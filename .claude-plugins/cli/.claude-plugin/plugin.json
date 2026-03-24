@@ -1,0 +1,9 @@
+{
+  "name": "cli",
+  "description": "Install, upgrade, authenticate, and use the public ArchAgent CLI distribution from GitHub Releases or Homebrew",
+  "version": "0.6.2",
+  "author": { "name": "ArchAstro" },
+  "license": "MIT",
+  "keywords": ["archagents", "cli", "developer-platform", "releases"],
+  "commands": ["./commands"]
+}

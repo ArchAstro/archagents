@@ -1,0 +1,115 @@
+name: Installer Smoke Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  unix-installer:
+    name: Unix Installer (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            shell_name: bash
+            rc_file: .bashrc
+            completion_file: .local/share/bash-completion/completions/archagent
+          - os: macos-latest
+            shell_name: zsh
+            rc_file: .zshrc
+            completion_file: .zsh/completions/_archagent
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate fixture assets
+        run: |
+          chmod +x ./scripts/create-unix-fixtures.sh ./install.sh
+          ./scripts/create-unix-fixtures.sh --output-dir "$RUNNER_TEMP/release" --version 0.3.1
+
+      - name: Start local release server
+        run: |
+          cd "$RUNNER_TEMP/release"
+          python3 -m http.server 8123 --bind 127.0.0.1 >/tmp/archagent-fixtures.log 2>&1 &
+          echo $! >/tmp/archagent-fixtures.pid
+
+      - name: Dry run installer
+        env:
+          ARCHAGENT_RELEASE_BASE_URL: http://127.0.0.1:8123
+          ARCHAGENT_VERSION: 0.3.1
+        run: |
+          ./install.sh --dry-run | tee "$RUNNER_TEMP/install-plan.txt"
+          ./install.sh --print-asset-url | tee "$RUNNER_TEMP/asset-url.txt"
+          grep 'release_base_url=http://127.0.0.1:8123' "$RUNNER_TEMP/install-plan.txt"
+          grep '/archagent-' "$RUNNER_TEMP/asset-url.txt"
+
+      - name: Install from local fixture server
+        env:
+          ARCHAGENT_RELEASE_BASE_URL: http://127.0.0.1:8123
+          ARCHAGENT_VERSION: 0.3.1
+          HOME: ${{ runner.temp }}/home
+          SHELL: /bin/${{ matrix.shell_name }}
+          ARCHAGENT_INSTALL_DIR: ${{ runner.temp }}/home/.local/bin
+        run: |
+          mkdir -p "$HOME"
+          ./install.sh
+          "$HOME/.local/bin/archagent" --version | grep '^0\.3\.1$'
+          test -f "$HOME/${{ matrix.rc_file }}"
+          test -f "$HOME/${{ matrix.completion_file }}"
+
+      - name: Stop local release server
+        if: always()
+        run: |
+          if [ -f /tmp/archagent-fixtures.pid ]; then
+            kill "$(cat /tmp/archagent-fixtures.pid)" || true
+          fi
+
+  windows-installer:
+    name: Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate fixture assets
+        shell: pwsh
+        run: |
+          ./scripts/create-windows-fixtures.ps1 -OutputDir "$env:RUNNER_TEMP\release" -Version "0.3.1"
+
+      - name: Start local release server
+        shell: pwsh
+        run: |
+          $process = Start-Process python -ArgumentList "-m", "http.server", "8123", "--bind", "127.0.0.1" -WorkingDirectory "$env:RUNNER_TEMP\release" -PassThru
+          $process.Id | Set-Content "$env:RUNNER_TEMP\archagent-fixtures.pid"
+
+      - name: Dry run installer
+        shell: pwsh
+        run: |
+          $env:ARCHAGENT_RELEASE_BASE_URL = "http://127.0.0.1:8123"
+          $env:ARCHAGENT_VERSION = "0.3.1"
+          .\install.ps1 -DryRun | Tee-Object -FilePath "$env:RUNNER_TEMP\install-plan.txt"
+          .\install.ps1 -PrintAssetUrl | Tee-Object -FilePath "$env:RUNNER_TEMP\asset-url.txt"
+          Select-String -Path "$env:RUNNER_TEMP\install-plan.txt" -Pattern "release_base_url=http://127.0.0.1:8123"
+          Select-String -Path "$env:RUNNER_TEMP\asset-url.txt" -Pattern "archagent-windows"
+
+      - name: Install from local fixture server
+        shell: pwsh
+        run: |
+          $env:ARCHAGENT_RELEASE_BASE_URL = "http://127.0.0.1:8123"
+          $env:ARCHAGENT_VERSION = "0.3.1"
+          .\install.ps1 -InstallDir "$env:RUNNER_TEMP\bin" -SkipPathUpdate
+          & "$env:RUNNER_TEMP\bin\archagent.exe" --version | Select-String -Pattern "^0\.3\.1$"
+
+      - name: Stop local release server
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path "$env:RUNNER_TEMP\archagent-fixtures.pid") {
+            $pid = Get-Content "$env:RUNNER_TEMP\archagent-fixtures.pid"
+            Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+          }

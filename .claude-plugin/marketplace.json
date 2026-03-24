@@ -1,0 +1,39 @@
+{
+  "name": "archagents",
+  "owner": {
+    "name": "ArchAstro",
+    "email": "dev@archastro.com"
+  },
+  "metadata": {
+    "description": "Official ArchAgent Claude Code plugins for CLI installation, authentication, and agent workflows",
+    "version": "1.0.0",
+    "pluginRoot": ".claude-plugins"
+  },
+  "plugins": [
+    {
+      "name": "cli",
+      "source": "./.claude-plugins/cli",
+      "description": "Install, upgrade, authenticate, and use the public ArchAgent CLI distribution",
+      "version": "0.2.0",
+      "category": "development",
+      "tags": [
+        "archagents",
+        "cli",
+        "developer-tools"
+      ]
+    },
+    {
+      "name": "agents",
+      "source": "./.claude-plugins/agents",
+      "description": "Manage ArchAgent impersonation workflows through the ArchAgent CLI",
+      "version": "0.2.0",
+      "category": "development",
+      "tags": [
+        "archagents",
+        "agents",
+        "impersonation",
+        "cli"
+      ]
+    }
+  ]
+}
