@@ -37,6 +37,15 @@ jobs:
           cd "$RUNNER_TEMP/release"
           python3 -m http.server 8123 --bind 127.0.0.1 >/tmp/archagent-fixtures.log 2>&1 &
           echo $! >/tmp/archagent-fixtures.pid
+          for attempt in $(seq 1 20); do
+            if curl -fsS "http://127.0.0.1:8123/SHA256SUMS" >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/archagent-fixtures.log || true
+          echo "Fixture server did not become ready" >&2
+          exit 1
 
       - name: Dry run installer
         env:
@@ -57,6 +66,7 @@ jobs:
           ARCHAGENT_INSTALL_DIR: ${{ runner.temp }}/home/.local/bin
         run: |
           mkdir -p "$HOME"
+          touch "$HOME/${{ matrix.rc_file }}"
           ./install.sh
           "$HOME/.local/bin/archagent" --version | grep '^0\.3\.1$'
           test -f "$HOME/${{ matrix.rc_file }}"
@@ -86,6 +96,15 @@ jobs:
         run: |
           $process = Start-Process python -ArgumentList "-m", "http.server", "8123", "--bind", "127.0.0.1" -WorkingDirectory "$env:RUNNER_TEMP\release" -PassThru
           $process.Id | Set-Content "$env:RUNNER_TEMP\archagent-fixtures.pid"
+          for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            try {
+              Invoke-WebRequest -Uri "http://127.0.0.1:8123/SHA256SUMS" -UseBasicParsing | Out-Null
+              exit 0
+            } catch {
+              Start-Sleep -Seconds 1
+            }
+          }
+          throw "Fixture server did not become ready"
 
       - name: Dry run installer
         shell: pwsh
@@ -110,6 +129,6 @@ jobs:
         shell: pwsh
         run: |
           if (Test-Path "$env:RUNNER_TEMP\archagent-fixtures.pid") {
-            $pid = Get-Content "$env:RUNNER_TEMP\archagent-fixtures.pid"
-            Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+            $serverPid = Get-Content "$env:RUNNER_TEMP\archagent-fixtures.pid"
+            Stop-Process -Id $serverPid -Force -ErrorAction SilentlyContinue
           }
