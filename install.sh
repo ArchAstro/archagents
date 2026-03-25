@@ -3,7 +3,7 @@
 set -euo pipefail
 
 OWNER="ArchAstro"
-REPO="archagents"
+REPO="archagent-cli"
 BINARY_NAME="archagent"
 DEFAULT_VERSION="latest"
 INSTALL_DIR="${ARCHAGENT_INSTALL_DIR:-}"
@@ -39,7 +39,8 @@ EOF
 
 normalize_bool() {
   local value="${1:-false}"
-  case "${value,,}" in
+  value="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+  case "$value" in
     1|true|yes|on) echo "true" ;;
     *) echo "false" ;;
   esac
