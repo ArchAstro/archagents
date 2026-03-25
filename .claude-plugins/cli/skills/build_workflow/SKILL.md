@@ -62,6 +62,18 @@ Understand the workflow before writing any config:
 - Does it need to send emails, Slack messages, or other notifications?
 - Does it loop over a collection?
 
+**Discover available events** to understand what can trigger the workflow and what data the trigger provides:
+```
+archagent list events
+```
+
+Once the user picks an event type, show them the payload schema so they know what `$` contains in downstream scripts:
+```
+archagent describe event <event-name>
+```
+
+This returns the JSON schema and a sample payload. The payload fields are accessible via `$` in scripts (e.g., `$.thread_id`, `$.message.content`).
+
 **Phase 2: Scaffold the workflow**
 
 Use the top-level workflow commands, not `configs sample`/`configs validate`, for the normal authoring loop when the current `archagent` build exposes them.

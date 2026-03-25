@@ -74,6 +74,14 @@ Ask the user:
 - Does it need environment variables? (accessible via `env.KEY`)
 - Does it need to make HTTP calls?
 
+If the script will handle a routine event, discover what `$` contains by checking the event's payload schema:
+```
+archagent list events
+archagent describe event <event-name>
+```
+
+`describe event` returns the JSON schema and a sample payload. Every field in the payload is accessible via `$` in the script (e.g., `$.thread_id`, `$.message.content`). Always check the event schema before writing scripts that consume routine payloads — do not guess the shape from memory.
+
 **Phase 3: Author the script**
 
 Key language concepts:

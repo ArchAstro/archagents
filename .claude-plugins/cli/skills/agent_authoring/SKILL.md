@@ -93,6 +93,12 @@ If the user doesn't have a `configs/` directory set up yet, route to the `local_
   - `schedule: "<cron>"`
   - `event_type: schedule.cron`
 - Do not put schedules under nested `event_config.schedule`.
+- To discover valid event types and their payload schemas:
+  ```
+  archagent list events
+  archagent describe event <event-name>
+  ```
+  The payload schema from `describe event` shows what `$` contains in the routine's script handler.
 
 ### Config references
 
