@@ -75,6 +75,12 @@ Route to the `agent_authoring` skill before deploying. That skill owns:
 
 ### User wants to add an agent to a thread
 
+**Prerequisites:** For the agent to auto-respond to messages, it needs:
+- A **participate routine** (`event_type: thread.session.join`, `preset_name: participate`, `status: active`)
+- An **`archastro/thread` installation**
+
+If the agent was deployed via `archagent deploy agent`, these are already provisioned from the template. If the agent was created manually, verify with `archagent list agentroutines --agent <id>` and `archagent list agentinstallations --agent <id>`.
+
 1. **If no thread exists**, create one:
    ```
    archagent create thread --title "..." --user <user-id>
@@ -90,7 +96,10 @@ Route to the `agent_authoring` skill before deploying. That skill owns:
    archagent create threadmember --thread <thread-id> --user-id <user-id>
    ```
 
-4. **Confirm** the thread is ready and offer to send the first message.
+4. **Send the first message with `--wait`** to trigger the agent and see its response:
+   ```
+   archagent create threadmessage --thread <thread-id> --user-id <user-id> -c "hello" --wait
+   ```
 
 ### User asks about existing agents
 
