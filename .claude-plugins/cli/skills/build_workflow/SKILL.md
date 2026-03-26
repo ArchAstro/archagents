@@ -222,15 +222,28 @@ Use `println()` in scripts for debugging output.
 
 ### User wants to set up a simple scheduled routine (no workflow)
 
-Not everything needs a full workflow graph. For simple scheduled tasks, a routine can use a script directly:
+Not everything needs a full workflow graph. For simple scheduled tasks, a routine can use a script directly.
 
+**Reference a script resource** (preferred for production):
+```
+archagent create script --id daily-check --file ./scripts/daily-check.agentscript
+archagent create agentroutine --agent <agent-id> \
+  --name "Daily check" \
+  --event-type schedule.cron \
+  --schedule "0 9 * * 1-5" \
+  --handler-type script \
+  --config-id <script-config-id>
+```
+Get the config ID from `archagent describe script daily-check --output json` (the `configId` field).
+
+**Or inline for quick prototyping:**
 ```
 archagent create agentroutine --agent <agent-id> \
   --name "Daily check" \
   --event-type schedule.cron \
   --schedule "0 9 * * 1-5" \
   --handler-type script \
-  --script "$(cat ./scripts/daily-check.archscript)"
+  --script 'println("hello")'
 ```
 
 Or include the routine in the AgentTemplate:

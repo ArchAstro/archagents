@@ -75,29 +75,48 @@ Sync server configs to local files:
 archagent configs sync
 ```
 
-This downloads all configs for the current app and writes them as local YAML files. The manifest tracks the file-to-config mapping.
+This downloads all configs for the current app — including skills, scripts, and workflows — and writes them as local files in the correct directories. The manifest tracks the file-to-config mapping.
+
+After syncing, the directory structure reflects server state:
+```
+configs/
+├── agents/                     # AgentTemplate configs (.yaml)
+├── skills/my-skill/            # Skill bundles (SKILL.md + supporting files)
+├── scripts/                    # Script configs (.agentscript)
+├── workflows/                  # Workflow configs (.json)
+└── ...                         # Other config kinds
+```
+
+You can then edit any file locally and run `archagent configs deploy` to push changes back.
 
 ### User wants to create a new config locally
 
-1. **Get a sample** for the config kind:
-   ```
-   archagent configs kinds
-   archagent configs sample <Kind> --to-file ./configs/<category>/<name>.yaml
-   ```
+For **scripts**, **skills**, and **workflows**, prefer the dedicated commands or create files directly in the correct directory:
 
-   Common kinds: `AgentTemplate`, `Script`, `Workflow`, `Persona`
+- **Script**: Write a `.agentscript` file in `configs/scripts/`:
+  ```
+  configs/scripts/my-script.agentscript
+  ```
+- **Skill**: Create a `SKILL.md` (with frontmatter) in `configs/skills/<slug>/`:
+  ```
+  configs/skills/my-skill/SKILL.md
+  configs/skills/my-skill/prompts/greeting.liquid   # optional supporting files
+  ```
+- **Workflow**: Write a `.json` file in `configs/workflows/`:
+  ```
+  configs/workflows/my-workflow.json
+  ```
 
-2. **Edit the file** — the user can edit in their editor or use the browser editor:
-   ```
-   archagent configs edit ./configs/<category>/<name>.yaml
-   ```
-   This opens the config in the ArchAstro browser editor with live validation.
+For **other config kinds** (AgentTemplate, Persona, etc.), get a sample:
+```
+archagent configs kinds
+archagent configs sample <Kind> --to-file ./configs/<category>/<name>.yaml
+```
 
-3. **Or create a blank config in the browser**:
-   ```
-   archagent configs new
-   archagent configs new --kind Script my-script.yaml
-   ```
+You can also use the browser editor:
+```
+archagent configs edit ./configs/<category>/<name>.yaml
+```
 
 ### User wants to validate local configs
 
@@ -108,7 +127,7 @@ archagent configs validate -k <Kind> -f ./configs/<category>/<name>.yaml
 
 For scripts specifically, use the dedicated validator:
 ```
-archagent validate script --file ./scripts/my-script.archscript
+archagent validate script --file ./configs/scripts/my-script.agentscript
 ```
 
 ### User wants to deploy local changes
@@ -122,6 +141,18 @@ This:
 - Compares local files against the manifest
 - Uploads new and changed configs in dependency order
 - Updates the manifest with new server IDs
+
+#### Managed directory conventions
+
+`configs deploy` enforces conventions for three managed directories:
+
+| Directory | Convention |
+|-----------|-----------|
+| `skills/<slug>/` | All files become `File` kind. `SKILL.md` is the root — name and description are extracted from its YAML frontmatter. Other files (`.liquid`, `.yaml`, `.js`, etc.) become supporting skill files. |
+| `scripts/` | Only `.agentscript` files and `.yaml`/`.json` with `kind: Script` are allowed. Other file types are rejected. |
+| `workflows/` | Only `.json` files and `.yaml` with a `Workflow*` kind are allowed. Other file types are rejected. |
+
+Files outside these directories use standard kind inference from file extension or YAML content.
 
 **Important**: `configs deploy` syncs config files only. It does not create agents. To provision an agent from a template, use `archagent deploy agent <file>` separately.
 
@@ -155,6 +186,25 @@ archagent configs deploy
 archagent deploy agent ./configs/agents/my-agent.yaml
 ```
 
+### Create a skill via local files
+```
+archagent configs init
+mkdir -p configs/skills/my-skill
+# Write SKILL.md with frontmatter (name, description)
+# Add supporting files (prompts, references, etc.)
+archagent configs deploy
+# Skill is now visible via: archagent list skills
+```
+
+### Create a script via local files
+```
+archagent configs init
+# Write script source directly
+echo 'println("hello")' > configs/scripts/my-script.agentscript
+archagent configs deploy
+# Script is now visible via: archagent describe script my-script
+```
+
 ### Pull existing project and make changes
 ```
 archagent configs init
@@ -165,7 +215,7 @@ archagent configs deploy
 
 ### Quick edit via browser
 ```
-archagent configs edit ./configs/scripts/my-script.yaml
+archagent configs edit ./configs/agents/my-agent.yaml
 # Opens in browser with live validation
 # Changes are saved to the server and synced back to the local file
 ```

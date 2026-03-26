@@ -58,7 +58,7 @@ Use the top-level script commands, not `configs sample`/`configs validate`, for 
 
 Create a script from a local source file:
 ```
-archagent create script --id my-script --file ./scripts/my-script.archscript
+archagent create script --id my-script --file ./scripts/my-script.agentscript
 ```
 
 Or let the CLI start from its built-in sample if you do not pass `--source` or `--file`:
@@ -129,7 +129,7 @@ Available namespaces:
 
 Validate the script syntax:
 ```
-archagent validate script --file ./scripts/my-script.archscript
+archagent validate script --file ./scripts/my-script.agentscript
 ```
 
 Or validate as a config:
@@ -143,7 +143,7 @@ Fix any validation errors before proceeding.
 
 Run the script locally with test input:
 ```
-archagent run script --file ./scripts/my-script.archscript --input '{"order_id": "ORD-123"}'
+archagent run script --file ./scripts/my-script.agentscript --input '{"order_id": "ORD-123"}'
 ```
 
 For scripts that need env vars, ensure they are set on the platform:
@@ -158,21 +158,22 @@ Scripts can be deployed two ways:
 
 **As a standalone script resource:**
 ```
-archagent create script --id order-lookup -n "Order Lookup" --file ./scripts/my-script.archscript
+archagent create script --id order-lookup -n "Order Lookup" --file ./scripts/my-script.agentscript
 ```
 
 Update an existing script resource:
 ```
-archagent update script order-lookup --file ./scripts/my-script.archscript
+archagent update script order-lookup --file ./scripts/my-script.agentscript
 ```
 
-**As a config (for use in templates and workflows):**
-Only use the config workflow when the user explicitly wants config-managed files in a `configs/` repo:
+**Via `configs deploy`** (for config-managed repos):
+
+Place `.agentscript` files in `configs/scripts/` and deploy:
 ```
 archagent configs deploy
 ```
 
-See the `local_configs` skill for setting up the configs directory.
+The `scripts/` directory enforces that only `.agentscript` files and `.yaml`/`.json` with `kind: Script` are allowed — other file types are rejected. See the `local_configs` skill for setting up the configs directory.
 
 **Phase 7: Wire it up**
 
@@ -196,15 +197,29 @@ Get the script's config ID from `archagent describe script <id> --output json` (
 
 **In a workflow graph:** Follow the real `WorkflowGraph` shape from `archagent describe workflowdocs` and the `build_workflow` skill.
 
-**As a routine handler:**
+**As a routine handler** (reference by config ID — preferred for production):
 ```
 archagent create agentroutine --agent <agent-id> \
   --name "My scheduled script" \
   --event-type schedule.cron \
   --schedule "0 9 * * 1-5" \
   --handler-type script \
-  --script "$(cat ./scripts/my-script.archscript)"
+  --config-id <script-config-id>
 ```
+
+Get the script's config ID from `archagent describe script <id> --output json` (the `configId` field).
+
+Or inline for quick prototyping:
+```
+archagent create agentroutine --agent <agent-id> \
+  --name "Quick test" \
+  --event-type schedule.cron \
+  --schedule "0 9 * * 1-5" \
+  --handler-type script \
+  --script 'println("hello")'
+```
+
+Prefer `--config-id` for production — it keeps the routine linked to a versioned script resource that can be updated independently.
 
 ### User wants to edit an existing script
 
@@ -216,8 +231,8 @@ archagent create agentroutine --agent <agent-id> \
 
 2. **Edit locally**, validate, and update:
    ```
-   archagent validate script --file ./scripts/my-script.archscript
-   archagent update script <id> --file ./scripts/my-script.archscript
+   archagent validate script --file ./scripts/my-script.agentscript
+   archagent update script <id> --file ./scripts/my-script.agentscript
    ```
 
 ## Script Authoring Rules

@@ -85,7 +85,15 @@ Walk through the authoring flow step by step.
 
 5. **Publish the skill to the platform**:
 
-   Create the skill:
+   **Option A — Via `configs deploy`** (recommended when working with a configs/ directory):
+
+   Place the skill directory under `configs/skills/<slug>/` and deploy:
+   ```
+   archagent configs deploy
+   ```
+   This automatically creates the skill with name and description from the SKILL.md frontmatter, and publishes all supporting files as File configs. See the `local_configs` skill for setting up the configs directory.
+
+   **Option B — Via dedicated commands:**
    ```
    archagent create skill -n "<Name>" -d "<Description>" -s <slug> --file ./skills/<slug>/SKILL.md
    ```
