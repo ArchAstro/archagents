@@ -76,7 +76,7 @@ This returns the JSON schema and a sample payload. The payload fields are access
 
 **Phase 2: Scaffold the workflow**
 
-Use the top-level workflow commands, not `configs sample`/`configs validate`, for the normal authoring loop when the current `archagent` build exposes them.
+Use the top-level workflow commands, not `describe configsample`/`validate config`, for the normal authoring loop when the current `archagent` build exposes them.
 
 Create a workflow from a local JSON file:
 ```
@@ -138,7 +138,7 @@ Do not hard-code a node taxonomy in this skill. The supported graph/node model i
 If the workflow needs script logic, author and validate that script first. Route to the `build_script` skill for detailed script authoring guidance, or get the reference directly:
 ```
 archagent describe scriptdocs
-archagent configs sample Script
+archagent describe configsample Script
 ```
 
 **Phase 5: Validate**

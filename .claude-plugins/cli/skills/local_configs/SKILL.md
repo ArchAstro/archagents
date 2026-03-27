@@ -1,6 +1,6 @@
 ---
 name: local_configs
-description: Use when the user wants to set up or manage local config files for an ArchAstro project — initialize a configs directory, edit configs locally, sync from the server, or deploy local changes. Trigger phrases include "set up configs", "init configs", "configs directory", "sync configs", "deploy configs", "edit config locally", "local config management", "configs init".
+description: Use when the user wants to set up or manage local config files for an ArchAstro project — initialize a configs directory, edit configs locally, sync from the server, or deploy local changes. Trigger phrases include "set up configs", "init configs", "configs directory", "sync configs", "deploy configs", "edit config locally", "local config management".
 allowed-tools: ["Bash(archagent:*)"]
 ---
 
@@ -49,9 +49,9 @@ Before any config work, verify the CLI:
 
 1. **Initialize the config directory**:
    ```
-   archagent configs init
+   archagent init --enable-configs
    ```
-   This enables local config management and creates the configured `configs/` directory if needed. It does not automatically sync remote configs; use `archagent configs sync` next when you want local files.
+   This enables local config management and creates the configured `configs/` directory if needed. It does not automatically sync remote configs; use `archagent sync configs` next when you want local files.
 
 2. **Explain the layout**: After init, the directory looks like:
    ```
@@ -66,13 +66,13 @@ Before any config work, verify the CLI:
 
    Managed virtual paths also follow these prefixes on the server: `skills/`, `scripts/`, and `workflows/`.
 
-3. **Offer next steps**: Ask if the user wants to create a new config (`archagent configs sample <Kind>`) or sync existing configs from the server.
+3. **Offer next steps**: Ask if the user wants to create a new config (`archagent describe configsample <Kind>`) or sync existing configs from the server.
 
 ### User wants to pull configs from the server
 
 Sync server configs to local files:
 ```
-archagent configs sync
+archagent sync configs
 ```
 
 This downloads all configs for the current app — including skills, scripts, and workflows — and writes them as local files in the correct directories. The manifest tracks the file-to-config mapping.
@@ -87,7 +87,7 @@ configs/
 └── ...                         # Other config kinds
 ```
 
-You can then edit any file locally and run `archagent configs deploy` to push changes back.
+You can then edit any file locally and run `archagent deploy configs` to push changes back.
 
 ### User wants to create a new config locally
 
@@ -109,20 +109,20 @@ For **scripts**, **skills**, and **workflows**, prefer the dedicated commands or
 
 For **other config kinds** (AgentTemplate, Persona, etc.), get a sample:
 ```
-archagent configs kinds
-archagent configs sample <Kind> --to-file ./configs/<category>/<name>.yaml
+archagent list configkinds
+archagent describe configsample <Kind> --to-file ./configs/<category>/<name>.yaml
 ```
 
 You can also use the browser editor:
 ```
-archagent configs edit ./configs/<category>/<name>.yaml
+archagent edit config ./configs/<category>/<name>.yaml
 ```
 
 ### User wants to validate local configs
 
 Validate a specific config file:
 ```
-archagent configs validate -k <Kind> -f ./configs/<category>/<name>.yaml
+archagent validate config -k <Kind> -f ./configs/<category>/<name>.yaml
 ```
 
 For scripts specifically, use the dedicated validator:
@@ -134,7 +134,7 @@ archagent validate script --file ./configs/scripts/my-script.agentscript
 
 Push all local config changes to the server:
 ```
-archagent configs deploy
+archagent deploy configs
 ```
 
 This:
@@ -144,7 +144,7 @@ This:
 
 #### Managed directory conventions
 
-`configs deploy` enforces conventions for three managed directories:
+`deploy configs` enforces conventions for three managed directories:
 
 | Directory | Convention |
 |-----------|-----------|
@@ -154,13 +154,13 @@ This:
 
 Files outside these directories use standard kind inference from file extension or YAML content.
 
-**Important**: `configs deploy` syncs config files only. It does not create agents. To provision an agent from a template, use `archagent deploy agent <file>` separately.
+**Important**: `deploy configs` syncs config files only. It does not create agents. To provision an agent from a template, use `archagent deploy agent <file>` separately.
 
 ### User wants to move or rename a config file
 
 If a local config file is moved or renamed:
 ```
-archagent configs mv <old-path> <new-path>
+archagent update configpath <old-path> <new-path>
 ```
 
 This updates the manifest mapping without affecting the server config.
@@ -169,7 +169,7 @@ This updates the manifest mapping without affecting the server config.
 
 If the manifest gets out of sync:
 ```
-archagent configs manifest-repair
+archagent validate configmanifest
 ```
 
 This re-normalizes the manifest and resolves any inconsistencies.
@@ -178,44 +178,44 @@ This re-normalizes the manifest and resolves any inconsistencies.
 
 ### New project from scratch
 ```
-archagent configs init
-archagent configs sample AgentTemplate --to-file ./configs/agents/my-agent.yaml
+archagent init --enable-configs
+archagent describe configsample AgentTemplate --to-file ./configs/agents/my-agent.yaml
 # Edit the file...
-archagent configs validate -k AgentTemplate -f ./configs/agents/my-agent.yaml
-archagent configs deploy
+archagent validate config -k AgentTemplate -f ./configs/agents/my-agent.yaml
+archagent deploy configs
 archagent deploy agent ./configs/agents/my-agent.yaml
 ```
 
 ### Create a skill via local files
 ```
-archagent configs init
+archagent init --enable-configs
 mkdir -p configs/skills/my-skill
 # Write SKILL.md with frontmatter (name, description)
 # Add supporting files (prompts, references, etc.)
-archagent configs deploy
+archagent deploy configs
 # Skill is now visible via: archagent list skills
 ```
 
 ### Create a script via local files
 ```
-archagent configs init
+archagent init --enable-configs
 # Write script source directly
 echo 'println("hello")' > configs/scripts/my-script.agentscript
-archagent configs deploy
+archagent deploy configs
 # Script is now visible via: archagent describe script my-script
 ```
 
 ### Pull existing project and make changes
 ```
-archagent configs init
-archagent configs sync
+archagent init --enable-configs
+archagent sync configs
 # Edit files locally...
-archagent configs deploy
+archagent deploy configs
 ```
 
 ### Quick edit via browser
 ```
-archagent configs edit ./configs/agents/my-agent.yaml
+archagent edit config ./configs/agents/my-agent.yaml
 # Opens in browser with live validation
 # Changes are saved to the server and synced back to the local file
 ```
@@ -226,4 +226,4 @@ archagent configs edit ./configs/agents/my-agent.yaml
 - Do not manually edit `.archastro-manifest.json` — use CLI commands.
 - Do not ask the user to pick raw subcommands when intent is clear.
 - Keep responses concise and operational.
-- Always recommend `configs deploy` over individual `create config` calls when working with local files.
+- Always recommend `deploy configs` over individual `create config` calls when working with local files.
