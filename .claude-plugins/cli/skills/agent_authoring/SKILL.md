@@ -33,19 +33,19 @@ Before any authoring work, verify the CLI:
 
 ### Local config directory not initialized
 
-If the user doesn't have a `configs/` directory set up yet, route to the `local_configs` skill first. That skill owns `archagent configs init`, local file layout, and the sync/deploy workflow.
+If the user doesn't have a `configs/` directory set up yet, route to the `local_configs` skill first. That skill owns `archagent init --enable-configs`, local file layout, and the sync/deploy workflow.
 
 ### User wants to author or modify agent configs
 
 1. **Start from CLI-backed templates, not memory**:
    - For new config objects, use:
      ```
-     archagent configs sample <Kind>
+     archagent describe configsample <Kind>
      ```
    - For Script configs, always use:
      ```
      archagent describe scriptdocs
-     archagent configs sample Script
+     archagent describe configsample Script
      ```
      The script docs are the live source of truth. Do not invent or paraphrase the language from memory.
 
@@ -60,14 +60,14 @@ If the user doesn't have a `configs/` directory set up yet, route to the `local_
 
 3. **Validate early**:
    ```
-   archagent configs validate -k <Kind> -f <path>
+   archagent validate config -k <Kind> -f <path>
    ```
    Run validation before deploy whenever the user changes Script or template files.
 
 4. **Deploy through the normal flow after authoring**:
    - If the agent has Script configs or other supporting files, sync them first:
      ```
-     archagent configs deploy
+     archagent deploy configs
      ```
      This pushes local config files (Scripts, templates) but does not create agents.
      Skip this step if the agent only has a single AgentTemplate file — `deploy agent` handles its own config upload.
@@ -76,8 +76,8 @@ If the user doesn't have a `configs/` directory set up yet, route to the `local_
      archagent deploy agent <yaml-file>
      ```
      This uploads the template config and creates the agent with its routines, tools, and installations.
-   - **Important:** `configs deploy` and `deploy agent` are different commands.
-     Use `configs deploy` to sync a directory of config files; use `deploy agent` to create an agent from a template.
+   - **Important:** `deploy configs` and `deploy agent` are different commands.
+     Use `deploy configs` to sync a directory of config files; use `deploy agent` to create an agent from a template.
 
 ## Authoring Rules
 
@@ -118,10 +118,8 @@ If the user doesn't have a `configs/` directory set up yet, route to the `local_
 
 ## Command Conventions
 
-- Config management uses two patterns:
-  - **Noun-first** for workflow commands: `archagent configs deploy`, `archagent configs sync`, `archagent configs validate`
-  - **Verb-first** for CRUD: `archagent list configs`, `archagent describe config <id>`, `archagent create config`
-- Do not use `archagent configs list` or `archagent configs describe` — those are not valid. Use the verb-first form.
+- All config commands are **verb-first**: `archagent list configs`, `archagent create config`, `archagent deploy configs`, `archagent sync configs`, `archagent validate config`, etc.
+- There is no `archagent configs` namespace. Do not use `archagent configs <verb>` — always put the verb first.
 
 ## Response Rules
 

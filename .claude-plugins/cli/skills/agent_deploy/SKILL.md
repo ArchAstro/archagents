@@ -45,7 +45,7 @@ Use the config-driven golden path. Do not skip straight to `create agent`.
 
 1. **Deploy configs first**:
    ```
-   archagent configs deploy
+   archagent deploy configs
    ```
    This pushes Script and AgentTemplate configs to the server. For config-driven agents, this should happen before provisioning the agent itself.
 
@@ -68,7 +68,7 @@ Use the config-driven golden path. Do not skip straight to `create agent`.
 
 Route to the `agent_authoring` skill before deploying. That skill owns:
 - `AgentTemplate` and Script config creation
-- `archagent configs sample`
+- `archagent describe configsample`
 - `archagent describe scriptdocs`
 - routine scheduling shape
 - env-var scope guidance
@@ -108,7 +108,7 @@ Summarize what's deployed and offer to deploy a new one or add an existing one t
 - If a script-related validation error appears, use:
   ```
   archagent describe scriptdocs
-  archagent configs sample Script
+  archagent describe configsample Script
   ```
   Do not invent script syntax from memory.
 - Prefer human-readable `config_ref` names that match deployed config lookup keys. Do not rewrite refs to raw `cfg_...` IDs unless explicitly debugging a broken environment.

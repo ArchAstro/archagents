@@ -54,7 +54,7 @@ Always start by fetching the live reference — do not write scripts from memory
 archagent describe scriptdocs
 ```
 
-Use the top-level script commands, not `configs sample`/`configs validate`, for the normal authoring loop.
+Use the top-level script commands, not `describe configsample`/`validate config`, for the normal authoring loop.
 
 Create a script from a local source file:
 ```
@@ -134,7 +134,7 @@ archagent validate script --file ./scripts/my-script.agentscript
 
 Or validate as a config:
 ```
-archagent configs validate -k Script -f ./configs/scripts/my-script.yaml
+archagent validate config -k Script -f ./configs/scripts/my-script.yaml
 ```
 
 Fix any validation errors before proceeding.
@@ -166,11 +166,11 @@ Update an existing script resource:
 archagent update script order-lookup --file ./scripts/my-script.agentscript
 ```
 
-**Via `configs deploy`** (for config-managed repos):
+**Via `deploy configs`** (for config-managed repos):
 
 Place `.agentscript` files in `configs/scripts/` and deploy:
 ```
-archagent configs deploy
+archagent deploy configs
 ```
 
 The `scripts/` directory enforces that only `.agentscript` files and `.yaml`/`.json` with `kind: Script` are allowed — other file types are rejected. See the `local_configs` skill for setting up the configs directory.
