@@ -1,0 +1,39 @@
+{
+  "name": "agents",
+  "version": "0.6.2",
+  "description": "Manage ArchAgent impersonation from Codex through the ArchAgent CLI.",
+  "author": {
+    "name": "ArchAstro",
+    "email": "dev@archastro.com",
+    "url": "https://github.com/ArchAstro"
+  },
+  "homepage": "https://github.com/ArchAstro/archagents",
+  "repository": "https://github.com/ArchAstro/archagents",
+  "license": "MIT",
+  "keywords": [
+    "archagents",
+    "agents",
+    "impersonation",
+    "cli",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "ArchAgent Agents",
+    "shortDescription": "Impersonation workflows for ArchAgent from Codex.",
+    "longDescription": "Manage ArchAgent impersonation state from Codex, refresh active identities, and align the current session with ArchAgent CLI state.",
+    "developerName": "ArchAstro",
+    "category": "Development",
+    "capabilities": [
+      "Interactive",
+      "Shell"
+    ],
+    "websiteURL": "https://github.com/ArchAstro/archagents",
+    "defaultPrompt": [
+      "Start impersonating an ArchAgent.",
+      "Show the current impersonation state.",
+      "Refresh or stop the active impersonation."
+    ],
+    "brandColor": "#1D4ED8"
+  }
+}

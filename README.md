@@ -47,3 +47,9 @@ Add the marketplace and install the public plugins:
 ```
 
 The `helper` plugin remains in `ArchAstro/claude-plugins`.
+
+## Codex Plugins
+
+The Codex marketplace metadata lives in [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json) and the Codex plugin manifests live under [`plugins/`](./plugins).
+
+Codex skill entrypoints are harness-specific wrappers. Shared skill workflow detail lives in [`shared/skills/`](./shared/skills), while shared Claude command workflow detail lives in [`shared/commands/`](./shared/commands). This keeps Claude commands and Codex skills distinct while still avoiding duplicated operational markdown.

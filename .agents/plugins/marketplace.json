@@ -1,0 +1,32 @@
+{
+  "name": "archagents",
+  "interface": {
+    "displayName": "ArchAstro"
+  },
+  "plugins": [
+    {
+      "name": "cli",
+      "source": {
+        "source": "local",
+        "path": "./plugins/cli"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "agents",
+      "source": {
+        "source": "local",
+        "path": "./plugins/agents"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Development"
+    }
+  ]
+}
