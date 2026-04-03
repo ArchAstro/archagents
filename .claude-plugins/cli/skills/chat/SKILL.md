@@ -10,6 +10,21 @@ Send messages to agents and view their responses.
 
 This skill depends on the `cli` plugin for CLI installation and authentication. Use that plugin's commands instead of trying to install or authenticate the CLI manually inside this skill.
 
+## Quick Reference
+
+| Task | Command |
+|------|---------|
+| Ask agent a question | `archagent create agentsession --agent <id> --instructions "..." --wait` |
+| Create a thread | `archagent create thread --title "..." --owner-type agent --owner-id <agent-id> --json` |
+| Create a test user | `archagent create user --system-user --name "..." --json` |
+| Add member to thread | `archagent create threadmember --thread <id> --user-id <id> --json` |
+| Add agent to thread | `archagent create threadmember --thread <id> --agent-id <id> --json` |
+| Send message (wait for reply) | `archagent create threadmessage --thread <id> --user-id <id> -c "..." --wait --json` |
+| View conversation | `archagent list threadmessages --thread <id> --full` |
+| List agent sessions | `archagent list agentsessions --agent <id> --json` |
+
+Use `--help` on any command for full options.
+
 ## Always Start with State
 
 Every invocation must begin by understanding the current context. Determine:
@@ -103,14 +118,39 @@ Always use `--full` — the default table view truncates content.
 
 ### User needs a new thread
 
-1. Create the thread:
+**Agent-owned thread** (recommended when an agent should participate):
+
+1. Create the thread owned by the agent:
    ```
-   archagent create thread --title "..." --user <user-id>
+   archagent create thread --title "..." --owner-type agent --owner-id <agent-id> --json
    ```
 
-2. Add members:
+2. Create a test user (if needed) and add them to the thread:
    ```
-   archagent create threadmember --thread <thread-id> --agent-id <agent-id>
+   archagent create user --system-user --name "Test User" --json
+   archagent create threadmember --thread <thread-id> --user-id <user-id> --json
+   ```
+
+3. Send a message and wait for the agent to respond:
+   ```
+   archagent create threadmessage --thread <thread-id> --user-id <user-id> -c "Hello" --wait --json
+   ```
+
+4. View the conversation:
+   ```
+   archagent list threadmessages --thread <thread-id> --full
+   ```
+
+**User-owned thread** (when a user starts the conversation):
+
+1. Create the thread:
+   ```
+   archagent create thread --title "..." --user <user-id> --json
+   ```
+
+2. Add the agent:
+   ```
+   archagent create threadmember --thread <thread-id> --agent-id <agent-id> --json
    ```
 
 ## Response Rules

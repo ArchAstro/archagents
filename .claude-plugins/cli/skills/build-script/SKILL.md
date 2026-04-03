@@ -235,6 +235,46 @@ Prefer `--config-id` for production — it keeps the routine linked to a version
    archagent update script <id> --file ./scripts/my-script.agentscript
    ```
 
+## Common Mistakes
+
+**Do not write JSON — use script object syntax:**
+```
+// WRONG — JSON syntax causes "unexpected token :" errors
+{ "status": "ok", "count": 5 }
+
+// CORRECT — script uses unquoted keys
+{ status: "ok", count: 5 }
+```
+
+**Do not use `return` — the last expression is the return value:**
+```
+// WRONG
+return { status: "ok" }
+
+// CORRECT
+{ status: "ok" }
+```
+
+**Always import namespaces before using them:**
+```
+// WRONG — "Unknown identifier" error
+let now = datetime.now()
+
+// CORRECT
+let dt = import("datetime")
+let now = dt.now()
+```
+
+**No imperative loops — use array functions:**
+```
+// WRONG — for/while don't exist
+for item in items { ... }
+
+// CORRECT
+let arr = import("array")
+arr.map(items, fn(item) { ... })
+```
+
 ## Script Authoring Rules
 
 - **Always fetch `archagent describe scriptdocs` before writing scripts.** Do not invent syntax from memory.

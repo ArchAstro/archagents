@@ -83,6 +83,7 @@ If the user doesn't have a `configs/` directory set up yet, route to the `manage
 
 ### Script configs
 
+- **Load the `build_script` skill for detailed script authoring guidance**, including syntax examples, common mistakes, and the validation/test/deploy workflow.
 - Treat the script language as a functional expression language, not a general-purpose imperative language.
 - Use `archagent describe scriptdocs` for exact syntax and available namespaces.
 - If a script fails validation, prefer rewriting toward the sample/reference instead of trial-and-error improvisation.
