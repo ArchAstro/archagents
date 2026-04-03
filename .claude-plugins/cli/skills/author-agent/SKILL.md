@@ -94,14 +94,12 @@ If the user doesn't have a `configs/` directory set up yet, route to the `manage
   - `schedule: "<cron>"`
   - `event_type: schedule.cron`
 - Do not put schedules under nested `event_config.schedule`.
-- Valid event types for routines (as of CLI 0.13.0):
-  - `schedule.cron` — scheduled tasks (requires `schedule: "<cron>"` field)
-  - `thread.session.join` — agent joins a thread session (used for participate routines)
-  - `thread.session.leave` — session ends (used for auto_memory_capture)
-  - `thread.member_joined` — user added to a thread
-  - `thread.message_added` — message posted to a thread
-  - `webhook.github_app.pull_request` — GitHub PR events
-  - `webhook.github_app.issues` — GitHub issue events
+- To discover valid event types and their payload schemas:
+  ```
+  archagent list events
+  archagent describe event <event-name>
+  ```
+  The payload schema from `describe event` shows what `$` contains in the routine's script handler.
 
 ### Config references
 
