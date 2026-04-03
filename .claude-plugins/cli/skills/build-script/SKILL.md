@@ -74,13 +74,10 @@ Ask the user:
 - Does it need environment variables? (accessible via `env.KEY`)
 - Does it need to make HTTP calls?
 
-If the script will handle a routine event, discover what `$` contains by checking the event's payload schema:
-```
-archagent list events
-archagent describe event <event-name>
-```
-
-`describe event` returns the JSON schema and a sample payload. Every field in the payload is accessible via `$` in the script (e.g., `$.thread_id`, `$.message.content`). Always check the event schema before writing scripts that consume routine payloads — do not guess the shape from memory.
+If the script will handle a routine event, `$` contains the event payload. Common event payloads:
+- `schedule.cron`: `$` is empty `{}`
+- `thread.message_added`: `$.thread_id`, `$.message.content`, `$.message.sender_id`
+- `thread.member_joined`: `$.thread_id`, `$.user_id`
 
 **Phase 3: Author the script**
 
@@ -234,6 +231,46 @@ Prefer `--config-id` for production — it keeps the routine linked to a version
    archagent validate script --file ./scripts/my-script.agentscript
    archagent update script <id> --file ./scripts/my-script.agentscript
    ```
+
+## Common Mistakes
+
+**Do not write JSON — use script object syntax:**
+```
+// WRONG — JSON syntax causes "unexpected token :" errors
+{ "status": "ok", "count": 5 }
+
+// CORRECT — script uses unquoted keys
+{ status: "ok", count: 5 }
+```
+
+**Do not use `return` — the last expression is the return value:**
+```
+// WRONG
+return { status: "ok" }
+
+// CORRECT
+{ status: "ok" }
+```
+
+**Always import namespaces before using them:**
+```
+// WRONG — "Unknown identifier" error
+let now = datetime.now()
+
+// CORRECT
+let dt = import("datetime")
+let now = dt.now()
+```
+
+**No imperative loops — use array functions:**
+```
+// WRONG — for/while don't exist
+for item in items { ... }
+
+// CORRECT
+let arr = import("array")
+arr.map(items, fn(item) { ... })
+```
 
 ## Script Authoring Rules
 

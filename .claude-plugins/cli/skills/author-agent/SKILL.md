@@ -83,6 +83,7 @@ If the user doesn't have a `configs/` directory set up yet, route to the `manage
 
 ### Script configs
 
+- **Load the `build_script` skill for detailed script authoring guidance**, including syntax examples, common mistakes, and the validation/test/deploy workflow.
 - Treat the script language as a functional expression language, not a general-purpose imperative language.
 - Use `archagent describe scriptdocs` for exact syntax and available namespaces.
 - If a script fails validation, prefer rewriting toward the sample/reference instead of trial-and-error improvisation.
@@ -93,12 +94,14 @@ If the user doesn't have a `configs/` directory set up yet, route to the `manage
   - `schedule: "<cron>"`
   - `event_type: schedule.cron`
 - Do not put schedules under nested `event_config.schedule`.
-- To discover valid event types and their payload schemas:
-  ```
-  archagent list events
-  archagent describe event <event-name>
-  ```
-  The payload schema from `describe event` shows what `$` contains in the routine's script handler.
+- Valid event types for routines:
+  - `schedule.cron` — scheduled tasks (requires `schedule: "<cron>"` field)
+  - `thread.session.join` — agent joins a thread session (used for participate routines)
+  - `thread.session.leave` — session ends (used for auto_memory_capture)
+  - `thread.member_joined` — user added to a thread
+  - `thread.message_added` — message posted to a thread
+  - `webhook.github_app.pull_request` — GitHub PR events
+  - `webhook.github_app.issues` — GitHub issue events
 
 ### Config references
 
