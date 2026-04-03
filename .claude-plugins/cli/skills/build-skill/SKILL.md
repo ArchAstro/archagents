@@ -1,5 +1,5 @@
 ---
-name: build_skill
+name: build-skill
 description: Use when the user wants to create, edit, or publish an ArchAstro skill — a reusable package of instructions and supporting files that agents can use. Trigger phrases include "build a skill", "create a skill", "write a skill", "author a skill", "new skill", "skill template", "SKILL.md".
 allowed-tools: ["Bash(archagent:*)"]
 ---
@@ -91,7 +91,7 @@ Walk through the authoring flow step by step.
    ```
    archagent deploy configs
    ```
-   This automatically creates the skill with name and description from the SKILL.md frontmatter, and publishes all supporting files as File configs. See the `local_configs` skill for setting up the configs directory.
+   This automatically creates the skill with name and description from the SKILL.md frontmatter, and publishes all supporting files as File configs. See the `manage-configs` skill for setting up the configs directory.
 
    **Option B — Via dedicated commands:**
    ```

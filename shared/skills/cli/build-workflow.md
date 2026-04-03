@@ -1,14 +1,8 @@
----
-name: build_workflow
-description: Use when the user wants to create, edit, or deploy a workflow — a multi-step process with branching, loops, HTTP calls, script execution, approvals, or scheduled routines. Trigger phrases include "build a workflow", "create a workflow", "design a workflow", "add a routine", "schedule a task", "automate this process", "set up a cron job", "workflow nodes".
-allowed-tools: ["Bash(archagent:*)"]
----
-
 # ArchAstro Workflow Builder
 
 Create, edit, and deploy workflows — multi-step processes that agents execute via routines.
 
-This skill depends on the `cli` plugin for CLI installation and authentication. Use that plugin's commands instead of trying to install or authenticate the CLI manually inside this skill.
+This workflow depends on the `cli` plugin for CLI installation and authentication. Use the current harness's CLI install and authentication flows instead of handling that setup inline.
 
 ## What is a Workflow?
 
@@ -36,8 +30,8 @@ Before any workflow work, verify the CLI:
 
 - Read `plugin-compatibility.json` from the plugin root.
 - Prefer `plugins.cli.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, direct the user to `/cli:install`.
-- If authentication or app selection is missing, direct the user to `/cli:auth`.
+- Run `archagent --version`. If missing or older than the resolved minimum, route the user to the current harness's CLI install flow.
+- If authentication or app selection is missing, route the user to the current harness's CLI authentication flow.
 
 ### Workflow commands not exposed in the current `archagent` build
 
@@ -131,11 +125,11 @@ If `workflowdocs` is not available in the current binary, say so explicitly and 
 
 ### Available node types
 
-Do not hard-code a node taxonomy in this skill. The supported graph/node model is owned by the workflow implementation and `archagent describe workflowdocs`.
+Do not hard-code a node taxonomy in this workflow. The supported graph/node model is owned by the workflow implementation and `archagent describe workflowdocs`.
 
 **Phase 4: Write supporting scripts**
 
-If the workflow needs script logic, author and validate that script first. Route to the `build_script` skill for detailed script authoring guidance, or get the reference directly:
+If the workflow needs script logic, author and validate that script first. Route to the `build-script` skill for detailed script authoring guidance, or get the reference directly:
 ```
 archagent describe scriptdocs
 archagent describe configsample Script
@@ -163,7 +157,7 @@ archagent create workflow --id my-workflow --file ./workflows/my-workflow.json
 archagent update workflow my-workflow --file ./workflows/my-workflow.json
 ```
 
-If the top-level workflow commands are unavailable in the current binary, or if the user is working inside a broader config-managed repo and explicitly wants that flow, route to `local_configs` instead. Do not claim the dedicated workflow commands are available unless you verified them in the running CLI.
+If the top-level workflow commands are unavailable in the current binary, or if the user is working inside a broader config-managed repo and explicitly wants that flow, route to `manage-configs` instead. Do not claim the dedicated workflow commands are available unless you verified them in the running CLI.
 
 **Phase 7: Attach to a routine**
 

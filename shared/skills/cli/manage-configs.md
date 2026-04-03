@@ -1,14 +1,8 @@
----
-name: local_configs
-description: Use when the user wants to set up or manage local config files for an ArchAstro project — initialize a configs directory, edit configs locally, sync from the server, or deploy local changes. Trigger phrases include "set up configs", "init configs", "configs directory", "sync configs", "deploy configs", "edit config locally", "local config management".
-allowed-tools: ["Bash(archagent:*)"]
----
-
 # ArchAstro Local Config Management
 
 Set up and manage a local `configs/` directory for editing agent configs as files, syncing with the server, and deploying changes.
 
-This skill depends on the `cli` plugin for CLI installation and authentication. Use that plugin's commands instead of trying to install or authenticate the CLI manually inside this skill.
+This workflow depends on the `cli` plugin for CLI installation and authentication. Use the current harness's CLI install and authentication flows instead of handling that setup inline.
 
 ## What is Local Config Management?
 
@@ -42,8 +36,8 @@ Before any config work, verify the CLI:
 
 - Read `plugin-compatibility.json` from the plugin root.
 - Prefer `plugins.cli.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, direct the user to `/cli:install`.
-- If authentication or app selection is missing, direct the user to `/cli:auth`.
+- Run `archagent --version`. If missing or older than the resolved minimum, route the user to the current harness's CLI install flow.
+- If authentication or app selection is missing, route the user to the current harness's CLI authentication flow.
 
 ### User wants to set up a configs directory for the first time
 

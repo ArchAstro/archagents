@@ -1,5 +1,5 @@
 ---
-name: agent_authoring
+name: author-agent
 description: Use when the user wants to create or edit an ArchAstro agent's config files before deployment, including AgentTemplate files, Script configs, custom tools, routines, and environment setup. Trigger phrases include "build this agent", "write the template", "create the scripts", "set up the routines", "author this agent config".
 allowed-tools: ["Bash(archagent:*)"]
 ---
@@ -33,7 +33,7 @@ Before any authoring work, verify the CLI:
 
 ### Local config directory not initialized
 
-If the user doesn't have a `configs/` directory set up yet, route to the `local_configs` skill first. That skill owns `archagent init --enable-configs`, local file layout, and the sync/deploy workflow.
+If the user doesn't have a `configs/` directory set up yet, route to the `manage-configs` skill first. That skill owns `archagent init --enable-configs`, local file layout, and the sync/deploy workflow.
 
 ### User wants to author or modify agent configs
 
@@ -114,7 +114,7 @@ If the user doesn't have a `configs/` directory set up yet, route to the `local_
 
 - If the user asks for a brand-new Script and the language shape is unclear, run `archagent describe scriptdocs` before drafting.
 - If validation fails, surface the exact failing field or syntax problem. Do not immediately switch to lower-level provisioning commands.
-- If the user asks to "just create the agent" while configs are still incomplete, finish authoring and validation first, then route to `agent_deploy`.
+- If the user asks to "just create the agent" while configs are still incomplete, finish authoring and validation first, then route to `deploy-agent`.
 
 ## Command Conventions
 
