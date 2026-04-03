@@ -35,7 +35,9 @@ Authenticate the user with the ArchAstro developer platform via browser-based lo
    archagent auth status
    ```
 
-7. On failure, show the error and suggest:
+7. On success, confirm authentication succeeded and show the user their status.
+
+8. On failure, show the error and suggest:
    - Check their internet connection.
    - Try `archagent settings reset` if URLs look wrong.
    - Try again with `archagent auth login`.

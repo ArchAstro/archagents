@@ -8,7 +8,7 @@
       "name": "cli",
       "source": {
         "source": "local",
-        "path": "./plugins/cli"
+        "path": "plugins/cli"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -20,7 +20,7 @@
       "name": "agents",
       "source": {
         "source": "local",
-        "path": "./plugins/agents"
+        "path": "plugins/agents"
       },
       "policy": {
         "installation": "AVAILABLE",
