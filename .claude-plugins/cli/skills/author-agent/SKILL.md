@@ -94,7 +94,7 @@ If the user doesn't have a `configs/` directory set up yet, route to the `manage
   - `schedule: "<cron>"`
   - `event_type: schedule.cron`
 - Do not put schedules under nested `event_config.schedule`.
-- Valid event types for routines:
+- Valid event types for routines (as of CLI 0.13.0 — verify against `archagent describe configsample AgentTemplate` if behavior is unexpected):
   - `schedule.cron` — scheduled tasks (requires `schedule: "<cron>"` field)
   - `thread.session.join` — agent joins a thread session (used for participate routines)
   - `thread.session.leave` — session ends (used for auto_memory_capture)

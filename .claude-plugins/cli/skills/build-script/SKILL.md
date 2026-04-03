@@ -74,10 +74,12 @@ Ask the user:
 - Does it need environment variables? (accessible via `env.KEY`)
 - Does it need to make HTTP calls?
 
-If the script will handle a routine event, `$` contains the event payload. Common event payloads:
+If the script will handle a routine event, `$` contains the event payload. Common event payloads (as of CLI 0.13.0 — verify with `archagent describe scriptdocs` if behavior is unexpected):
 - `schedule.cron`: `$` is empty `{}`
 - `thread.message_added`: `$.thread_id`, `$.message.content`, `$.message.sender_id`
 - `thread.member_joined`: `$.thread_id`, `$.user_id`
+
+Do not guess payload shapes from memory — these may change in future platform releases.
 
 **Phase 3: Author the script**
 
