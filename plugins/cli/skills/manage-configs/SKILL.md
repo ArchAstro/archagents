@@ -1,5 +1,5 @@
 ---
-name: local_configs
+name: manage-configs
 description: Use when the user wants to set up or manage local config files for an ArchAstro project — initialize a configs directory, edit configs locally, sync from the server, or deploy local changes. Trigger phrases include "set up configs", "init configs", "configs directory", "sync configs", "deploy configs", "edit config locally", "local config management".
 allowed-tools: ["Bash(archagent:*)"]
 ---
@@ -10,7 +10,7 @@ Codex entrypoint for the shared workflow details.
 
 Shared workflow details:
 
-- [`shared/skills/cli/local_configs.md`](../../../../shared/skills/cli/local_configs.md)
+- [`shared/skills/cli/manage-configs.md`](../../../../shared/skills/cli/manage-configs.md)
 
 Codex-specific notes:
 

@@ -1,5 +1,5 @@
 ---
-name: agent_authoring
+name: author-agent
 description: Use when the user wants to create or edit an ArchAstro agent's config files before deployment, including AgentTemplate files, Script configs, custom tools, routines, and environment setup. Trigger phrases include "build this agent", "write the template", "create the scripts", "set up the routines", "author this agent config".
 allowed-tools: ["Bash(archagent:*)"]
 ---
@@ -10,7 +10,7 @@ Codex entrypoint for the shared workflow details.
 
 Shared workflow details:
 
-- [`shared/skills/cli/agent_authoring.md`](../../../../shared/skills/cli/agent_authoring.md)
+- [`shared/skills/cli/author-agent.md`](../../../../shared/skills/cli/author-agent.md)
 
 Codex-specific notes:
 

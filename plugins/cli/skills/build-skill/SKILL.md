@@ -1,5 +1,5 @@
 ---
-name: build_skill
+name: build-skill
 description: Use when the user wants to create, edit, or publish an ArchAstro skill — a reusable package of instructions and supporting files that agents can use. Trigger phrases include "build a skill", "create a skill", "write a skill", "author a skill", "new skill", "skill template", "SKILL.md".
 allowed-tools: ["Bash(archagent:*)"]
 ---
@@ -10,7 +10,7 @@ Codex entrypoint for the shared workflow details.
 
 Shared workflow details:
 
-- [`shared/skills/cli/build_skill.md`](../../../../shared/skills/cli/build_skill.md)
+- [`shared/skills/cli/build-skill.md`](../../../../shared/skills/cli/build-skill.md)
 
 Codex-specific notes:
 

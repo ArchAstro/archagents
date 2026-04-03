@@ -1,14 +1,8 @@
----
-name: agent_deploy
-description: Use when the user wants to deploy an ArchAstro agent, turn a config-driven agent repo into a running agent, or get an existing agent running in a thread. Trigger phrases include "deploy agent", "deploy this agent", "set up an agent", "launch agent", "ship this agent", "get this agent running".
-allowed-tools: ["Bash(archagent:*)"]
----
-
 # ArchAstro Agent Deployment
 
 Deploy an agent from a YAML template and get it running in a thread.
 
-This skill depends on the `cli` plugin for CLI installation and authentication. Use that plugin's commands instead of trying to install or authenticate the CLI manually inside this skill.
+This workflow depends on the `cli` plugin for CLI installation and authentication. Use the current harness's CLI install and authentication flows instead of handling that setup inline.
 
 ## Always Start with State
 
@@ -32,12 +26,12 @@ Before any deployment work, verify the CLI:
 
 - Read `plugin-compatibility.json` from the plugin root.
 - Prefer `plugins.cli.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, direct the user to `/cli:install`.
-- If authentication or app selection is missing, direct the user to `/cli:auth`.
+- Run `archagent --version`. If missing or older than the resolved minimum, route the user to the current harness's CLI install flow.
+- If authentication or app selection is missing, route the user to the current harness's CLI authentication flow.
 
 ### Local config directory not initialized
 
-If the user has config files but no `configs/` directory set up, route to the `local_configs` skill first. That skill owns local config management.
+If the user has config files but no `configs/` directory set up, route to the `manage-configs` skill first. That skill owns local config management.
 
 ### User wants to deploy a new agent
 
@@ -66,7 +60,7 @@ Use the config-driven golden path. Do not skip straight to `create agent`.
 
 ### User needs help creating or editing the config files first
 
-Route to the `agent_authoring` skill before deploying. That skill owns:
+Route to the `author-agent` skill before deploying. That skill owns:
 - `AgentTemplate` and Script config creation
 - `archagent describe configsample`
 - `archagent describe scriptdocs`
@@ -104,7 +98,7 @@ Summarize what's deployed and offer to deploy a new one or add an existing one t
 ## Recovery Rules
 
 - If `archagent deploy agent` fails with a validation-style error, inspect the exact CLI output first. Do not immediately fall back to lower-level provisioning commands.
-- If the problem appears to be in the config files, route to `agent_authoring`.
+- If the problem appears to be in the config files, route to `author-agent`.
 - If a script-related validation error appears, use:
   ```
   archagent describe scriptdocs
@@ -117,5 +111,5 @@ Summarize what's deployed and offer to deploy a new one or add an existing one t
 
 - Do not inspect or edit credential files directly — use the CLI only.
 - Do not ask the user to pick a subcommand — infer the action from their message.
-- If the CLI reports an auth or app error, route to `/cli:auth` or suggest `--app <id>`.
+- If the CLI reports an auth or app error, route to the current harness's CLI authentication flow or suggest `--app <id>`.
 - Keep responses concise — state the outcome, not the process.

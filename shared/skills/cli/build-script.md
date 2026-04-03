@@ -1,14 +1,8 @@
----
-name: build_script
-description: Use when the user wants to write, test, or deploy an ArchAstro script — custom logic for agent tools, workflow nodes, and routines. Trigger phrases include "build a script", "write a script", "create a script", "test a script", "script syntax", "script reference", "script language".
-allowed-tools: ["Bash(archagent:*)"]
----
-
 # ArchAstro Script Builder
 
 Write, test, and deploy scripts — custom logic that powers agent tools, workflow nodes, and routines.
 
-This skill depends on the `cli` plugin for CLI installation and authentication. Use that plugin's commands instead of trying to install or authenticate the CLI manually inside this skill.
+This workflow depends on the `cli` plugin for CLI installation and authentication. Use the current harness's CLI install and authentication flows instead of handling that setup inline.
 
 ## What is a Script?
 
@@ -42,8 +36,8 @@ Before any script work, verify the CLI:
 
 - Read `plugin-compatibility.json` from the plugin root.
 - Prefer `plugins.cli.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, direct the user to `/cli:install`.
-- If authentication or app selection is missing, direct the user to `/cli:auth`.
+- Run `archagent --version`. If missing or older than the resolved minimum, route the user to the current harness's CLI install flow.
+- If authentication or app selection is missing, route the user to the current harness's CLI authentication flow.
 
 ### User wants to write a new script
 
@@ -173,7 +167,7 @@ Place `.agentscript` files in `configs/scripts/` and deploy:
 archagent deploy configs
 ```
 
-The `scripts/` directory enforces that only `.agentscript` files and `.yaml`/`.json` with `kind: Script` are allowed — other file types are rejected. See the `local_configs` skill for setting up the configs directory.
+The `scripts/` directory enforces that only `.agentscript` files and `.yaml`/`.json` with `kind: Script` are allowed — other file types are rejected. See the `manage-configs` skill for setting up the configs directory.
 
 **Phase 7: Wire it up**
 
@@ -195,7 +189,7 @@ archagent create agenttool --agent <agent-id> \
 
 Get the script's config ID from `archagent describe script <id> --output json` (the `configId` field).
 
-**In a workflow graph:** Follow the real `WorkflowGraph` shape from `archagent describe workflowdocs` and the `build_workflow` skill.
+**In a workflow graph:** Follow the real `WorkflowGraph` shape from `archagent describe workflowdocs` and the `build-workflow` skill.
 
 **As a routine handler** (reference by config ID — preferred for production):
 ```

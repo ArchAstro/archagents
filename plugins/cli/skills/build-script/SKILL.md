@@ -1,5 +1,5 @@
 ---
-name: build_script
+name: build-script
 description: Use when the user wants to write, test, or deploy an ArchAstro script — custom logic for agent tools, workflow nodes, and routines. Trigger phrases include "build a script", "write a script", "create a script", "test a script", "script syntax", "script reference", "script language".
 allowed-tools: ["Bash(archagent:*)"]
 ---
@@ -10,7 +10,7 @@ Codex entrypoint for the shared workflow details.
 
 Shared workflow details:
 
-- [`shared/skills/cli/build_script.md`](../../../../shared/skills/cli/build_script.md)
+- [`shared/skills/cli/build-script.md`](../../../../shared/skills/cli/build-script.md)
 
 Codex-specific notes:
 

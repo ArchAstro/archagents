@@ -85,7 +85,7 @@ Walk through the authoring flow step by step.
    ```
    archagent deploy configs
    ```
-   This automatically creates the skill with name and description from the SKILL.md frontmatter, and publishes all supporting files as File configs. See the `local_configs` skill for setting up the configs directory.
+   This automatically creates the skill with name and description from the SKILL.md frontmatter, and publishes all supporting files as File configs. See the `manage-configs` skill for setting up the configs directory.
 
    **Option B — Via dedicated commands:**
    ```

@@ -1,5 +1,5 @@
 ---
-name: agent_deploy
+name: deploy-agent
 description: Use when the user wants to deploy an ArchAstro agent, turn a config-driven agent repo into a running agent, or get an existing agent running in a thread. Trigger phrases include "deploy agent", "deploy this agent", "set up an agent", "launch agent", "ship this agent", "get this agent running".
 allowed-tools: ["Bash(archagent:*)"]
 ---
@@ -10,7 +10,7 @@ Codex entrypoint for the shared workflow details.
 
 Shared workflow details:
 
-- [`shared/skills/cli/agent_deploy.md`](../../../../shared/skills/cli/agent_deploy.md)
+- [`shared/skills/cli/deploy-agent.md`](../../../../shared/skills/cli/deploy-agent.md)
 
 Codex-specific notes:
 
