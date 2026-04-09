@@ -50,6 +50,6 @@ This skill assumes the ArchAgent CLI is already installed and authenticated. Use
 
 - When impersonation is active, report the active agent, app, scope, and local file locations.
 - When inactive, say so explicitly.
-- If the CLI is missing or too old, route the user to `/archagents:install`.
-- If auth or app selection is missing, route the user to `/archagents:auth` or supply `--app <id>`.
+- If the CLI is missing or too old, direct the user to `/archagents:install`.
+- If auth or app selection is missing, direct the user to `/archagents:auth` or supply `--app <id>`.
 - Do not inspect or edit credential files directly. Use the CLI only.
