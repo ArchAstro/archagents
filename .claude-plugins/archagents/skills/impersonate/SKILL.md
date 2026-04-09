@@ -13,7 +13,8 @@ This skill assumes the ArchAgent CLI is already installed and authenticated. Use
 ## Core Workflow
 
 1. Ensure the CLI layer is ready:
-   - If the `archagent` command is missing, or the installed version is older than `0.3.1`, direct the user to `/archagents:install`.
+   - Read `plugin-compatibility.json` from the plugin root. Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
+   - Run `archagent --version`. If missing or older than the resolved minimum, direct the user to `/archagents:install`.
    - If authentication or app selection is missing, direct the user to `/archagents:auth`.
 
 2. Check the current impersonation state:
