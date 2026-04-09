@@ -36,21 +36,20 @@ Use the PowerShell installer:
 irm https://raw.githubusercontent.com/ArchAstro/archagents/main/install.ps1 | iex
 ```
 
-## Claude Code Plugins
+## Claude Code Plugin
 
-Add the marketplace and install the public plugins:
+Add the marketplace and install the `archagents` plugin:
 
 ```text
 /plugin marketplace add archastro/archagents
-/plugin install cli@archagents
-/plugin install agents@archagents
+/plugin install archagents@archagents
 ```
 
-The `helper` plugin remains in `ArchAstro/claude-plugins`.
+The `archagents` plugin bundles everything: CLI install/auth commands, agent authoring, script and workflow builders, deployment, chat, config management, and impersonation. The `helper` plugin remains in `ArchAstro/claude-plugins`.
 
-## Codex Plugins
+## Codex Plugin
 
-To install the Codex plugins:
+To install the Codex plugin:
 
 ```text
 git clone https://github.com/ArchAstro/archagents.git
@@ -59,7 +58,7 @@ codex
 /plugins
 ```
 
-Then open the `ArchAstro` marketplace and install `cli` and `agents`. If the marketplace does not appear, restart Codex from the repository root and open `/plugins` again.
+Then open the `ArchAstro` marketplace and install `archagents`. If the marketplace does not appear, restart Codex from the repository root and open `/plugins` again.
 
 The marketplace definition lives in [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json), and the plugin manifests live under [`plugins/`](./plugins). For repo-local discovery, the marketplace must point at plugin directories using repo-root-relative `./plugins/...` paths.
 

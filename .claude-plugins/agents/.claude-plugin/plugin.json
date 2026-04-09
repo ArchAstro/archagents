@@ -1,9 +1,0 @@
-{
-  "name": "agents",
-  "description": "Manage ArchAgent impersonation workflows from Claude Code through the public ArchAgent CLI",
-  "version": "0.6.2",
-  "author": { "name": "ArchAstro" },
-  "license": "MIT",
-  "keywords": ["archagents", "impersonation", "agents", "cli"],
-  "commands": ["./commands"]
-}
