@@ -62,4 +62,4 @@ Then open the `ArchAstro` marketplace and install `archagents`. If the marketpla
 
 The marketplace definition lives in [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json), and the plugin manifests live under [`plugins/`](./plugins). For repo-local discovery, the marketplace must point at plugin directories using repo-root-relative `./plugins/...` paths.
 
-Codex skill entrypoints are harness-specific wrappers. Shared skill workflow detail lives in [`shared/skills/`](./shared/skills), while shared Claude command workflow detail lives in [`shared/commands/`](./shared/commands). This keeps Claude commands and Codex skills distinct while still avoiding duplicated operational markdown.
+Claude Code and Codex each load their own plugin tree (`.claude-plugins/archagents/` and `plugins/archagents/` respectively). Skill and command content is inlined into each tree — there is no shared source directory. When updating skill or command content, edit both copies.
