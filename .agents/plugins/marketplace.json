@@ -5,22 +5,10 @@
   },
   "plugins": [
     {
-      "name": "cli",
+      "name": "archagents",
       "source": {
         "source": "local",
-        "path": "./plugins/cli"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Development"
-    },
-    {
-      "name": "agents",
-      "source": {
-        "source": "local",
-        "path": "./plugins/agents"
+        "path": "./plugins/archagents"
       },
       "policy": {
         "installation": "AVAILABLE",

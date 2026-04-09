@@ -1,10 +1,7 @@
 {
   "minimumCliVersion": "0.3.1",
   "plugins": {
-    "cli": {
-      "minimumCliVersion": "0.3.1"
-    },
-    "agents": {
+    "archagents": {
       "minimumCliVersion": "0.3.1"
     }
   }

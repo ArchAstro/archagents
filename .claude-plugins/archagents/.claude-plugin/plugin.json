@@ -1,0 +1,16 @@
+{
+  "name": "archagents",
+  "description": "The complete ArchAgent workflow plugin: install and authenticate the public ArchAgent CLI, then author agents, build scripts and workflows, manage configs, chat with running agents, and impersonate agents from Claude Code.",
+  "version": "0.7.0",
+  "author": { "name": "ArchAstro" },
+  "license": "MIT",
+  "keywords": [
+    "archagents",
+    "cli",
+    "agent-authoring",
+    "deployment",
+    "impersonation",
+    "developer-platform"
+  ],
+  "commands": ["./commands"]
+}

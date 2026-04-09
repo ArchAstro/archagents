@@ -1,0 +1,43 @@
+{
+  "name": "archagents",
+  "version": "0.7.0",
+  "description": "Author, deploy, manage, chat with, and impersonate ArchAgents from Codex through the ArchAgent CLI.",
+  "author": {
+    "name": "ArchAstro",
+    "email": "dev@archastro.com",
+    "url": "https://github.com/ArchAstro"
+  },
+  "homepage": "https://github.com/ArchAstro/archagents",
+  "repository": "https://github.com/ArchAstro/archagents",
+  "license": "MIT",
+  "keywords": [
+    "archagents",
+    "cli",
+    "agent-authoring",
+    "deployment",
+    "impersonation",
+    "developer-platform",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "ArchAgents",
+    "shortDescription": "Complete ArchAgent workflows for Codex: authoring, deployment, chat, configs, and impersonation.",
+    "longDescription": "Use the public ArchAgent CLI from Codex to author agent configs, manage local config files, build scripts, skills, and workflows, deploy agents, chat with running agents, and impersonate deployed ArchAgents from the current session.",
+    "developerName": "ArchAstro",
+    "category": "Development",
+    "capabilities": [
+      "Interactive",
+      "Write",
+      "Shell"
+    ],
+    "websiteURL": "https://github.com/ArchAstro/archagents",
+    "defaultPrompt": [
+      "Author a config-driven ArchAgent.",
+      "Set up local configs for this repo.",
+      "Chat with a deployed ArchAgent.",
+      "Start impersonating an ArchAgent."
+    ],
+    "brandColor": "#0F766E"
+  }
+}
