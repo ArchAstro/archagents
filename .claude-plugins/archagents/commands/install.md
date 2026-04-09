@@ -5,13 +5,51 @@ allowed-tools: ["Bash(archagent:*)", "Bash(brew:*)", "Bash(curl:*)", "Bash(bash:
 
 # Install ArchAgent CLI
 
-Claude Code wrapper for the shared ArchAgent CLI install workflow.
+Install or upgrade the public `archagent` binary from Homebrew or GitHub Releases.
 
-Shared workflow details:
+## Workflow
 
-- [`shared/commands/archagents/install.md`](../../../shared/commands/archagents/install.md)
+1. **Read the compatibility contract first**:
+   - Use `plugin-compatibility.json` from the plugin root.
+   - Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
+   - Treat the resolved value as the minimum supported CLI version for every check below.
 
-Claude-specific notes:
+2. **Check whether the CLI is already installed**:
+   ```
+   archagent --version
+   ```
+   If this succeeds, record the version.
 
-- When installation succeeds, suggest `/archagents:auth`.
-- Keep Claude-facing guidance in terms of Claude commands, not Codex skills.
+3. **If the CLI is present and meets the resolved minimum**, confirm the version and stop unless the user explicitly asked to upgrade.
+
+4. **If the CLI is missing or older than the resolved minimum**, install it using the public distribution path:
+   - On macOS, if Homebrew is available:
+     ```
+     brew install ArchAstro/tools/archagent
+     ```
+     If the formula is already installed, run:
+     ```
+     brew upgrade ArchAstro/tools/archagent
+     ```
+   - On Linux or macOS without Homebrew:
+     ```
+     curl -fsSL https://raw.githubusercontent.com/ArchAstro/archagents/main/install.sh | bash
+     ```
+   - On Windows PowerShell:
+     ```powershell
+     irm https://raw.githubusercontent.com/ArchAstro/archagents/main/install.ps1 | iex
+     ```
+
+5. **Verify installation**:
+   ```
+   archagent --version
+   ```
+   Confirm that the version now meets the resolved minimum.
+
+6. **On failure, help troubleshoot the public install path**:
+   - Missing `brew` is expected on Linux and some macOS setups; fall back to `install.sh`.
+   - `Permission denied` usually means they need `--install-dir` or a user-writable target directory.
+   - `command not found: archagent` after install usually means the install directory is not on `PATH`.
+   - Release download failures usually mean the target release asset has not been published yet.
+
+7. **On success**, tell the user the CLI is ready and suggest `/archagents:auth`.
