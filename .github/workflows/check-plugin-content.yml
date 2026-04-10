@@ -1,0 +1,32 @@
+name: check-plugin-content
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      # SHA-pinned to defend against tag mutability in the supply chain.
+      # A compromised tag could otherwise execute arbitrary code in CI.
+      # Bump deliberately when needed.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        # Pinned to avoid silent behavioral drift in yaml.safe_load between
+        # pyyaml releases. Bump deliberately when needed.
+        run: pip install pyyaml==6.0.2
+
+      - name: Run generator unit tests
+        run: python3 scripts/test_generate_plugin_content.py
+
+      - name: Verify generated plugin content is in sync with sources/
+        run: python3 scripts/generate-plugin-content.py --check
