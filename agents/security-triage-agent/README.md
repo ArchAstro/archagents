@@ -131,9 +131,10 @@ Recommended policies to upload:
 ## Customization
 
 ### Different ecosystems
-The shipped agent has scan logic for `hex`, `npm`, and `pip`. Add a new
-ecosystem by extending `scripts/scan_dependencies.aascript` with the
-matching lockfile parser.
+The shipped agent parses `hex` (Elixir mix.lock) out of the box. npm
+and pip parsers are not yet implemented — the script will return empty
+results for those ecosystems. Add a new ecosystem by extending
+`scripts/scan_dependencies.aascript` with the matching lockfile parser.
 
 ### Different escalation channel
 By default, escalations go to GitHub issues. To use Linear or Jira

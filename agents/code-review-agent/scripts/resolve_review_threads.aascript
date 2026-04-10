@@ -26,6 +26,11 @@ let gql_resp = unwrap(http.post("https://api.github.com/graphql", {
   }
 }))
 
+// GraphQL returns HTTP 200 with {"errors": [...]} on permission/not-found — guard against null data
+if (!gql_resp.body.data || !gql_resp.body.data.repository || !gql_resp.body.data.repository.pullRequest) {
+  {error: gql_resp.body.errors || "unexpected null in GraphQL response", resolved_count: 0, my_unresolved: 0}
+} else {
+
 let threads = gql_resp.body.data.repository.pullRequest.reviewThreads.nodes
 
 let bot_login = if (env.BOT_LOGIN != null) { env.BOT_LOGIN } else { "" }
@@ -58,3 +63,5 @@ let resolved = arr.map(target_threads, fn(t) {
 })
 
 {total_unresolved: arr.length(my_threads), resolved_count: arr.length(resolved), resolved_threads: resolved, filtered: if ($.thread_ids) { true } else { false }}
+
+} // end GraphQL null guard

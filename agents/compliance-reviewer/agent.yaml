@@ -63,7 +63,7 @@ identity: |
 
   ## Severity rules
 
-  - **CRITICAL**: post inline + REQUEST_CHANGES
+  - **CRITICAL**: post inline + COMMENT (never REQUEST_CHANGES — blocking reviews from bots require admin dismissal on false positives)
   - **HIGH**: post inline + COMMENT
   - **MEDIUM**: post inline + COMMENT (max 3 per review)
   - **LOW**: do not post — log to memory for documentation
