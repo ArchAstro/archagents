@@ -14,7 +14,9 @@ let owner = $.owner
 let repo = $.repo
 let pull_number = $.pull_number
 let body = if ($.body != null) { $.body } else { "" }
-let event = if ($.event != null) { $.event } else { "COMMENT" }
+
+// Safety guard: never allow the bot to APPROVE a PR. Force to COMMENT.
+let event = if ($.event == "APPROVE") { "COMMENT" } else { if ($.event != null) { $.event } else { "COMMENT" } }
 
 // NOTE: Single-element JSON arrays may be unwrapped during script input
 // deserialization (platform bug). Detect a bare comment object and rewrap.

@@ -25,7 +25,12 @@ echo "🤖 Deploying agent..."
 archagent deploy agent agent.yaml
 
 echo "📜 Uploading compliance rules..."
-./upload-rules.sh rules/*.md
+echo "   (waiting for installation to provision...)"
+sleep 5
+./upload-rules.sh rules/*.md || {
+  echo "⚠️  Rule upload failed — the files installation may not be ready yet."
+  echo "   Retry in a minute: ./upload-rules.sh rules/*.md"
+}
 
 echo "✅ Done."
 echo ""

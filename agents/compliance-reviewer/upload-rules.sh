@@ -21,7 +21,7 @@ fi
 for file in "$@"; do
   filename=$(basename "$file")
   echo "📤 $filename"
-  data=$(base64 -i "$file" | tr -d '\n')
+  data=$(base64 < "$file" | tr -d '\n')
 
   file_id=$(archagent create files \
     --data "$data" \

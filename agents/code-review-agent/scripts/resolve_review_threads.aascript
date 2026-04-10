@@ -37,7 +37,13 @@ let my_threads = arr.filter(threads, fn(t) {
   }
 })
 
-let resolved = arr.map(my_threads, fn(t) {
+// If thread_ids is provided, only resolve those specific threads (selective resolve).
+// Otherwise resolve all bot threads (backward-compatible).
+let target_threads = if ($.thread_ids) {
+  arr.filter(my_threads, fn(t) { arr.includes($.thread_ids, t.id) })
+} else { my_threads }
+
+let resolved = arr.map(target_threads, fn(t) {
   let resolve_resp = unwrap(http.post("https://api.github.com/graphql", {
     headers: {
       "Authorization": "Bearer " + env.GITHUB_TOKEN,
@@ -51,4 +57,4 @@ let resolved = arr.map(my_threads, fn(t) {
   {thread_id: t.id, resolved: true}
 })
 
-{total_unresolved: arr.length(my_threads), resolved_count: arr.length(resolved), resolved_threads: resolved}
+{total_unresolved: arr.length(my_threads), resolved_count: arr.length(resolved), resolved_threads: resolved, filtered: if ($.thread_ids) { true } else { false }}

@@ -39,7 +39,7 @@ for file in "$@"; do
   echo "📤 Uploading $filename..."
 
   # 1. base64 the file
-  data=$(base64 -i "$file" | tr -d '\n')
+  data=$(base64 < "$file" | tr -d '\n')
 
   # 2. Detect content type
   case "$filename" in

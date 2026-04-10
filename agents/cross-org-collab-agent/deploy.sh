@@ -28,6 +28,12 @@ SCHEMA_ID=$(archagent create configs -f schemas/cross-org-hardened.yaml 2>&1 | g
 SCHEMA_ID=$(archagent update configs -f schemas/cross-org-hardened.yaml 2>&1 | grep -oE 'cfg_[A-Za-z0-9]+' | head -1)
 echo "  → schema: $SCHEMA_ID"
 
+if [[ -z "$SCHEMA_ID" ]]; then
+  echo "❌ Failed to deploy field guard schema. The agent WILL NOT have privacy guards without it."
+  echo "   Fix the schema deployment and re-run: archagent create configs -f schemas/cross-org-hardened.yaml"
+  exit 1
+fi
+
 echo "🤖 Deploying agent..."
 archagent deploy agent agent.yaml
 
