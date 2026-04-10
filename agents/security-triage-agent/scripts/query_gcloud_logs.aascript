@@ -1,0 +1,58 @@
+// Query Google Cloud Logging for security events.
+// Mints a fresh access token from the service account, then calls
+// the Cloud Logging entries:list API.
+//
+// Required env vars:
+//   GCLOUD_SA_CLIENT_EMAIL  Service account client email
+//   GCLOUD_SA_PRIVATE_KEY   Service account private key (PEM, escape newlines as \n)
+//   GCLOUD_PROJECT_ID       Default project ID
+//
+// (We split the SA key into two env vars instead of pasting the whole
+// JSON because there's no `json.parse` in the script language yet.)
+
+let http = import("requests")
+let jwt = import("jwt")
+let dt = import("datetime")
+let str = import("string")
+
+let client_email = env.GCLOUD_SA_CLIENT_EMAIL
+let private_key = str.replace(env.GCLOUD_SA_PRIVATE_KEY, "\\n", "\n")
+
+let project_id = if ($.project_id != null) { $.project_id } else { env.GCLOUD_PROJECT_ID }
+let log_filter = $.log_filter
+let page_size = if ($.page_size != null) { $.page_size } else { 100 }
+
+// Mint an access token via JWT-bearer grant
+let now = dt.unix()
+let claims = {
+  iss: client_email,
+  scope: "https://www.googleapis.com/auth/logging.read",
+  aud: "https://oauth2.googleapis.com/token",
+  iat: now,
+  exp: now + 3600
+}
+
+let signed = unwrap(jwt.sign(claims, private_key, "RS256"))
+
+let token_resp = unwrap(http.post("https://oauth2.googleapis.com/token", {
+  headers: {"Content-Type": "application/x-www-form-urlencoded"},
+  body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=" + signed
+}))
+
+let access_token = token_resp.body.access_token
+
+// Query Cloud Logging
+let logs_resp = unwrap(http.post("https://logging.googleapis.com/v2/entries:list", {
+  headers: {
+    "Authorization": "Bearer " + access_token,
+    "Content-Type": "application/json"
+  },
+  body: {
+    "resourceNames": ["projects/" + project_id],
+    "filter": log_filter,
+    "pageSize": page_size,
+    "orderBy": "timestamp desc"
+  }
+}))
+
+logs_resp.body

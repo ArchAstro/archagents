@@ -1,0 +1,34 @@
+// Create a GitHub issue for a security finding that needs human attention.
+// Calls POST /repos/{owner}/{repo}/issues
+
+let http = import("requests")
+let arr = import("array")
+
+let owner = $.owner
+let repo = $.repo
+let title = $.title
+let body = if ($.body != null) { $.body } else { "" }
+
+// WORKAROUND: single-element JSON arrays may be unwrapped during deserialization
+// during script input deserialization. Detect and rewrap.
+let raw_labels = if ($.labels != null) { $.labels } else { [] }
+let labels = if (typeof(raw_labels) == "array") { raw_labels } else { [raw_labels] }
+
+let raw_assignees = if ($.assignees != null) { $.assignees } else { [] }
+let assignees = if (typeof(raw_assignees) == "array") { raw_assignees } else { [raw_assignees] }
+
+let url = "https://api.github.com/repos/" + owner + "/" + repo + "/issues"
+
+let payload = {"title": title, "body": body}
+let payload = if (arr.length(labels) > 0) { merge(payload, {"labels": labels}) } else { payload }
+let payload = if (arr.length(assignees) > 0) { merge(payload, {"assignees": assignees}) } else { payload }
+
+let resp = unwrap(http.post(url, {
+  headers: {
+    "Authorization": "Bearer " + env.GITHUB_TOKEN,
+    "Accept": "application/vnd.github+json"
+  },
+  body: payload
+}))
+
+resp.body

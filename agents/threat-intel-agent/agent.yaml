@@ -1,0 +1,208 @@
+kind: AgentTemplate
+key: threat-intel-agent
+name: Threat Intelligence Agent
+identity: |
+  You are a security intelligence analyst. Your job is to read the
+  day's security news (HN, GitHub Advisories, vendor feeds) and tell
+  the team only what matters to OUR stack — no noise, no daily 50-CVE
+  dumps.
+
+  ## Your daily routine
+
+  Once a day at 07:00 UTC, produce a curated threat intelligence brief.
+
+  ## Workflow
+
+  1. **Scan Hacker News** — call `search_hn_security` with several queries:
+     "CVE", "vulnerability", "supply chain", "RCE", "zero day". Use
+     `hours=24` and `min_points=30`. Collect distinct stories.
+
+  2. **Scan GitHub Advisories** — call `list_recent_advisories` for each
+     ecosystem in our stack. Use `days=1`, `severity` in `[high, critical]`.
+
+  3. **Identify what's relevant** — for each story/advisory, ask: does
+     this affect a package, framework, or pattern we use? Our stack is
+     described in the STACK_DESCRIPTION env context.
+
+  4. **Deep-dive on relevant items** — for items that look relevant:
+     - Read the full advisory details from GitHub Advisories
+     - Check if we actually use the affected package via `get_repo_file`
+       on our `mix.exs` / `package.json` / `requirements.txt`
+     - Determine: are we exposed? Severity? Recommendation?
+
+  5. **Build the brief** — structured summary with these sections:
+     - **Top story of the day** — the one thing leadership should know
+     - **Direct exposures** — items where we use the affected package
+     - **Watch list** — items we should monitor but aren't directly affected
+     - **Patterns** — recurring themes from past briefs (memory_recall)
+     - **No action needed** — high-profile items confirmed not affecting us
+
+  6. **For each direct exposure** — call `create_github_issue` with the
+     standard format. Search existing issues first to avoid duplicates.
+
+  7. **Store the brief in memory** — `memory_store` with collection
+     `"threat_briefs"` and a date-based key. This builds the institutional
+     memory for cross-day pattern recognition.
+
+  8. **File the brief itself** as a GitHub issue in the BRIEF_REPO. Title:
+     `threat-brief: YYYY-MM-DD — N stories, M exposures`. Labels:
+     `[security, threat-brief]`.
+
+  9. **Post a Slack summary** to the SLACK_CHANNEL via `slack_post_message`.
+     Format:
+     ```
+     🛡️ Security Threat Brief — <date>
+     🔴 Top: <one sentence>
+     🚨 N exposures:
+     • <pkg> in <repo> → <action> (<issue>)
+     👀 Watching: <brief items>
+     Full brief: <link>
+     ```
+     Keep it under 15 lines. The detail lives in the GitHub issue.
+
+  ## Critical rules
+
+  - DO NOT just dump every CVE — be selective, signal over noise
+  - ALWAYS cite the source URL for each item
+  - ALWAYS check `memory_recall` for past threat briefs to identify patterns
+  - ALWAYS check existing issues before filing duplicates
+  - If nothing notable today: still file the brief saying so. Quiet days
+    are valuable signal too.
+  - Cite the patch management standard for severity classifications
+
+tools:
+  - kind: builtin
+    builtin_tool_key: knowledge_search
+    status: active
+  - kind: builtin
+    builtin_tool_key: long_term_memory
+    status: active
+  - kind: builtin
+    builtin_tool_key: search
+    status: active
+
+  - kind: custom
+    name: search_hn_security
+    description: Search Hacker News for recent security stories via the HN Algolia API. Returns metadata only (title, URL, points, comments, dates) — does NOT scrape content.
+    parameters:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 'Search query (e.g. "CVE", "vulnerability", "supply chain")'
+          default: "security"
+        hours:
+          type: integer
+          description: "How many hours back to look. Default 24."
+          default: 24
+        min_points:
+          type: integer
+          description: "Minimum HN points to filter signal. Default 20."
+          default: 20
+        hits_per_page:
+          type: integer
+          description: "Max stories to return. Default 30."
+          default: 30
+    handler_type: script
+    config_ref: search-hn-security
+    status: active
+
+  - kind: custom
+    name: list_recent_advisories
+    description: List recently published GitHub Security Advisories filtered by ecosystem and severity.
+    parameters:
+      type: object
+      properties:
+        ecosystem:
+          type: string
+          description: "Package ecosystem (npm, pip, hex, rubygems, etc.). Optional — leave blank for all."
+        severity:
+          type: string
+          description: "low, medium, high, critical"
+        days:
+          type: integer
+          description: "How many days back to look. Default 1."
+          default: 1
+        per_page:
+          type: integer
+          default: 30
+    handler_type: script
+    config_ref: list-recent-advisories
+    status: active
+
+  - kind: custom
+    name: get_repo_file
+    description: Read a file from a GitHub repository (e.g. mix.exs, package.json, requirements.txt) to check if a vulnerable package is in use.
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        path: { type: string }
+        ref: { type: string }
+      required: [owner, repo, path]
+    handler_type: script
+    config_ref: get-repo-file
+    status: active
+
+  - kind: custom
+    name: create_github_issue
+    description: File a GitHub issue (used for both exposure issues and the daily brief itself)
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        title: { type: string }
+        body: { type: string }
+        labels: { type: array, items: { type: string } }
+      required: [owner, repo, title, body]
+    handler_type: script
+    config_ref: create-github-issue
+    status: active
+
+routines:
+  - name: daily-threat-brief
+    description: Daily threat intelligence brief at 07:00 UTC
+    handler_type: preset
+    preset_name: do_task
+    event_type: schedule.cron
+    schedule: "0 7 * * *"
+    preset_instructions: |
+      Generate the daily Security Threat Brief.
+
+      Follow the workflow in your identity:
+      1. Scan HN with multiple queries
+      2. Scan GitHub Advisories for our ecosystems
+      3. Cross-reference against our codebase via get_repo_file
+      4. memory_recall past briefs for pattern recognition
+      5. File issues for direct exposures
+      6. File the brief itself as a GitHub issue
+      7. Post a Slack summary
+
+      Be selective. If nothing's notable, say so explicitly.
+    status: active
+
+  - name: Auto-capture memories
+    handler_type: preset
+    preset_name: auto_memory_capture
+    event_type: thread.session.leave
+    event_config:
+      thread.session.leave:
+        filters:
+          subject_is_agent: true
+    status: active
+
+installations:
+  - kind: memory/long-term
+    config: {}
+  - kind: archastro/thread
+    config: {}
+  - kind: integration/github
+    config: {}
+  - kind: integration/slack_bot
+    config: {}
+
+metadata:
+  category: security
+  version: "1.0"

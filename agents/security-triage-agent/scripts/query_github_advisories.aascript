@@ -1,0 +1,19 @@
+// Query GitHub Security Advisories for a specific package.
+// Calls GET https://api.github.com/advisories?affects={package}&ecosystem={ecosystem}
+
+let http = import("requests")
+
+let severity = if ($.severity != null) { $.severity } else { "" }
+
+let url = "https://api.github.com/advisories?affects=" + $.package_name + "&ecosystem=" + $.ecosystem
+let url = if (severity != "") { url + "&severity=" + severity } else { url }
+let url = url + "&per_page=30"
+
+let response = unwrap(http.get(url, {
+  headers: {
+    "Authorization": "Bearer " + env.GITHUB_TOKEN,
+    "Accept": "application/vnd.github+json"
+  }
+}))
+
+response.body

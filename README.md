@@ -1,6 +1,20 @@
-# ArchAgent CLI
+# ArchAgents
 
-Public distribution repository for the ArchAgent CLI.
+CLI, plugins, and production-ready sample agents for the ArchAgents platform.
+
+## Sample Agents
+
+Deploy a working agent in minutes. See [`agents/`](agents/) for the full list:
+
+| Agent | What it does |
+|---|---|
+| [Code Review](agents/code-review-agent) | Reviews every PR with inline comments |
+| [Compliance Reviewer](agents/compliance-reviewer) | Checks PRs against SOC2 / GDPR / custom rules |
+| [Cross-Org Collab](agents/cross-org-collab-agent) | Privacy-by-construction field guards for cross-org threads |
+| [Onboarding Q&A](agents/onboarding-qa) | Answers new-hire questions from your knowledge base |
+| [Release Notes](agents/release-notes-bot) | Weekly changelog from merged PRs |
+| [Security Triage](agents/security-triage-agent) | Daily dep scan, auto-fix CVEs, escalate the rest |
+| [Threat Intel](agents/threat-intel-agent) | Daily security brief from HN + GitHub Advisories |
 
 ## Install
 

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+
+if [[ ! -f .env ]]; then
+  echo "❌ .env file not found. Copy env.example to .env and fill in your values."
+  exit 1
+fi
+
+# shellcheck disable=SC1091
+source .env
+
+echo "📜 Deploying scripts..."
+for script in scripts/*.aascript; do
+  name=$(basename "$script" .aascript | tr '_' '-')
+  echo "  → $name"
+  archagent create scripts \
+    --id "$name" \
+    --name "$(echo "$name" | tr '-' ' ')" \
+    --file "$script" 2>/dev/null || \
+  archagent update scripts "$name" --file "$script"
+done
+
+echo "🤖 Deploying agent..."
+archagent deploy agent agent.yaml
+
+echo "✅ Done."
+echo ""
+echo "Next steps:"
+echo "  1. Upload your compliance rules: ./upload-rules.sh rules/*.md"
+echo "  2. Install the GitHub App on your repo"
+echo "  3. Open a PR — the agent will review against the rules"

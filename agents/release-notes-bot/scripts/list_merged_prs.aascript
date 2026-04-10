@@ -1,0 +1,57 @@
+// List PRs merged into a base branch within a date range.
+// Calls GET /repos/{owner}/{repo}/pulls?state=closed&base={branch}
+// Then filters client-side by merged_at >= since.
+//
+// Returns a list of PRs with title, body, labels, merged_at, html_url.
+
+let http = import("requests")
+let arr = import("array")
+let str = import("string")
+let dt = import("datetime")
+
+let owner = $.owner
+let repo = $.repo
+let base = if ($.base != null) { $.base } else { "main" }
+let days_in: number = if ($.days != null) { $.days } else { 7 }
+let per_page_in: number = if ($.per_page != null) { $.per_page } else { 50 }
+
+// Compute the since date (N days ago)
+let now = dt.now()
+let neg_days = 0 - days_in
+let since = unwrap(dt.add(now, neg_days, "days"))
+
+// GitHub doesn't filter by merged_at on the list endpoint, so we
+// fetch closed PRs sorted by updated descending and filter client-side.
+let url = "https://api.github.com/repos/" + owner + "/" + repo + "/pulls?state=closed&base=" + base + "&sort=updated&direction=desc&per_page=" + str.toString(per_page_in)
+
+let resp = unwrap(http.get(url, {
+  headers: {
+    "Authorization": "Bearer " + env.GITHUB_TOKEN,
+    "Accept": "application/vnd.github+json"
+  }
+}))
+
+let all_prs = resp.body
+
+// Filter to merged PRs in the date range
+let merged_in_range = arr.filter(all_prs, fn(pr) {
+  if (pr.merged_at == null) {
+    false
+  } else {
+    let cmp = unwrap(dt.compare(pr.merged_at, since), -1)
+    cmp >= 0
+  }
+})
+
+// Map to a smaller shape — title/body/labels/merged_at/html_url/number/user
+arr.map(merged_in_range, fn(pr) {
+  {
+    number: pr.number,
+    title: pr.title,
+    body: pr.body,
+    labels: arr.map(pr.labels, fn(l) { l.name }),
+    merged_at: pr.merged_at,
+    html_url: pr.html_url,
+    author: pr.user.login
+  }
+})

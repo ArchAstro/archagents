@@ -1,0 +1,126 @@
+kind: AgentTemplate
+key: release-notes-bot
+name: Release Notes Bot
+identity: |
+  You draft the weekly changelog. Once a week, you scan the merged PRs
+  from the past 7 days and produce a clean, human-readable release
+  notes draft.
+
+  ## Workflow
+
+  1. Call `list_merged_prs` with `days=7`
+  2. Group the PRs by category:
+     - **Highlights**: 1-3 most user-visible / impactful changes (your judgment)
+     - **Features**: PRs prefixed with `feat:` or labeled `enhancement`
+     - **Fixes**: PRs prefixed with `fix:` or labeled `bug`
+     - **Breaking changes**: PRs labeled `breaking-change` or with "BREAKING" in title/body
+     - **Internal/maintenance**: `chore:`, `refactor:`, `test:`, `docs:`, `ci:`
+  3. For each entry, write 1 sentence describing the user-facing impact
+     (NOT the implementation). Use the PR body for context, not just the title.
+  4. Skip noise: dependency bumps without behavior changes, formatting-only PRs,
+     pure refactors that don't ship behavior
+  5. Call `create_github_issue` to file the draft as a GitHub issue with
+     labels `[release-notes, draft]` in the BRIEF_REPO
+
+  ## Format the changelog
+
+  ```
+  # Release Notes Draft — Week of YYYY-MM-DD
+
+  ## ✨ Highlights
+  - <highlight 1> (#1234)
+  - <highlight 2> (#5678)
+
+  ## Features
+  - <feature> (#1234)
+
+  ## Fixes
+  - <fix> (#5678)
+
+  ## Breaking changes
+  - <breaking change with migration note> (#9012)
+
+  ## Internal
+  - <maintenance> (#1111)
+
+  ---
+  *Generated from N merged PRs between YYYY-MM-DD and YYYY-MM-DD.*
+  ```
+
+  ## Voice
+
+  - Write for users, not for engineers
+  - One sentence per entry
+  - Skip implementation details ("rewrote the X module")
+  - Highlight impact ("X is now Y times faster", "you can now do Z")
+  - For breaking changes, ALWAYS include the migration step
+
+  ## Memory
+
+  After filing the draft, `memory_store` the date range so the next
+  run knows where to start. Use collection `"release_notes_runs"`.
+
+tools:
+  - kind: builtin
+    builtin_tool_key: long_term_memory
+    status: active
+
+  - kind: custom
+    name: list_merged_prs
+    description: List PRs merged into a base branch in the last N days
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        base: { type: string, default: "main" }
+        days: { type: integer, default: 7 }
+        per_page: { type: integer, default: 50 }
+      required: [owner, repo]
+    handler_type: script
+    config_ref: list-merged-prs
+    status: active
+
+  - kind: custom
+    name: create_github_issue
+    description: File the changelog draft as a GitHub issue
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        title: { type: string }
+        body: { type: string }
+        labels: { type: array, items: { type: string } }
+      required: [owner, repo, title, body]
+    handler_type: script
+    config_ref: create-github-issue
+    status: active
+
+routines:
+  - name: weekly-release-notes
+    description: Draft a weekly changelog from merged PRs
+    handler_type: preset
+    preset_name: do_task
+    event_type: schedule.cron
+    schedule: "0 10 * * 1"
+    preset_instructions: |
+      Generate this week's release notes draft.
+
+      1. Call list_merged_prs with days=7
+      2. Group and categorize per the workflow in your identity
+      3. File the draft via create_github_issue with labels [release-notes, draft]
+      4. memory_store the date range
+    status: active
+
+installations:
+  - kind: memory/long-term
+    config: {}
+  - kind: archastro/thread
+    config: {}
+  - kind: integration/github
+    config: {}
+
+metadata:
+  category: engineering
+  version: "1.0"

@@ -1,0 +1,297 @@
+kind: AgentMessageSchema
+id: cross-org-hardened
+name: Cross-Org Collaboration — Hardened Schema
+description: |
+  Strict schema for an agent participating in cross-org collaboration
+  threads. Defense in depth: structured output + sync regex/string guards
+  + two LLM judges (different models) + required self-audit field.
+
+  Apply via --preset-template-ids to the agent's participate routine.
+
+schema:
+  type: object
+  properties:
+    classification:
+      type: string
+      enum: [PUBLIC]
+      description: |
+        Required content classification. In cross-org threads, ONLY
+        "PUBLIC" is permitted. Anything classified higher must NOT be
+        sent here. If you cannot classify your message as PUBLIC, do
+        not send it.
+
+    message_type:
+      type: string
+      enum:
+        - question
+        - design_proposal
+        - interface_description
+        - status_update
+        - clarification
+        - integration_plan
+      description: The type of message being sent
+
+    summary:
+      type: string
+      description: |
+        High-level summary in plain English. Architecture-level only.
+        NEVER include source code, function bodies, module definitions,
+        internal file paths, env vars, or secrets.
+
+    interface_shape:
+      type: string
+      description: |
+        Optional pseudocode or interface description of the integration
+        point. Use generic syntax (e.g. "createSubscription(customerId,
+        plan) -> Subscription"), NOT actual implementation language.
+
+    proposed_approach:
+      type: string
+      description: |
+        Optional architecture-level description of how you would
+        implement this. Use module names and patterns at the conceptual
+        level, not file paths or code.
+
+    questions_for_partner:
+      type: array
+      items:
+        type: string
+      description: Optional questions to ask the external partner agent
+
+    next_steps:
+      type: array
+      items:
+        type: string
+      description: Concrete next actions for the collaboration
+
+    safety_self_check:
+      type: object
+      description: |
+        REQUIRED self-audit. You must explicitly confirm each item
+        before sending. If you cannot confirm all items, set the
+        corresponding field to false and do NOT send the message —
+        rewrite it instead.
+      properties:
+        no_source_code:
+          type: boolean
+          description: I have NOT included raw source code in any field
+        no_internal_paths:
+          type: boolean
+          description: I have NOT included internal file paths or directory structures
+        no_secrets_or_env_vars:
+          type: boolean
+          description: I have NOT included environment variable names, secrets, API keys, or DB URLs
+        no_infrastructure_details:
+          type: boolean
+          description: I have NOT included infrastructure, deployment, or scaling details
+        architecture_level_only:
+          type: boolean
+          description: All technical content is at architecture level (pseudocode / interfaces / patterns)
+      required:
+        - no_source_code
+        - no_internal_paths
+        - no_secrets_or_env_vars
+        - no_infrastructure_details
+        - architecture_level_only
+
+  required:
+    - classification
+    - message_type
+    - summary
+    - safety_self_check
+
+field_guards:
+  # ─── Layer 1: Sync regex guards (fast, deterministic) ───
+
+  - kind: RegexMatch
+    fields: ["*"]
+    pattern: "defmodule\\s+[A-Z][\\w.]*"
+    on_match: reject
+    message: "Contains Elixir module definition"
+
+  - kind: RegexMatch
+    fields: ["*"]
+    pattern: "\\bdefp?\\s+[a-z_][\\w?!]*"
+    on_match: reject
+    message: "Contains Elixir function definition"
+
+  - kind: RegexMatch
+    fields: ["*"]
+    pattern: "\\bclass\\s+[A-Z][\\w]*\\s*[({:]"
+    on_match: reject
+    message: "Contains class definition (Python/Ruby/JS/Java)"
+
+  - kind: RegexMatch
+    fields: ["*"]
+    pattern: "\\bfunction\\s+\\w+\\s*\\("
+    on_match: reject
+    message: "Contains JavaScript function definition"
+
+  - kind: RegexMatch
+    fields: ["*"]
+    pattern: "\\bGenServer\\.(call|cast|start_link|handle_call|handle_cast|handle_info)"
+    on_match: reject
+    message: "Contains Elixir GenServer call"
+
+  - kind: RegexMatch
+    fields: ["*"]
+    pattern: "\\bRepo\\.(get|insert|update|delete|all|one|preload|transaction)"
+    on_match: reject
+    message: "Contains Ecto Repo call"
+
+  - kind: RegexMatch
+    fields: ["*"]
+    pattern: "\\bSystem\\.get_env\\b"
+    on_match: reject
+    message: "Contains environment variable read"
+
+  - kind: RegexMatch
+    fields: ["*"]
+    pattern: "sk_(live|test)_[A-Za-z0-9]{16,}"
+    on_match: reject
+    message: "Contains Stripe secret key"
+
+  - kind: RegexMatch
+    fields: ["*"]
+    pattern: "AKIA[0-9A-Z]{16}"
+    on_match: reject
+    message: "Contains AWS access key ID"
+
+  - kind: RegexMatch
+    fields: ["*"]
+    pattern: "ghp_[A-Za-z0-9]{36}"
+    on_match: reject
+    message: "Contains GitHub personal access token"
+
+  - kind: RegexMatch
+    fields: ["*"]
+    pattern: "eyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}"
+    on_match: reject
+    message: "Contains JWT token"
+
+  # ─── Layer 2: Sync substring guards (path/secret name detection) ───
+
+  - kind: ContainsAny
+    fields: ["*"]
+    values:
+      - "services/internal/"
+      - "lib/internal/"
+      - "lib/yourapp/"
+      - "config/runtime.exs"
+      - "config/prod.exs"
+    case_sensitive: false
+    on_match: reject
+    message: "Contains internal repo path"
+
+  - kind: ContainsAny
+    fields: ["*"]
+    values:
+      - "DATABASE_URL"
+      - "SECRET_KEY"
+      - "API_KEY"
+      - "PRIVATE_KEY"
+      - "GITHUB_TOKEN"
+      - "STRIPE_SECRET"
+      - "JWT_SECRET"
+      - "ENCRYPTION_KEY"
+    case_sensitive: true
+    on_match: reject
+    message: "Contains environment variable name"
+
+  - kind: ContainsAny
+    fields: ["*"]
+    values:
+      - "```elixir"
+      - "```ex"
+      - "```ruby"
+      - "```bash"
+      - "```sh"
+      - "```python"
+      - "```java"
+    case_sensitive: false
+    on_match: reject
+    message: "Contains executable code block"
+
+  - kind: ContainsAny
+    fields: ["*"]
+    values:
+      - "CONFIDENTIAL"
+      - "INTERNAL ONLY"
+      - "DO NOT SHARE"
+      - "PROPRIETARY"
+    case_sensitive: false
+    on_match: reject
+    message: "Contains confidentiality marker"
+
+  # ─── Layer 3: LLM judge #1 — Haiku, blacklist semantic check ───
+
+  - kind: LLMJudge
+    fields: ["summary", "interface_shape", "proposed_approach"]
+    model: anthropic/claude-haiku-latest
+    prompt: |
+      You are a security auditor for a software company. Analyze the
+      following text that an internal AI agent wants to send to an
+      external partner.
+
+      REJECT (return pass=false) if the text contains ANY of:
+      - Source code in any programming language (function bodies, class
+        definitions, complete code snippets)
+      - Internal file paths or directory structures
+      - Environment variables, secret keys, API tokens, database URLs
+      - Internal infrastructure details (server names, deployment configs, region info)
+      - Database schemas, table definitions, or migration SQL
+      - Internal module names paired with implementation details
+      - Error messages or stack traces from internal services
+
+      ACCEPT (return pass=true) if the text is:
+      - Architecture-level descriptions in plain English
+      - Pseudocode that describes intent without revealing implementation
+      - Interface signatures using generic syntax
+      - Questions about external APIs
+      - References to public documentation or standards
+
+      Be strict. When in doubt, reject. False positives are far less
+      harmful than false negatives.
+    on_match: reject
+    message: "Layer-3 LLM judge (Haiku) detected potentially leaked content"
+
+  # ─── Layer 4: LLM judge #2 — different model, whitelist semantic check ───
+
+  - kind: LLMJudge
+    fields: ["summary", "interface_shape", "proposed_approach"]
+    model: openai/gpt-4o-mini
+    prompt: |
+      You are a strict content classifier. The following text is being
+      sent from an internal engineer to an external business partner
+      in a cross-organization collaboration thread.
+
+      Return pass=true ONLY IF the text exclusively contains:
+      1. Plain English architecture descriptions, OR
+      2. Pseudocode using generic/abstract syntax, OR
+      3. Public API references (e.g., Stripe public docs), OR
+      4. Questions about external systems, OR
+      5. Project status updates without implementation specifics
+
+      Return pass=false if the text contains ANYTHING ELSE, including:
+      - Real source code in any language
+      - Internal file paths, module names paired with implementation
+      - Configuration values or environment variables
+      - Specific database schemas or query syntax
+      - Internal product roadmap details beyond what's needed for the integration
+
+      This is a whitelist check — if the content does not clearly fall
+      into the 5 allowed categories, REJECT it.
+    on_match: reject
+    message: "Layer-4 LLM judge (GPT-4o-mini) — content failed whitelist check"
+
+  # ─── Layer 5: LLM judge #3 — self-check verification ───
+
+  - kind: LLMJudge
+    fields: ["safety_self_check"]
+    model: anthropic/claude-haiku-latest
+    prompt: |
+      Verify that ALL boolean fields in this safety_self_check object
+      are set to true. If ANY field is false, return pass=false.
+      Return pass=true only if every field is true.
+    on_match: reject
+    message: "Agent did not self-confirm all safety checks"
