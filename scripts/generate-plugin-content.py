@@ -11,6 +11,11 @@ USAGE
     python3 scripts/generate-plugin-content.py           # write outputs
     python3 scripts/generate-plugin-content.py --check   # diff against committed, exit 1 if different
 
+    Both modes first run a manifest consistency check (version and name
+    must agree across .claude-plugin/marketplace.json, the Claude plugin.json,
+    and the Codex plugin.json). Inconsistent manifests exit 2 before any
+    content rendering is attempted.
+
 SOURCE FILE FORMAT
     ---
     targets:
@@ -74,6 +79,7 @@ DESIGN NOTE: ASYMMETRY BETWEEN INSTALL/AUTH AND OTHER CONCEPTS
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from dataclasses import dataclass
@@ -87,6 +93,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SOURCES_DIR = REPO_ROOT / "sources"
 CLAUDE_PLUGIN_ROOT = REPO_ROOT / ".claude-plugins" / "archagents"
 CODEX_PLUGIN_ROOT = REPO_ROOT / "plugins" / "archagents"
+
+# Plugin manifest files. These are hand-edited (not generated from sources/)
+# but their `version` and `name` fields must agree across all three — the
+# Claude Code plugin cache keys off the marketplace.json plugin version.
+CLAUDE_MARKETPLACE_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
+CLAUDE_PLUGIN_MANIFEST_PATH = CLAUDE_PLUGIN_ROOT / ".claude-plugin" / "plugin.json"
+CODEX_PLUGIN_MANIFEST_PATH = CODEX_PLUGIN_ROOT / ".codex-plugin" / "plugin.json"
 
 
 TargetType = Literal["claude-skill", "claude-command", "codex-skill"]
@@ -362,6 +375,116 @@ def check_outputs(outputs: dict[Path, str]) -> list[Path]:
     return diffs
 
 
+def check_manifest_consistency(
+    marketplace_path: Path = CLAUDE_MARKETPLACE_PATH,
+    claude_plugin_path: Path = CLAUDE_PLUGIN_MANIFEST_PATH,
+    codex_plugin_path: Path = CODEX_PLUGIN_MANIFEST_PATH,
+) -> list[str]:
+    """
+    Verify the three plugin manifest files agree on plugin name and version.
+
+    The manifest files are hand-edited (not generated from sources/) but the
+    Claude Code plugin cache keys off the marketplace.json plugin version. If
+    the three version fields drift, the cache will either fail to refresh or
+    serve stale content to users — this was the operational lesson from PR
+    #12. This check enforces version equality across all three files and
+    plugin name equality as a belt-and-braces guard against copy-paste drift.
+
+    Paths default to the committed manifest locations but accept overrides
+    for tests. Returns a list of human-readable error messages (empty if
+    consistent). Does not raise — callers compose this with the other
+    check(s) so all failures surface in a single report.
+    """
+    errors: list[str] = []
+
+    def rel(p: Path) -> str:
+        # Fall back to the full path when p is outside REPO_ROOT (tests use
+        # tmpdirs that aren't relative to the repo).
+        try:
+            return str(p.relative_to(REPO_ROOT))
+        except ValueError:
+            return str(p)
+
+    # Load all three files defensively. A parse/read error on any single
+    # file is reported as a check failure rather than a crash, but we stop
+    # after collecting all load errors since we can't compare against files
+    # we couldn't read.
+    manifests: dict[Path, dict] = {}
+    for path in (marketplace_path, claude_plugin_path, codex_plugin_path):
+        try:
+            data = json.loads(path.read_text())
+        except OSError as e:
+            errors.append(f"{rel(path)}: cannot read ({e})")
+            continue
+        except json.JSONDecodeError as e:
+            errors.append(f"{rel(path)}: invalid JSON ({e})")
+            continue
+        if not isinstance(data, dict):
+            errors.append(f"{rel(path)}: top-level JSON is not an object")
+            continue
+        manifests[path] = data
+    if errors:
+        return errors
+
+    # marketplace.json is expected to contain exactly one plugin entry.
+    # Enforce that contract explicitly rather than silently indexing [0],
+    # so a future contributor adding a second entry cannot defeat the check.
+    plugins_list = manifests[marketplace_path].get("plugins")
+    if not isinstance(plugins_list, list):
+        errors.append(
+            f"{rel(marketplace_path)}: expected `plugins` to be a list, "
+            f"found {type(plugins_list).__name__}"
+        )
+        return errors
+    if len(plugins_list) != 1:
+        errors.append(
+            f"{rel(marketplace_path)}: expected exactly one entry in `plugins`, "
+            f"found {len(plugins_list)}"
+        )
+        return errors
+    marketplace_plugin = plugins_list[0]
+    if not isinstance(marketplace_plugin, dict):
+        errors.append(f"{rel(marketplace_path)}: `plugins[0]` is not an object")
+        return errors
+
+    claude_plugin = manifests[claude_plugin_path]
+    codex_plugin = manifests[codex_plugin_path]
+
+    # For each checked field we enforce two separate invariants:
+    #   (a) the field is present in every file (missing → per-file error)
+    #   (b) the values across files agree (disagree → consolidated error)
+    # Splitting (a) from (b) prevents the `None == None == None` silent-pass
+    # failure mode where all three files omit the field and the set-equality
+    # check would otherwise collapse to `{None}` and report consistent.
+    def check_field(field: str, label: str) -> None:
+        values = {
+            rel(marketplace_path): marketplace_plugin.get(field),
+            rel(claude_plugin_path): claude_plugin.get(field),
+            rel(codex_plugin_path): codex_plugin.get(field),
+        }
+        # Treat None (missing) and "" (explicit empty string) as equivalent
+        # failure modes. Without the empty-string branch, three files all
+        # set to `"version": ""` would produce `{""}` under set-equality
+        # and pass silently — same shape of bug as the None case.
+        missing = [path for path, v in values.items() if v is None or v == ""]
+        if missing:
+            errors.append(
+                f"plugin manifest `{field}` field missing or empty in:\n"
+                + "\n".join(f"    {path}" for path in missing)
+            )
+            return
+        if len(set(values.values())) != 1:
+            detail = "\n".join(f"    {path}: {v!r}" for path, v in values.items())
+            errors.append(f"plugin manifest {label} disagree:\n{detail}")
+
+    # Hard invariant: plugin version (cache refresh depends on it).
+    check_field("version", "versions")
+    # Soft invariant: plugin name (not cache-critical but catches drift cheaply).
+    check_field("name", "names")
+
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
@@ -370,6 +493,17 @@ def main() -> int:
         help="Diff generator output against committed files; exit 1 if different",
     )
     args = parser.parse_args()
+
+    # Manifest consistency is a precondition check on repo state, independent
+    # of content rendering. Run it in both modes so developers regenerating
+    # locally also catch drift, not just CI.
+    manifest_errors = check_manifest_consistency()
+    if manifest_errors:
+        print("ERROR: plugin manifest consistency check failed:", file=sys.stderr)
+        for err in manifest_errors:
+            for line in err.splitlines():
+                print(f"  {line}", file=sys.stderr)
+        return 2
 
     try:
         outputs = render_all()
