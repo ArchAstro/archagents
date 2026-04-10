@@ -1,5 +1,22 @@
 # Security Triage Agent
 
+## Deploy with your coding agent
+
+Paste this into Claude Code, Codex, or any AI coding assistant:
+
+```
+Deploy the Security Triage Agent from this repo.
+
+1) Read agents/security-triage-agent/agent.yaml and agents/security-triage-agent/env.example
+2) Ask me for: GITHUB_TOKEN (a PAT with repo scope), DEFAULT_REPO_OWNER, DEFAULT_REPO_NAME
+3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
+4) Run: archagent auth login <my-email> && archagent init
+5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
+6) Deploy: cd agents/security-triage-agent && ./deploy.sh
+7) Test it: create an agent session and ask it to scan a small repo for vulnerabilities
+8) Show me the result
+```
+
 > 🛡️ **A senior security engineer that triages vulnerabilities, fixes what it can, and escalates the rest.**
 
 Runs daily dependency scans, classifies findings into three explicit

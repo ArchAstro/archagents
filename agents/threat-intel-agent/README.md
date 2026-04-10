@@ -1,5 +1,22 @@
 # Threat Intelligence Agent
 
+## Deploy with your coding agent
+
+Paste this into Claude Code, Codex, or any AI coding assistant:
+
+```
+Deploy the Threat Intelligence Agent from this repo.
+
+1) Read agents/threat-intel-agent/agent.yaml and agents/threat-intel-agent/env.example
+2) Ask me for: GITHUB_TOKEN (a PAT with repo scope), MONITORED_REPOS (comma-separated owner/repo list), BRIEF_REPO (where to file the daily brief)
+3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
+4) Run: archagent auth login <my-email> && archagent init
+5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
+6) Deploy: cd agents/threat-intel-agent && ./deploy.sh
+7) Test it: create an agent session and ask it to generate today's threat brief
+8) Show me the result
+```
+
 > 📰 **Your daily security analyst.** Reads HN, GitHub Advisories, and the major CVE feeds every morning. Tells you only what matters to YOUR stack.
 
 A focused agent that runs once a day and produces a curated threat

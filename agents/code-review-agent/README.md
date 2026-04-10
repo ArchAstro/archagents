@@ -1,5 +1,22 @@
 # Code Review Agent
 
+## Deploy with your coding agent
+
+Paste this into Claude Code, Codex, or any AI coding assistant:
+
+```
+Deploy the Code Review Agent from this repo.
+
+1) Read agents/code-review-agent/agent.yaml and agents/code-review-agent/env.example
+2) Ask me for: GITHUB_TOKEN (a PAT with repo scope)
+3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
+4) Run: archagent auth login <my-email> && archagent init
+5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
+6) Deploy: cd agents/code-review-agent && ./deploy.sh
+7) Test it: create an agent session and ask it to review the most recent open PR in ArchAstro/archagents
+8) Show me the result
+```
+
 > 🤖 **Reviews every pull request like a senior engineer who actually cares.**
 
 Posts inline review comments anchored to specific files and lines on

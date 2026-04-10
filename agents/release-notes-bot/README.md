@@ -1,5 +1,22 @@
 # Release Notes Bot
 
+## Deploy with your coding agent
+
+Paste this into Claude Code, Codex, or any AI coding assistant:
+
+```
+Deploy the Release Notes Bot from this repo.
+
+1) Read agents/release-notes-bot/agent.yaml and agents/release-notes-bot/env.example
+2) Ask me for: GITHUB_TOKEN (a PAT with repo scope), REPO_OWNER, REPO_NAME
+3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
+4) Run: archagent auth login <my-email> && archagent init
+5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
+6) Deploy: cd agents/release-notes-bot && ./deploy.sh
+7) Test it: create an agent session and ask it to draft release notes for the last week
+8) Show me the result
+```
+
 > 📝 **Drafts your weekly changelog from the merged PRs.**
 
 A scheduled agent that watches your merged PRs and writes a clean,

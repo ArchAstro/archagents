@@ -1,5 +1,22 @@
 # Compliance Reviewer Agent
 
+## Deploy with your coding agent
+
+Paste this into Claude Code, Codex, or any AI coding assistant:
+
+```
+Deploy the Compliance Reviewer Agent from this repo.
+
+1) Read agents/compliance-reviewer/agent.yaml and agents/compliance-reviewer/env.example
+2) Ask me for: GITHUB_TOKEN (a PAT with repo scope)
+3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
+4) Run: archagent auth login <my-email> && archagent init
+5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
+6) Deploy: cd agents/compliance-reviewer && ./deploy.sh
+7) Test it: create an agent session and ask it to review a PR for compliance
+8) Show me the result
+```
+
 > ⚖️ **Reviews every PR against your compliance rules.** SOC2, GDPR,
 > HIPAA, internal data handling policies — define the rules once,
 > the agent enforces them on every change.

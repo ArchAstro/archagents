@@ -1,5 +1,21 @@
 # Onboarding Q&A Agent
 
+## Deploy with your coding agent
+
+Paste this into Claude Code, Codex, or any AI coding assistant:
+
+```
+Deploy the Onboarding Q&A Agent from this repo.
+
+1) Read agents/onboarding-qa/agent.yaml and agents/onboarding-qa/env.example
+2) No env vars required — this agent works out of the box
+3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
+4) Run: archagent auth login <my-email> && archagent init
+5) Deploy: cd agents/onboarding-qa && ./deploy.sh
+6) Test it: upload the bundled sample FAQ, create an agent session, and ask "What's the PTO policy?"
+7) Show me the result
+```
+
 > 🎓 **The new-hire question answerer that doesn't get tired.**
 
 Drops your company's docs, runbooks, and policies into a knowledge

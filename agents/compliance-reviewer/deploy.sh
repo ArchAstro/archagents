@@ -24,9 +24,11 @@ done
 echo "🤖 Deploying agent..."
 archagent deploy agent agent.yaml
 
+echo "📜 Uploading compliance rules..."
+./upload-rules.sh rules/*.md
+
 echo "✅ Done."
 echo ""
 echo "Next steps:"
-echo "  1. Upload your compliance rules: ./upload-rules.sh rules/*.md"
-echo "  2. Install the GitHub App on your repo"
-echo "  3. Open a PR — the agent will review against the rules"
+echo "  1. Install the GitHub App on your repo"
+echo "  2. Open a PR — the agent will review against the rules"

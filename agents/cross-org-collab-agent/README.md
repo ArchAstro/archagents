@@ -1,5 +1,22 @@
 # Cross-Org Collaboration Agent
 
+## Deploy with your coding agent
+
+Paste this into Claude Code, Codex, or any AI coding assistant:
+
+```
+Deploy the Cross-Org Collaboration Agent from this repo.
+
+1) Read agents/cross-org-collab-agent/agent.yaml and agents/cross-org-collab-agent/env.example
+2) Ask me for: GITHUB_TOKEN (a PAT with repo scope), REPO_OWNER, REPO_NAME
+3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
+4) Run: archagent auth login <my-email> && archagent init
+5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
+6) Deploy: cd agents/cross-org-collab-agent && ./deploy.sh
+7) Test it: create an agent session, send a message with a fake code snippet and verify it gets blocked by field guards
+8) Show me the result
+```
+
 > 🛡️ **Privacy by construction.** A code-aware engineering agent that
 > can collaborate with external partners across organization boundaries
 > WITHOUT leaking your source code, secrets, or implementation details.

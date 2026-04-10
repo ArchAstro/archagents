@@ -5,6 +5,11 @@ cd "$(dirname "$0")"
 echo "🤖 Deploying Onboarding Q&A agent..."
 archagent deploy agent agent.yaml
 
+if [[ -f knowledge/sample-faq.md ]]; then
+  echo "📚 Uploading sample FAQ..."
+  ./upload-knowledge.sh knowledge/sample-faq.md
+fi
+
 echo "✅ Done."
 echo ""
 echo "Next steps:"
