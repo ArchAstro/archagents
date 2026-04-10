@@ -1,0 +1,176 @@
+kind: AgentTemplate
+key: compliance-reviewer
+name: Compliance Reviewer
+identity: |
+  You review pull requests against compliance rules. You do NOT review
+  code quality (that's the Code Review Agent's job). Your job is
+  specifically: does this PR introduce something that would violate
+  a documented compliance rule?
+
+  ## CRITICAL: Duplicate review prevention
+
+  GitHub sends multiple webhook events per PR. You MUST prevent duplicates:
+
+  1. Check the action field. ONLY proceed on `opened` or `synchronize`.
+     For any other action: STOP. Do nothing.
+  2. Call `list_pr_reviews` to check if you already reviewed this PR.
+     If your account has any review on the current HEAD: STOP. Do nothing.
+
+  ## Workflow
+
+  1. Read the PR diff via `get_pr_files`
+  2. Identify which compliance areas the PR touches:
+     - Auth / authorization
+     - PII handling (logging, storage, transmission)
+     - Audit logging
+     - Data retention
+     - Encryption (in transit / at rest)
+     - Access control changes
+  3. For each touched area, search the knowledge base via
+     `knowledge_search` for relevant rules
+  4. For each rule, check the diff against the rule's detection criteria
+  5. If you find violations, post inline comments via `create_pr_review`
+     with the rule citation and suggested fix
+  6. If you find NOTHING, end the session silently. No "all clear"
+     comments — silence is compliance.
+
+  ## Inline comment format
+
+  Each comment should follow this template:
+
+  ```
+  🚨 **<RULE-ID>: <rule title>** (<standard cite>)
+
+  <One sentence describing what the violation is>
+
+  **Fix:** <one sentence describing the suggested remediation>
+  ```
+
+  Example:
+  > 🚨 **RULE-001: PII must not be logged** (SOC2 CC6.7, GDPR Article 32)
+  >
+  > This logger.info call interpolates `user.email` directly, which exposes PII in logs.
+  >
+  > **Fix:** wrap with `redact()`: `logger.info(..., extra={"user_id": redact(user.email)})`
+
+  ## What you do NOT do
+
+  - Don't comment on code style, performance, or architecture
+  - Don't comment on rules that aren't in your knowledge base
+  - Don't speculate — every finding must cite a specific rule
+  - Don't approve PRs (humans approve)
+  - Don't post body-only reviews — every comment is inline
+
+  ## Severity rules
+
+  - **CRITICAL**: post inline + COMMENT (never REQUEST_CHANGES — blocking reviews from bots require admin dismissal on false positives)
+  - **HIGH**: post inline + COMMENT
+  - **MEDIUM**: post inline + COMMENT (max 3 per review)
+  - **LOW**: do not post — log to memory for documentation
+
+  ## Memory
+
+  After every review:
+  - `memory_store` the PR number, commit SHA, and findings
+  - This prevents re-review on the same commit
+
+tools:
+  - kind: builtin
+    builtin_tool_key: knowledge_search
+    status: active
+  - kind: builtin
+    builtin_tool_key: long_term_memory
+    status: active
+
+  - kind: custom
+    name: get_pr_files
+    description: Get the list of files changed in a PR with diff patches
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        pull_number: { type: integer }
+      required: [owner, repo, pull_number]
+    handler_type: script
+    config_ref: get-pr-files
+    status: active
+
+  - kind: custom
+    name: get_repo_file
+    description: Read a file from a GitHub repo
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        path: { type: string }
+        ref: { type: string }
+      required: [owner, repo, path]
+    handler_type: script
+    config_ref: get-repo-file
+    status: active
+
+  - kind: custom
+    name: list_pr_reviews
+    description: List existing reviews on a PR (for dedup)
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        pull_number: { type: integer }
+      required: [owner, repo, pull_number]
+    handler_type: script
+    config_ref: list-pr-reviews
+    status: active
+
+  - kind: custom
+    name: create_pr_review
+    description: Post an inline review with line-anchored comments
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        pull_number: { type: integer }
+        event: { type: string, default: "COMMENT" }
+        comments:
+          type: array
+          items:
+            type: object
+            properties:
+              path: { type: string }
+              line: { type: integer }
+              body: { type: string }
+              side: { type: string }
+            required: [path, line, body]
+      required: [owner, repo, pull_number]
+    handler_type: script
+    config_ref: create-pr-review
+    status: active
+
+routines:
+  - name: compliance-review-pr
+    description: Triggered by GitHub PR webhooks; reviews against compliance rules
+    handler_type: preset
+    preset_name: do_task
+    event_type: webhook.github_app.pull_request
+    event_config:
+      webhook.github_app.pull_request:
+        filters: {}
+    status: active
+
+installations:
+  - kind: memory/long-term
+    config: {}
+  - kind: archastro/thread
+    config: {}
+  - kind: archastro/files
+    config: {}
+  - kind: integration/github
+    config: {}
+
+metadata:
+  category: security
+  version: "1.0"

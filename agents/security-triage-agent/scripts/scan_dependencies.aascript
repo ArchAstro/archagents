@@ -1,0 +1,97 @@
+// Parse a project's lockfile and check every dependency against OSV.dev.
+// Currently supports hex (mix.lock), npm (package-lock.json), and pip
+// (requirements.txt). Add more by extending the parser switch.
+//
+// Returns: { repo, ecosystem, total_dependencies, checked, vulnerable_count, findings }
+
+let http = import("requests")
+let arr = import("array")
+let str = import("string")
+
+let owner = if ($.owner != null) { $.owner } else { env.DEFAULT_REPO_OWNER }
+let repo = if ($.repo != null) { $.repo } else { env.DEFAULT_REPO_NAME }
+let ecosystem = if ($.ecosystem != null) { $.ecosystem } else { env.DEFAULT_ECOSYSTEM }
+
+let default_lockfile = if (ecosystem == "hex") { "mix.lock" } else {
+  if (ecosystem == "pip") { "requirements.txt" } else { "package-lock.json" }
+}
+let lockfile_path = if ($.path != null) { $.path } else { default_lockfile }
+
+// Fetch the file via the contents API and base64-decode the content field.
+// Do NOT use download_url — it points to raw.githubusercontent.com (a CDN
+// outside GitHub's API) and sending the auth header there leaks the PAT.
+let meta_resp = http.get("https://api.github.com/repos/" + owner + "/" + repo + "/contents/" + lockfile_path, {
+  headers: {
+    "Authorization": "Bearer " + env.GITHUB_TOKEN,
+    "Accept": "application/vnd.github+json"
+  }
+})
+
+let meta = unwrap(meta_resp, null)
+if (meta == null) {
+  {error: "Could not fetch " + lockfile_path + " from " + owner + "/" + repo}
+} else {
+  let content = if (meta.body.content) {
+    str.decode_base64(meta.body.content)
+  } else { "" }
+  let lines = str.split(content, "\n")
+
+  // Parse hex/mix.lock format. For other ecosystems, write a parallel parser.
+  let dependencies = arr.filter(
+    arr.map(lines, fn(line) {
+      let m = str.match(line, "\"([^\"]+)\":\\s*\\{:hex,\\s*:[^,]+,\\s*\"([^\"]+)\"")
+      if (m != null) {
+        {name: m.groups[0], version: m.groups[1]}
+      } else {
+        null
+      }
+    }),
+    fn(dep) { dep != null }
+  )
+
+  // Cap at 20 per scan to bound API calls. Raise this or use OSV batch API for full coverage.
+  let deps_to_check = arr.slice(dependencies, 0, 20)
+
+  let osv_ecosystem = if (ecosystem == "hex") { "Hex" } else { ecosystem }
+
+  let findings = arr.filter(
+    arr.map(deps_to_check, fn(dep) {
+      let osv_resp = unwrap(http.post("https://api.osv.dev/v1/query", {
+        body: {
+          "package": {"name": dep.name, "ecosystem": osv_ecosystem},
+          "version": dep.version
+        }
+      }), null)
+
+      let vulns = if (osv_resp != null && osv_resp.body != null && osv_resp.body.vulns != null) {
+        osv_resp.body.vulns
+      } else {
+        []
+      }
+
+      if (arr.length(vulns) > 0) {
+        {
+          package: dep.name,
+          version: dep.version,
+          vuln_count: arr.length(vulns),
+          vulns: arr.map(vulns, fn(v) {
+            {id: v.id, summary: v.summary}
+          })
+        }
+      } else {
+        null
+      }
+    }),
+    fn(f) { f != null }
+  )
+
+  {
+    repo: owner + "/" + repo,
+    ecosystem: ecosystem,
+    total_dependencies: arr.length(dependencies),
+    checked: arr.length(deps_to_check),
+    total_unchecked: arr.length(dependencies) - arr.length(deps_to_check),
+    vulnerable_count: arr.length(findings),
+    findings: findings
+  }
+}

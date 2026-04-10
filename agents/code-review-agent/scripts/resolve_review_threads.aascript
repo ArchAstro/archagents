@@ -1,0 +1,67 @@
+// Resolve all unresolved review comment threads authored by the bot
+// account on a PR. Used after a synchronize event when the agent has
+// verified that the original finding was addressed in the new commits.
+//
+// Uses GitHub's GraphQL API since the REST API doesn't support thread
+// resolution.
+
+let http = import("requests")
+let arr = import("array")
+let str = import("string")
+
+let owner = $.owner
+let repo = $.repo
+let pull_number = $.pull_number
+
+let graphql_query = "query($owner: String!, $repo: String!, $pr: Int!) { repository(owner: $owner, name: $repo) { pullRequest(number: $pr) { reviewThreads(first: 100) { nodes { id isResolved comments(first: 1) { nodes { author { login } } } } } } } }"
+
+let gql_resp = unwrap(http.post("https://api.github.com/graphql", {
+  headers: {
+    "Authorization": "Bearer " + env.GITHUB_TOKEN,
+    "Accept": "application/json"
+  },
+  body: {
+    "query": graphql_query,
+    "variables": {"owner": owner, "repo": repo, "pr": pull_number}
+  }
+}))
+
+// GraphQL returns HTTP 200 with {"errors": [...]} on permission/not-found — guard against null data
+if (!gql_resp.body.data || !gql_resp.body.data.repository || !gql_resp.body.data.repository.pullRequest) {
+  {error: gql_resp.body.errors || "unexpected null in GraphQL response", resolved_count: 0, my_unresolved: 0}
+} else {
+
+let threads = gql_resp.body.data.repository.pullRequest.reviewThreads.nodes
+
+let bot_login = if (env.BOT_LOGIN != null) { env.BOT_LOGIN } else { "" }
+
+let my_threads = arr.filter(threads, fn(t) {
+  if (t.isResolved) { false } else {
+    let author = t.comments.nodes[0].author.login
+    if (bot_login != "") { author == bot_login } else { false }
+  }
+})
+
+// If thread_ids is provided, only resolve those specific threads (selective resolve).
+// Otherwise resolve all bot threads (backward-compatible).
+let target_threads = if ($.thread_ids) {
+  arr.filter(my_threads, fn(t) { arr.includes($.thread_ids, t.id) })
+} else { my_threads }
+
+let resolved = arr.map(target_threads, fn(t) {
+  let resolve_resp = unwrap(http.post("https://api.github.com/graphql", {
+    headers: {
+      "Authorization": "Bearer " + env.GITHUB_TOKEN,
+      "Accept": "application/json"
+    },
+    body: {
+      "query": "mutation($threadId: ID!) { resolveReviewThread(input: {threadId: $threadId}) { thread { id isResolved } } }",
+      "variables": {"threadId": t.id}
+    }
+  }))
+  {thread_id: t.id, resolved: true}
+})
+
+{total_unresolved: arr.length(my_threads), resolved_count: arr.length(resolved), resolved_threads: resolved, filtered: if ($.thread_ids) { true } else { false }}
+
+} // end GraphQL null guard

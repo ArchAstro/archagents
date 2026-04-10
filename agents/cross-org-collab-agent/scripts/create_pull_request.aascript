@@ -1,0 +1,26 @@
+// Open a pull request from a branch.
+// Calls POST /repos/{owner}/{repo}/pulls
+
+let http = import("requests")
+
+let owner = $.owner
+let repo = $.repo
+let title = $.title
+let body = if ($.body != null) { $.body } else { "" }
+let head = $.head
+let base = if ($.base != null) { $.base } else { "main" }
+
+let resp = unwrap(http.post("https://api.github.com/repos/" + owner + "/" + repo + "/pulls", {
+  headers: {
+    "Authorization": "Bearer " + env.GITHUB_TOKEN,
+    "Accept": "application/vnd.github+json"
+  },
+  body: {
+    "title": title,
+    "body": body,
+    "head": head,
+    "base": base
+  }
+}))
+
+resp.body

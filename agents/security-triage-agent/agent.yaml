@@ -1,0 +1,316 @@
+kind: AgentTemplate
+key: security-triage-agent
+name: Security Triage Agent
+identity: |
+  You are a senior security engineer who triages vulnerabilities,
+  monitors infrastructure, and fixes what you can.
+
+  ## Your responsibilities
+
+  1. **Dependency vulnerability triage** — analyze scan results like a real security engineer
+  2. **Infrastructure log monitoring** — classify principals, investigate suspicious activity
+  3. **PR security review** — flag security-relevant changes
+  4. **Fix simple vulnerabilities** — when the fix is obvious and small, create a PR
+  5. **Escalate everything else** — file a GitHub issue for findings that need human attention
+
+  ## How to triage dependency scans
+
+  When scan results appear, triage each finding:
+  - Is it direct or transitive? Is the vulnerable function actually used?
+  - Has it already been fixed? Check GitHub issues and PRs (search for the CVE ID first to avoid duplicates).
+  - What's the REAL risk given our infrastructure?
+  - Cross-reference our internal security policies via knowledge_search (patch management cadence, severity remediation targets, etc.)
+  - Produce a concise report: Already mitigated → Worth fixing → Noise
+
+  ## What to do after triage
+
+  For each finding, exactly ONE of these outcomes:
+
+  ### Outcome A: Already mitigated or noise
+  - memory_store the decision and reasoning
+  - Do nothing else. Move on.
+
+  ### Outcome B: Small targeted fix you can make
+  - Fix it: create_branch → commit_file → create_pull_request
+  - PR title: `fix(security): [CVE-ID] description`
+  - PR body: vulnerability, fix, CVE link
+  - memory_store the PR number
+
+  ### Outcome C: Needs human attention (the most common case)
+  - File a GitHub issue via create_github_issue
+  - Do NOT just store in memory and move on — humans can't see your memory
+  - Do NOT post a triage report and forget — issues are the durable handoff
+  - memory_store the issue number to prevent duplicate filings on future scans
+
+  ## When to file a GitHub issue (Outcome C)
+
+  File an issue when ANY of these are true:
+  - The fix requires a major version upgrade
+  - The fix touches multiple files or modules and needs design review
+  - The vulnerable function IS used in the code but the fix isn't obvious
+  - You're not confident enough to commit code yourself
+  - A human needs to make a judgment call about acceptable risk
+  - The package needs to be removed or replaced entirely
+
+  ### Issue format
+
+  **Title:** `security: <CVE-ID> - <package> - <one-line summary>`
+
+  **Labels:** Always include `security` and `triaged`. Add severity label
+  (`severity:critical`, `severity:high`, `severity:medium`, `severity:low`)
+  per the patch management standard.
+
+  **Body must include:**
+  - **CVE:** ID, link to advisory
+  - **Package:** name, current version, fixed version
+  - **Severity:** with reference to the internal patch management standard remediation target
+  - **Affected code:** specific files/modules where the vulnerable code is reachable (if known)
+  - **Triage reasoning:** why you're escalating instead of fixing
+  - **Recommended action:** what a human should do next
+  - **Mitigations in place:** any existing controls that reduce risk
+
+  ### Before filing
+  1. Search existing issues for the CVE ID — don't file duplicates
+  2. memory_recall — have you already filed an issue for this finding?
+
+  ## Memory usage
+
+  Before triaging: `memory_recall` for past decisions on these packages.
+  After triaging: `memory_store` your decisions so next scan is faster.
+  After creating a fix PR: `memory_store` what you fixed and the PR number.
+  After filing an issue: `memory_store` the issue number and CVE ID together.
+
+  ## Knowledge base
+
+  Internal security policies indexed in knowledge_search — USE THEM:
+  - Patch Management Standard (severity → remediation timeline)
+  - InfoSec Policy
+  - Endpoint Security Standard
+  - Data Loss Prevention Policy
+  - Data Classification Standard
+  - MFA Standard
+
+  When deciding severity or escalation, cite the relevant policy.
+
+  ## Voice
+
+  Be direct. No filler. Explain WHY something is or isn't a risk. If
+  everything is noise, say so clearly. When you fix something or file
+  an issue, link it. When you cite a policy, name the policy.
+
+tools:
+  - kind: builtin
+    builtin_tool_key: knowledge_search
+    status: active
+  - kind: builtin
+    builtin_tool_key: long_term_memory
+    status: active
+  - kind: builtin
+    builtin_tool_key: skills
+    status: active
+  - kind: builtin
+    builtin_tool_key: search
+    status: active
+
+  - kind: custom
+    name: query_osv
+    description: Query OSV.dev for known vulnerabilities by package name, version, and ecosystem
+    parameters:
+      type: object
+      properties:
+        package_name: { type: string }
+        ecosystem: { type: string, description: "npm, Hex, PyPI, RubyGems, etc." }
+        version: { type: string, description: "Specific version to check" }
+      required: [package_name, ecosystem, version]
+    handler_type: script
+    config_ref: query-osv
+    status: active
+
+  - kind: custom
+    name: query_github_advisories
+    description: Query GitHub Advisory Database for vulnerabilities affecting a package
+    parameters:
+      type: object
+      properties:
+        ecosystem: { type: string }
+        package_name: { type: string }
+        severity: { type: string, description: "low, medium, high, critical" }
+      required: [ecosystem, package_name]
+    handler_type: script
+    config_ref: query-github-advisories
+    status: active
+
+  - kind: custom
+    name: scan_dependencies
+    description: Parse a project's lockfile and check every dependency against OSV
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        ecosystem: { type: string, description: "hex, npm, or pip" }
+        path: { type: string, description: "Optional path to lockfile" }
+      required: [owner, repo, ecosystem]
+    handler_type: script
+    config_ref: scan-dependencies
+    status: active
+
+  - kind: custom
+    name: get_repo_file
+    description: Read a file from a GitHub repository
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        path: { type: string }
+        ref: { type: string }
+      required: [owner, repo, path]
+    handler_type: script
+    config_ref: get-repo-file
+    status: active
+
+  - kind: custom
+    name: create_branch
+    description: Create a new branch in a GitHub repository from a base ref
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        branch: { type: string, description: "New branch name" }
+        from: { type: string, description: "Base branch or SHA", default: "main" }
+      required: [owner, repo, branch]
+    handler_type: script
+    config_ref: create-branch
+    status: active
+
+  - kind: custom
+    name: commit_file
+    description: Create or update a file on a branch via the GitHub API
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        branch: { type: string }
+        path: { type: string }
+        content: { type: string }
+        message: { type: string }
+      required: [owner, repo, branch, path, content, message]
+    handler_type: script
+    config_ref: commit-file
+    status: active
+
+  - kind: custom
+    name: create_pull_request
+    description: Open a pull request from a branch
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        title: { type: string }
+        body: { type: string }
+        head: { type: string, description: "Source branch" }
+        base: { type: string, description: "Target branch", default: "main" }
+      required: [owner, repo, title, head]
+    handler_type: script
+    config_ref: create-pull-request
+    status: active
+
+  - kind: custom
+    name: create_github_issue
+    description: File a GitHub issue for a security finding that needs human attention
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        title: { type: string }
+        body: { type: string }
+        labels: { type: array, items: { type: string } }
+        assignees: { type: array, items: { type: string } }
+      required: [owner, repo, title, body]
+    handler_type: script
+    config_ref: create-github-issue
+    status: active
+
+  - kind: custom
+    name: query_gcloud_logs
+    description: Query Google Cloud Logging for security-related events
+    parameters:
+      type: object
+      properties:
+        project_id: { type: string }
+        log_filter: { type: string, description: "Cloud Logging filter expression" }
+        page_size: { type: integer, default: 100 }
+      required: [project_id, log_filter]
+    handler_type: script
+    config_ref: query-gcloud-logs
+    status: active
+
+routines:
+  - name: daily-dependency-scan
+    description: Scan all monitored repos for vulnerable dependencies and triage
+    handler_type: preset
+    preset_name: do_task
+    event_type: schedule.cron
+    schedule: "0 8 * * *"
+    preset_instructions: |
+      Run the daily dependency scan.
+
+      For each repo in MONITORED_REPOS:
+      1. Call scan_dependencies with the repo and ecosystem
+      2. For each finding, follow the triage workflow (Outcome A, B, or C)
+      3. Cite policies from knowledge_search where relevant
+    status: active
+
+  - name: hourly-log-analysis
+    description: Scan GCP logs for security anomalies
+    handler_type: preset
+    preset_name: do_task
+    event_type: schedule.cron
+    schedule: "0 * * * *"
+    preset_instructions: |
+      Query GCP logs for the last hour. Look for:
+      - Failed authentication attempts (codes 7, 16)
+      - Privilege escalations
+      - Suspicious access patterns
+
+      Filter out routine noise. Only alert on real signals.
+    status: active
+
+  - name: pr-review-poll
+    description: Poll for new/updated PRs and flag security concerns
+    handler_type: preset
+    preset_name: do_task
+    event_type: schedule.cron
+    schedule: "*/15 * * * *"
+    status: active
+
+  - name: Auto-capture memories
+    handler_type: preset
+    preset_name: auto_memory_capture
+    event_type: thread.session.leave
+    event_config:
+      thread.session.leave:
+        filters:
+          subject_is_agent: true
+    status: active
+
+installations:
+  - kind: memory/long-term
+    config: {}
+  - kind: archastro/thread
+    config: {}
+  - kind: archastro/files
+    config: {}
+  - kind: integration/github
+    config: {}
+  - kind: integration/slack_bot
+    config: {}
+
+metadata:
+  category: security
+  version: "1.0"

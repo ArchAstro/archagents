@@ -1,0 +1,17 @@
+// Query OSV.dev for known vulnerabilities affecting a package version.
+// Calls POST https://api.osv.dev/v1/query
+
+let http = import("requests")
+
+let response = unwrap(http.post("https://api.osv.dev/v1/query", {
+  headers: {"Content-Type": "application/json"},
+  body: {
+    "package": {
+      "name": $.package_name,
+      "ecosystem": $.ecosystem
+    },
+    "version": $.version
+  }
+}))
+
+response.body
