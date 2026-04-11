@@ -1,33 +1,23 @@
 #!/usr/bin/env python3
 """
-Unit tests for scripts/generate-plugin-content.py internal functions.
+Unit tests for scripts/check_plugin_repo.py repo-validation checks.
 
-Run directly or via unittest:
+Run directly:
 
-    python3 scripts/test_generate_plugin_content.py
-    python3 -m unittest scripts.test_generate_plugin_content
+    python3 scripts/test_check_plugin_repo.py
+
+Currently covers check_manifest_consistency. Test classes for the four
+additional #9 checks (compat refs, slash commands, hardcoded versions,
+version-bump-on-change) will be added as those checks are implemented.
 """
-import importlib.util
 import json
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-
-SCRIPTS_DIR = Path(__file__).resolve().parent
-GENERATOR_PATH = SCRIPTS_DIR / "generate-plugin-content.py"
-
-# The generator filename has a hyphen, so `import generate-plugin-content`
-# is not legal Python. Load it via importlib. The module must be registered
-# in sys.modules before exec_module() runs, because the generator's
-# @dataclass decorator looks up its own module via cls.__module__ during
-# class construction and crashes with NoneType if the lookup fails.
-_spec = importlib.util.spec_from_file_location("plugin_generator", GENERATOR_PATH)
-assert _spec is not None and _spec.loader is not None
-plugin_generator = importlib.util.module_from_spec(_spec)
-sys.modules["plugin_generator"] = plugin_generator
-_spec.loader.exec_module(plugin_generator)
+# scripts/check_plugin_repo.py has no hyphen, so it imports cleanly
+# unlike generate-plugin-content.py which needs importlib.
+import check_plugin_repo
 
 
 class ManifestConsistencyTest(unittest.TestCase):
@@ -49,7 +39,7 @@ class ManifestConsistencyTest(unittest.TestCase):
         self.codex_path.write_text(json.dumps(codex))
 
     def _check(self) -> list[str]:
-        return plugin_generator.check_manifest_consistency(
+        return check_plugin_repo.check_manifest_consistency(
             marketplace_path=self.marketplace_path,
             claude_plugin_path=self.claude_path,
             codex_plugin_path=self.codex_path,
@@ -70,7 +60,7 @@ class ManifestConsistencyTest(unittest.TestCase):
         self._write(*self._valid_triplet())
         self.assertEqual(self._check(), [])
 
-    # H1: missing-field handling (regression for None == None == None bypass)
+    # Missing-field handling (regression for None == None == None bypass) -
 
     def test_all_three_missing_version_fails(self):
         mp, cp, xp = self._valid_triplet()
@@ -93,13 +83,11 @@ class ManifestConsistencyTest(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn("`version` field missing or empty", errors[0])
         self.assertIn(str(self.claude_path), errors[0])
-        # Only the file actually missing the field should appear in the error.
-        # Plain substring check (no trailing-newline suffix): when `missing`
-        # has a single entry, "\n".join(...) produces no trailing newline
-        # after the final path, so appending "\n" to the needle would fail
-        # to catch a buggy implementation that put `marketplace_path` in the
-        # missing list instead of `claude_path` — the exact failure mode
-        # this assertion exists to catch.
+        # Plain substring check: when `missing` has a single entry,
+        # "\n".join(...) produces no trailing newline after the final
+        # path, so a "+ \\n" suffix would fail to catch a buggy impl
+        # that put marketplace_path in `missing` instead of claude_path
+        # (the exact failure this assertion exists to catch).
         self.assertNotIn(str(self.marketplace_path), errors[0])
 
     def test_all_three_missing_name_fails(self):
@@ -141,7 +129,7 @@ class ManifestConsistencyTest(unittest.TestCase):
         self.assertIn("`version` field missing or empty", errors[0])
         self.assertIn(str(self.codex_path), errors[0])
 
-    # H2: plugins[] arity (regression for silent `plugins[0]` indexing) ----
+    # plugins[] arity (regression for silent `plugins[0]` indexing) --------
 
     def test_empty_plugins_list_fails(self):
         mp, cp, xp = self._valid_triplet()
@@ -177,7 +165,7 @@ class ManifestConsistencyTest(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn("`plugins[0]` is not an object", errors[0])
 
-    # Disagreement detection (original PR scenarios) ----------------------
+    # Disagreement detection -----------------------------------------------
 
     def test_version_drift_fails(self):
         mp, cp, xp = self._valid_triplet()
@@ -198,7 +186,7 @@ class ManifestConsistencyTest(unittest.TestCase):
         self.assertIn("names disagree", errors[0])
         self.assertIn("'archagents-renamed'", errors[0])
 
-    # File-level errors ---------------------------------------------------
+    # File-level errors ----------------------------------------------------
 
     def test_missing_file_fails(self):
         self._write(*self._valid_triplet())
@@ -210,26 +198,36 @@ class ManifestConsistencyTest(unittest.TestCase):
 
     def test_invalid_json_fails(self):
         self.marketplace_path.write_text("{not valid json")
-        self.claude_path.write_text(json.dumps({"name": "archagents", "version": "0.7.2"}))
-        self.codex_path.write_text(json.dumps({"name": "archagents", "version": "0.7.2"}))
+        self.claude_path.write_text(
+            json.dumps({"name": "archagents", "version": "0.7.2"})
+        )
+        self.codex_path.write_text(
+            json.dumps({"name": "archagents", "version": "0.7.2"})
+        )
         errors = self._check()
         self.assertEqual(len(errors), 1)
         self.assertIn("invalid JSON", errors[0])
 
     def test_marketplace_top_level_not_object_fails(self):
         self.marketplace_path.write_text(json.dumps([1, 2, 3]))
-        self.claude_path.write_text(json.dumps({"name": "archagents", "version": "0.7.2"}))
-        self.codex_path.write_text(json.dumps({"name": "archagents", "version": "0.7.2"}))
+        self.claude_path.write_text(
+            json.dumps({"name": "archagents", "version": "0.7.2"})
+        )
+        self.codex_path.write_text(
+            json.dumps({"name": "archagents", "version": "0.7.2"})
+        )
         errors = self._check()
         self.assertEqual(len(errors), 1)
         self.assertIn("top-level JSON is not an object", errors[0])
 
-    # Multi-error reporting -----------------------------------------------
+    # Multi-error reporting ------------------------------------------------
 
     def test_multiple_file_errors_reported_together(self):
         # Two broken files — both should surface in a single check call.
         self.marketplace_path.write_text("{not valid json")
-        self.claude_path.write_text(json.dumps({"name": "archagents", "version": "0.7.2"}))
+        self.claude_path.write_text(
+            json.dumps({"name": "archagents", "version": "0.7.2"})
+        )
         self.codex_path.write_text("{also not valid")
         errors = self._check()
         self.assertEqual(len(errors), 2)

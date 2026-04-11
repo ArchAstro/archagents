@@ -25,8 +25,11 @@ jobs:
         # pyyaml releases. Bump deliberately when needed.
         run: pip install pyyaml==6.0.2
 
-      - name: Run generator unit tests
-        run: python3 scripts/test_generate_plugin_content.py
+      - name: Run repo-validation unit tests
+        run: python3 scripts/test_check_plugin_repo.py
+
+      - name: Run repo-validation checks
+        run: python3 scripts/check_plugin_repo.py
 
       - name: Verify generated plugin content is in sync with sources/
         run: python3 scripts/generate-plugin-content.py --check
