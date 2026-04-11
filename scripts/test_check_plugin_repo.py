@@ -1005,6 +1005,192 @@ class HardcodedVersionsTest(unittest.TestCase):
         self.assertFalse(any("4.5.6" in e for e in errors))  # fenced
 
 
+class MainRunnerTest(unittest.TestCase):
+    """
+    Tests for main() and the CHECKS registry. Monkey-patches CHECKS with
+    fixture lists so each test exercises exactly the shape it cares about;
+    one sanity test at the end asserts the real CHECKS registry has the
+    expected entries in the expected order.
+    """
+
+    def setUp(self) -> None:
+        self._original_checks = check_plugin_repo.CHECKS
+
+    def tearDown(self) -> None:
+        check_plugin_repo.CHECKS = self._original_checks
+
+    def _run_main(self) -> tuple[int, str, str]:
+        """Call main(), return (exit_code, stdout, stderr)."""
+        import io
+        import contextlib
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            exit_code = check_plugin_repo.main()
+        return exit_code, stdout.getvalue(), stderr.getvalue()
+
+    # Exit codes ----------------------------------------------------------
+
+    def test_all_checks_pass_returns_zero(self):
+        check_plugin_repo.CHECKS = [
+            ("fixture-a", lambda: []),
+            ("fixture-b", lambda: []),
+        ]
+        exit_code, stdout, stderr = self._run_main()
+        self.assertEqual(exit_code, 0)
+        self.assertIn("OK   [fixture-a]", stdout)
+        self.assertIn("OK   [fixture-b]", stdout)
+        self.assertEqual(stderr, "")
+
+    def test_any_check_fails_returns_one(self):
+        check_plugin_repo.CHECKS = [
+            ("pass", lambda: []),
+            ("fail", lambda: ["something broke"]),
+        ]
+        exit_code, stdout, stderr = self._run_main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn("OK   [pass]", stdout)
+        self.assertIn("FAIL [fail]", stderr)
+        self.assertIn("something broke", stderr)
+
+    def test_all_checks_fail_returns_one(self):
+        check_plugin_repo.CHECKS = [
+            ("a", lambda: ["a broke"]),
+            ("b", lambda: ["b broke"]),
+        ]
+        exit_code, _, stderr = self._run_main()
+        self.assertEqual(exit_code, 1)
+        self.assertIn("FAIL [a]", stderr)
+        self.assertIn("FAIL [b]", stderr)
+
+    def test_empty_checks_list_returns_zero(self):
+        # Degenerate case: no checks registered. Trivially passes.
+        check_plugin_repo.CHECKS = []
+        exit_code, stdout, stderr = self._run_main()
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stdout, "")
+        self.assertEqual(stderr, "")
+
+    # Ordering ------------------------------------------------------------
+
+    def test_checks_run_in_registry_order(self):
+        order: list[str] = []
+
+        def make_check(name: str):
+            def check() -> list[str]:
+                order.append(name)
+                return []
+            return check
+
+        check_plugin_repo.CHECKS = [
+            ("first", make_check("first")),
+            ("second", make_check("second")),
+            ("third", make_check("third")),
+        ]
+        self._run_main()
+        self.assertEqual(order, ["first", "second", "third"])
+
+    def test_all_checks_run_even_after_a_failure(self):
+        # A failing check must not short-circuit the runner; later checks
+        # still run so their errors surface in the same report.
+        order: list[str] = []
+
+        def make_check(name: str, errs: list[str]):
+            def check() -> list[str]:
+                order.append(name)
+                return errs
+            return check
+
+        check_plugin_repo.CHECKS = [
+            ("a", make_check("a", ["a-err"])),
+            ("b", make_check("b", [])),
+            ("c", make_check("c", ["c-err"])),
+        ]
+        _, stdout, stderr = self._run_main()
+        self.assertEqual(order, ["a", "b", "c"])
+        self.assertIn("FAIL [a]", stderr)
+        self.assertIn("FAIL [c]", stderr)
+        self.assertIn("OK   [b]", stdout)
+
+    # Output formatting ---------------------------------------------------
+
+    def test_failed_check_output_routes_to_stderr(self):
+        check_plugin_repo.CHECKS = [("x", lambda: ["boom"])]
+        _, stdout, stderr = self._run_main()
+        self.assertIn("FAIL [x]:", stderr)
+        self.assertIn("boom", stderr)
+        # Failures do not leak into stdout.
+        self.assertNotIn("FAIL", stdout)
+        self.assertNotIn("boom", stdout)
+
+    def test_passed_check_output_routes_to_stdout(self):
+        check_plugin_repo.CHECKS = [("y", lambda: [])]
+        _, stdout, stderr = self._run_main()
+        self.assertIn("OK   [y]", stdout)
+        # Passes do not leak into stderr.
+        self.assertEqual(stderr, "")
+
+    def test_multiline_error_each_line_indented(self):
+        # Errors with embedded newlines (e.g. check_manifest_consistency's
+        # multi-file reports) must have each line indented by 2 spaces under
+        # the header so the output stays legible.
+        check_plugin_repo.CHECKS = [
+            ("multi", lambda: ["first line\nsecond line\nthird line"]),
+        ]
+        _, _, stderr = self._run_main()
+        self.assertIn("  first line", stderr)
+        self.assertIn("  second line", stderr)
+        self.assertIn("  third line", stderr)
+
+    def test_multiple_errors_from_single_check_all_printed(self):
+        check_plugin_repo.CHECKS = [
+            ("x", lambda: ["err1", "err2", "err3"]),
+        ]
+        _, _, stderr = self._run_main()
+        self.assertIn("err1", stderr)
+        self.assertIn("err2", stderr)
+        self.assertIn("err3", stderr)
+
+    # Real CHECKS registry sanity ----------------------------------------
+
+    def test_real_checks_registry_has_expected_entries(self):
+        # The real CHECKS list should contain all 5 checks in the expected
+        # order. This guards against accidental removal or reordering that
+        # would break invariants documented in the comment above CHECKS.
+        names = [name for name, _ in self._original_checks]
+        self.assertEqual(
+            names,
+            [
+                "manifest consistency",
+                "compat key refs",
+                "slash command refs",
+                "hardcoded versions",
+                "version bump on content change",
+            ],
+        )
+
+    def test_manifest_consistency_runs_before_version_bump(self):
+        # version-bump-on-content-change assumes check_manifest_consistency
+        # has already validated cross-file version agreement, so it can
+        # compare just one manifest against the PR base. Enforce the ordering
+        # invariant so a future reorder can't silently break it.
+        names = [name for name, _ in self._original_checks]
+        mc_idx = names.index("manifest consistency")
+        vb_idx = names.index("version bump on content change")
+        self.assertLess(
+            mc_idx,
+            vb_idx,
+            "manifest consistency must run before version-bump check",
+        )
+
+    def test_every_registered_check_is_callable(self):
+        for name, check in self._original_checks:
+            self.assertTrue(
+                callable(check),
+                f"CHECKS entry {name!r} is not callable",
+            )
+
+
 class VersionBumpOnContentChangeTest(unittest.TestCase):
     """Tests for check_version_bump_on_content_change().
 
