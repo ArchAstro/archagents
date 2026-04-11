@@ -32,8 +32,8 @@ ERROR CONTRACT
 
 CHECKS
     Implemented: check_manifest_consistency, check_compat_key_refs,
-                 check_slash_command_refs
-    Planned (#9): check_hardcoded_versions, check_version_bump_on_content_change
+                 check_slash_command_refs, check_hardcoded_versions
+    Planned (#9): check_version_bump_on_content_change
 """
 from __future__ import annotations
 
@@ -360,6 +360,73 @@ def check_slash_command_refs(
     return errors
 
 
+# Matches three-segment version literals like `0.3.1`. Each segment is
+# 1-3 digits, which excludes 4-digit year components (e.g. `2026.04.10`
+# would not match because `2026` exceeds the `\d{1,3}` bound). Word
+# boundaries prevent substring matches inside longer identifiers.
+_VERSION_RE = re.compile(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\b")
+
+
+def _iter_scannable_lines(text: str) -> Iterator[tuple[int, str]]:
+    """
+    Yield (1-based lineno, line) pairs from markdown text, skipping YAML
+    frontmatter at the top of the file and lines inside fenced code blocks.
+    Both fence delimiters and frontmatter delimiters are consumed but not
+    yielded.
+    """
+    lines = text.splitlines()
+    i = 0
+    n = len(lines)
+
+    # Frontmatter: if the first line is `---` alone, consume until the
+    # next `---`. A file without frontmatter starts scanning at line 1.
+    if n > 0 and lines[0].strip() == "---":
+        i = 1
+        while i < n and lines[i].strip() != "---":
+            i += 1
+        i += 1  # consume the closing ---
+
+    in_fence = False
+    while i < n:
+        stripped = lines[i].lstrip()
+        # Markdown fences may use either ``` or ~~~ as delimiters.
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            in_fence = not in_fence
+        elif not in_fence:
+            yield (i + 1, lines[i])
+        i += 1
+
+
+def check_hardcoded_versions(
+    content_files: Iterable[Path] | None = None,
+) -> list[str]:
+    """
+    Flag hardcoded semver literals (N.N.N) in skill and command markdown
+    prose. Contributors should read from plugin-compatibility.json
+    dynamically so a version bump in the manifest flows through to every
+    reference automatically. YAML frontmatter and fenced code blocks are
+    excluded — version literals there are usually legitimate examples.
+
+    Returns a list of error messages (empty on success).
+    """
+    errors: list[str] = []
+    files = _iter_content_files() if content_files is None else content_files
+    for path in files:
+        try:
+            text = path.read_text()
+        except OSError:
+            continue
+        for lineno, line in _iter_scannable_lines(text):
+            for match in _VERSION_RE.finditer(line):
+                version = match.group(0)
+                errors.append(
+                    f"{_rel(path)}:{lineno}: hardcoded version string "
+                    f"`{version}` — prefer reading from "
+                    f"plugin-compatibility.json dynamically"
+                )
+    return errors
+
+
 # Ordered list of (name, callable) pairs. Runner invokes each in order so
 # earlier checks can establish preconditions that later checks rely on
 # (e.g. check_version_bump_on_content_change, when added, will assume
@@ -368,6 +435,7 @@ CHECKS: list[tuple[str, Callable[[], list[str]]]] = [
     ("manifest consistency", check_manifest_consistency),
     ("compat key refs", check_compat_key_refs),
     ("slash command refs", check_slash_command_refs),
+    ("hardcoded versions", check_hardcoded_versions),
 ]
 
 

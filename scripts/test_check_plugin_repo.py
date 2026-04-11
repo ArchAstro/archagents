@@ -6,10 +6,10 @@ Run directly:
 
     python3 scripts/test_check_plugin_repo.py
 
-Covers check_manifest_consistency, check_compat_key_refs, and
-check_slash_command_refs. Test classes for the remaining #9 checks
-(hardcoded versions, version-bump-on-change) will be added as those
-checks are implemented.
+Covers check_manifest_consistency, check_compat_key_refs,
+check_slash_command_refs, and check_hardcoded_versions. Test classes
+for the remaining #9 checks (version-bump-on-change) will be added
+as those checks are implemented.
 """
 import json
 import tempfile
@@ -770,6 +770,238 @@ class SlashCommandRefsTest(unittest.TestCase):
         self.assertEqual(len(errors), 2)
         self.assertTrue(any("`installer`" in e for e in errors))
         self.assertTrue(any("`install_extended`" in e for e in errors))
+
+
+class HardcodedVersionsTest(unittest.TestCase):
+    """Tests for check_hardcoded_versions()."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def _write(self, name: str, text: str) -> Path:
+        path = self.tmp / name
+        path.write_text(text)
+        return path
+
+    def _check(self, *files: Path) -> list[str]:
+        return check_plugin_repo.check_hardcoded_versions(
+            content_files=list(files)
+        )
+
+    # Happy path ----------------------------------------------------------
+
+    def test_no_versions_passes(self):
+        f = self._write("clean.md", "No version numbers here.")
+        self.assertEqual(self._check(f), [])
+
+    def test_empty_file_passes(self):
+        f = self._write("empty.md", "")
+        self.assertEqual(self._check(f), [])
+
+    def test_two_segment_version_not_matched(self):
+        # `1.2` is not a semver triple and should not fire.
+        f = self._write("two.md", "Python 3.12 has new features.")
+        self.assertEqual(self._check(f), [])
+
+    def test_four_digit_year_not_matched(self):
+        # Date-like strings with 4-digit year components must not match
+        # because the regex bounds each segment to 1-3 digits.
+        f = self._write("date.md", "Released on 2026.04.10.")
+        self.assertEqual(self._check(f), [])
+
+    # Hardcoded version detection ----------------------------------------
+
+    def test_version_in_prose_fails(self):
+        f = self._write("bad.md", "Requires archagent 0.3.1 or later.")
+        errors = self._check(f)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("hardcoded version string", errors[0])
+        self.assertIn("`0.3.1`", errors[0])
+        self.assertIn(":1:", errors[0])
+
+    def test_version_in_inline_code_fails(self):
+        # Inline code (single backticks) is still prose — a literal
+        # version there is exactly what we want to flag.
+        f = self._write("inline.md", "Use `0.7.2` for the plugin cache.")
+        errors = self._check(f)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("`0.7.2`", errors[0])
+
+    def test_multiple_versions_all_reported(self):
+        f = self._write(
+            "multi.md",
+            "first 0.3.1\nsecond 1.2.3\nthird 10.20.30\n",
+        )
+        errors = self._check(f)
+        self.assertEqual(len(errors), 3)
+        self.assertTrue(any("`0.3.1`" in e and ":1:" in e for e in errors))
+        self.assertTrue(any("`1.2.3`" in e and ":2:" in e for e in errors))
+        self.assertTrue(any("`10.20.30`" in e and ":3:" in e for e in errors))
+
+    def test_line_number_accurate(self):
+        f = self._write(
+            "offset.md",
+            "line 1\n"
+            "line 2\n"
+            "line 3 with 4.5.6 version\n"
+            "line 4\n",
+        )
+        errors = self._check(f)
+        self.assertEqual(len(errors), 1)
+        self.assertIn(":3:", errors[0])
+
+    def test_multiple_files(self):
+        f1 = self._write("a.md", "`1.0.0`")
+        f2 = self._write("b.md", "`2.0.0`")
+        errors = self._check(f1, f2)
+        self.assertEqual(len(errors), 2)
+        self.assertTrue(any("a.md" in e and "1.0.0" in e for e in errors))
+        self.assertTrue(any("b.md" in e and "2.0.0" in e for e in errors))
+
+    # Frontmatter exclusion -----------------------------------------------
+
+    def test_version_in_frontmatter_ignored(self):
+        f = self._write(
+            "fm.md",
+            "---\n"
+            "name: test\n"
+            "version: 1.2.3\n"
+            "---\n"
+            "body without versions\n",
+        )
+        self.assertEqual(self._check(f), [])
+
+    def test_version_after_frontmatter_still_matched(self):
+        # Versions in the body after frontmatter must still fire.
+        f = self._write(
+            "after-fm.md",
+            "---\n"
+            "name: test\n"
+            "---\n"
+            "\n"
+            "Requires 0.3.1 to run.\n",
+        )
+        errors = self._check(f)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("`0.3.1`", errors[0])
+        self.assertIn(":5:", errors[0])
+
+    def test_triple_dash_in_body_not_treated_as_frontmatter(self):
+        # A `---` in the body (e.g. a horizontal rule) is not a
+        # frontmatter delimiter because the file didn't start with one.
+        f = self._write(
+            "hr.md",
+            "intro\n"
+            "---\n"
+            "1.2.3 after horizontal rule\n",
+        )
+        errors = self._check(f)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("`1.2.3`", errors[0])
+        self.assertIn(":3:", errors[0])
+
+    # Fenced code block exclusion ----------------------------------------
+
+    def test_version_in_fenced_code_block_ignored(self):
+        f = self._write(
+            "fence.md",
+            "Setup:\n"
+            "```bash\n"
+            "brew install archagent@0.3.1\n"
+            "```\n",
+        )
+        self.assertEqual(self._check(f), [])
+
+    def test_version_in_fenced_code_ignored_with_language(self):
+        # Fence opener may include a language tag.
+        f = self._write(
+            "lang.md",
+            "```python\n"
+            "VERSION = '0.3.1'\n"
+            "```\n",
+        )
+        self.assertEqual(self._check(f), [])
+
+    def test_mixed_prose_and_fenced_code(self):
+        # Prose version before the fence: fires.
+        # Version inside the fence: ignored.
+        # Prose version after the fence: fires.
+        f = self._write(
+            "mixed.md",
+            "Before 1.0.0 fence\n"
+            "```\n"
+            "inside 2.0.0 fence\n"
+            "```\n"
+            "After 3.0.0 fence\n",
+        )
+        errors = self._check(f)
+        self.assertEqual(len(errors), 2)
+        self.assertTrue(any(":1:" in e and "1.0.0" in e for e in errors))
+        self.assertTrue(any(":5:" in e and "3.0.0" in e for e in errors))
+
+    def test_unclosed_fence_skips_to_eof(self):
+        # An unclosed fence silently eats everything after it. Defensive
+        # behavior: better than crashing, and contributors usually close
+        # their fences.
+        f = self._write(
+            "unclosed.md",
+            "Before 1.0.0\n"
+            "```\n"
+            "inside 2.0.0\n"
+            "more lines 3.0.0\n",
+        )
+        errors = self._check(f)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("1.0.0", errors[0])
+
+    def test_tilde_fence_ignored(self):
+        # Markdown also supports `~~~` as a fence delimiter.
+        f = self._write(
+            "tilde.md",
+            "Setup:\n"
+            "~~~bash\n"
+            "install archagent@0.3.1\n"
+            "~~~\n",
+        )
+        self.assertEqual(self._check(f), [])
+
+    def test_unclosed_frontmatter_skips_whole_file(self):
+        # A file starting with `---` but lacking a closing `---` is
+        # treated as all-frontmatter. Lenient: better than crashing, and
+        # malformed frontmatter is a different class of defect that the
+        # contributor should fix at the file-format level.
+        f = self._write(
+            "unclosed-fm.md",
+            "---\n"
+            "name: test\n"
+            "version: 1.2.3\n",  # no closing ---
+        )
+        self.assertEqual(self._check(f), [])
+
+    def test_fence_and_frontmatter_combined(self):
+        f = self._write(
+            "combo.md",
+            "---\n"
+            "name: test\n"
+            "version: 0.1.0\n"
+            "---\n"
+            "\n"
+            "Body version 1.2.3 in prose\n"
+            "```\n"
+            "Fenced 4.5.6\n"
+            "```\n"
+            "Trailing 7.8.9 prose\n",
+        )
+        errors = self._check(f)
+        self.assertEqual(len(errors), 2)
+        self.assertTrue(any("1.2.3" in e for e in errors))
+        self.assertTrue(any("7.8.9" in e for e in errors))
+        self.assertFalse(any("0.1.0" in e for e in errors))  # frontmatter
+        self.assertFalse(any("4.5.6" in e for e in errors))  # fenced
 
 
 if __name__ == "__main__":
