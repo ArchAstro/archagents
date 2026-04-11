@@ -478,6 +478,7 @@ class SlashCommandRefsTest(unittest.TestCase):
         return check_plugin_repo.check_slash_command_refs(
             marketplace_path=self.marketplace_path,
             content_files=list(content_files),
+            repo_root=self.tmp,
         )
 
     # Happy path ----------------------------------------------------------

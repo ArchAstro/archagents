@@ -279,15 +279,23 @@ _SLASH_COMMAND_RE = re.compile(r"/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)")
 def check_slash_command_refs(
     marketplace_path: Path = CLAUDE_MARKETPLACE_PATH,
     content_files: Iterable[Path] | None = None,
+    repo_root: Path | None = None,
 ) -> list[str]:
     """
     Verify every `/plugin:command` reference in skill and command markdown
     resolves to a plugin declared in marketplace.json and a command file
     that actually exists under that plugin's commands/ directory.
 
+    `repo_root` defaults to REPO_ROOT. `source` paths in marketplace.json
+    are resolved relative to it, and all resolved commands directories
+    must stay inside it.
+
     Returns a list of error messages (empty on success).
     """
     errors: list[str] = []
+
+    if repo_root is None:
+        repo_root = REPO_ROOT
 
     marketplace, err = _load_json_dict(marketplace_path)
     if err is not None:
@@ -308,20 +316,16 @@ def check_slash_command_refs(
     # live at `<source>/commands/*.md`. A plugin with no commands/ directory
     # contributes an empty set, which cleanly makes every command ref fail.
     #
-    # `source` paths are relative to the repo root — marketplace.json lives
-    # at `<repo>/.claude-plugin/marketplace.json`, so the repo root is two
-    # levels up. Tests mirror this layout in tmpdir.
-    #
-    # Resolved commands directories must stay inside `repo_base`. A `source`
-    # that escapes the repo (via `../` or absolute path) would otherwise let
-    # the check enumerate arbitrary filesystem locations as "valid commands."
+    # `source` paths are resolved relative to `repo_root`. Resolved commands
+    # directories must stay inside it — a `source` that escapes the repo
+    # (via `../` or absolute path) would otherwise let the check enumerate
+    # arbitrary filesystem locations as "valid commands."
     #
     # Malformed entries (non-dict, or dict with missing/wrong-typed `name`
     # or `source`) surface as explicit errors rather than being silently
     # skipped — a contributor typing `"nmae"` should see the typo, not
     # discover it later via a downstream "plugin X not declared" error.
-    repo_base = marketplace_path.parent.parent
-    repo_resolved = repo_base.resolve()
+    repo_resolved = repo_root.resolve()
     valid: dict[str, set[str]] = {}
     for i, entry in enumerate(plugins):
         if not isinstance(entry, dict):
@@ -338,7 +342,7 @@ def check_slash_command_refs(
                 f"non-string `name`/`source` (name={name!r}, source={source!r})"
             )
             continue
-        commands_dir = (repo_base / source / "commands").resolve()
+        commands_dir = (repo_root / source / "commands").resolve()
         if not commands_dir.is_relative_to(repo_resolved):
             errors.append(
                 f"{_rel(marketplace_path)}: plugin {name!r} source "
