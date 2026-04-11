@@ -31,9 +31,9 @@ ERROR CONTRACT
     surface multiple failures at once.
 
 CHECKS
-    Implemented: check_manifest_consistency, check_compat_key_refs
-    Planned (#9): check_slash_command_refs, check_hardcoded_versions,
-                  check_version_bump_on_content_change
+    Implemented: check_manifest_consistency, check_compat_key_refs,
+                 check_slash_command_refs
+    Planned (#9): check_hardcoded_versions, check_version_bump_on_content_change
 """
 from __future__ import annotations
 
@@ -243,6 +243,123 @@ def check_compat_key_refs(
     return errors
 
 
+# Matches `/plugin:command` slash command references in skill and command
+# markdown. Both segments use the same kebab/snake/alnum charset as plugin
+# names elsewhere. The greedy `+` captures the full command identifier,
+# so `/archagents:installer` captures `installer`, not a `install` prefix.
+_SLASH_COMMAND_RE = re.compile(r"/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)")
+
+
+def check_slash_command_refs(
+    marketplace_path: Path = CLAUDE_MARKETPLACE_PATH,
+    content_files: Iterable[Path] | None = None,
+) -> list[str]:
+    """
+    Verify every `/plugin:command` reference in skill and command markdown
+    resolves to a plugin declared in marketplace.json and a command file
+    that actually exists under that plugin's commands/ directory.
+
+    Returns a list of error messages (empty on success).
+    """
+    errors: list[str] = []
+
+    try:
+        marketplace = json.loads(marketplace_path.read_text())
+    except OSError as e:
+        return [f"{_rel(marketplace_path)}: cannot read ({e})"]
+    except json.JSONDecodeError as e:
+        return [f"{_rel(marketplace_path)}: invalid JSON ({e})"]
+
+    if not isinstance(marketplace, dict):
+        return [f"{_rel(marketplace_path)}: top-level JSON is not an object"]
+
+    plugins = marketplace.get("plugins")
+    if not isinstance(plugins, list):
+        return [
+            f"{_rel(marketplace_path)}: expected `plugins` to be a list, "
+            f"found {type(plugins).__name__}"
+        ]
+    if not plugins:
+        return [f"{_rel(marketplace_path)}: `plugins` list is empty"]
+
+    # Build {plugin_name: {command_name, ...}} from marketplace entries.
+    # Each plugin's `source` field points at its plugin tree root; commands
+    # live at `<source>/commands/*.md`. A plugin with no commands/ directory
+    # contributes an empty set, which cleanly makes every command ref fail.
+    #
+    # `source` paths are relative to the repo root — marketplace.json lives
+    # at `<repo>/.claude-plugin/marketplace.json`, so the repo root is two
+    # levels up. Tests mirror this layout in tmpdir.
+    #
+    # Resolved commands directories must stay inside `repo_base`. A `source`
+    # that escapes the repo (via `../` or absolute path) would otherwise let
+    # the check enumerate arbitrary filesystem locations as "valid commands."
+    #
+    # Malformed entries (non-dict, or dict with missing/wrong-typed `name`
+    # or `source`) surface as explicit errors rather than being silently
+    # skipped — a contributor typing `"nmae"` should see the typo, not
+    # discover it later via a downstream "plugin X not declared" error.
+    repo_base = marketplace_path.parent.parent
+    repo_resolved = repo_base.resolve()
+    valid: dict[str, set[str]] = {}
+    for i, entry in enumerate(plugins):
+        if not isinstance(entry, dict):
+            errors.append(
+                f"{_rel(marketplace_path)}: plugins[{i}] is not an object "
+                f"(found {type(entry).__name__})"
+            )
+            continue
+        name = entry.get("name")
+        source = entry.get("source")
+        if not isinstance(name, str) or not isinstance(source, str):
+            errors.append(
+                f"{_rel(marketplace_path)}: plugins[{i}] has missing or "
+                f"non-string `name`/`source` (name={name!r}, source={source!r})"
+            )
+            continue
+        commands_dir = (repo_base / source / "commands").resolve()
+        if not commands_dir.is_relative_to(repo_resolved):
+            errors.append(
+                f"{_rel(marketplace_path)}: plugin {name!r} source "
+                f"{source!r} resolves outside the repo "
+                f"({commands_dir} not under {repo_resolved})"
+            )
+            continue
+        if commands_dir.exists() and commands_dir.is_dir():
+            valid[name] = {p.stem for p in commands_dir.glob("*.md")}
+        else:
+            valid[name] = set()
+
+    if errors:
+        return errors
+
+    files = _iter_content_files() if content_files is None else content_files
+    for path in files:
+        try:
+            text = path.read_text()
+        except OSError:
+            continue
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            for match in _SLASH_COMMAND_RE.finditer(line):
+                plugin, command = match.group(1), match.group(2)
+                if plugin not in valid:
+                    errors.append(
+                        f"{_rel(path)}:{lineno}: references "
+                        f"`/{plugin}:{command}` but plugin `{plugin}` is "
+                        f"not declared in marketplace.json "
+                        f"(valid: {sorted(valid)})"
+                    )
+                elif command not in valid[plugin]:
+                    errors.append(
+                        f"{_rel(path)}:{lineno}: references "
+                        f"`/{plugin}:{command}` but command `{command}` does "
+                        f"not exist in {plugin}'s commands/ directory "
+                        f"(valid: {sorted(valid[plugin])})"
+                    )
+
+    return errors
+
+
 # Ordered list of (name, callable) pairs. Runner invokes each in order so
 # earlier checks can establish preconditions that later checks rely on
 # (e.g. check_version_bump_on_content_change, when added, will assume
@@ -250,6 +367,7 @@ def check_compat_key_refs(
 CHECKS: list[tuple[str, Callable[[], list[str]]]] = [
     ("manifest consistency", check_manifest_consistency),
     ("compat key refs", check_compat_key_refs),
+    ("slash command refs", check_slash_command_refs),
 ]
 
 
