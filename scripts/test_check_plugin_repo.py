@@ -1386,6 +1386,32 @@ class VersionBumpOnContentChangeTest(unittest.TestCase):
         self.assertIn("unreachable", stderr.getvalue())
         self.assertIn("fetch-depth: 0", stderr.getvalue())
 
+    def test_git_subprocess_timeout_skips_with_warning(self):
+        # If a git call hangs (slow NFS, credential prompt, stale lock),
+        # the subprocess timeout fires, the check warns and skips rather
+        # than blocking CI for the default 6-hour step timeout.
+        import io
+        import contextlib
+        import subprocess as sp
+        from unittest.mock import patch
+
+        def fake_run(*args, **kwargs):
+            raise sp.TimeoutExpired(cmd=args[0] if args else [], timeout=30)
+
+        stderr = io.StringIO()
+        with (
+            contextlib.redirect_stderr(stderr),
+            patch("check_plugin_repo.subprocess.run", side_effect=fake_run),
+        ):
+            errors = check_plugin_repo.check_version_bump_on_content_change(
+                marketplace_path=self.marketplace_path,
+                base_ref="HEAD~1",
+                repo_root=self.tmp,
+            )
+        self.assertEqual(errors, [])
+        self.assertIn("WARN", stderr.getvalue())
+        self.assertIn("timed out", stderr.getvalue())
+
     def test_base_without_marketplace_treats_as_implicit_bump(self):
         # If marketplace.json didn't exist at the base ref (e.g. the file
         # was added in this PR), there's no base version to compare against

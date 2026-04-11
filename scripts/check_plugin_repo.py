@@ -479,23 +479,38 @@ def check_version_bump_on_content_change(
         github_base = os.environ.get("GITHUB_BASE_REF")
         base_ref = f"origin/{github_base}" if github_base else "origin/main"
 
-    def _git(*args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["git", "-C", str(repo_root), *args],
-            capture_output=True,
-            text=True,
-        )
-
     def _warn(msg: str) -> None:
         # Stderr warning that does NOT fail the check — lets skip conditions
         # surface visibly so a misconfigured CI (shallow clone, missing
         # origin/main) doesn't silently no-op this check.
         print(f"WARN [version bump on content change]: {msg}", file=sys.stderr)
 
-    try:
-        base_check = _git("rev-parse", "--verify", f"{base_ref}^{{commit}}")
-    except FileNotFoundError:
-        _warn("git executable not found; skipping check")
+    def _git(*args: str) -> subprocess.CompletedProcess[str] | None:
+        # 30-second timeout guards against hung git invocations (slow NFS
+        # mounts, unusual credential/signing prompts, etc.) that would
+        # otherwise block CI for the default GitHub Actions step timeout.
+        # Missing git or a timeout both warn-and-return-None; callers
+        # treat None the same as a non-zero returncode.
+        try:
+            return subprocess.run(
+                ["git", "-C", str(repo_root), *args],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except FileNotFoundError:
+            _warn("git executable not found; skipping check")
+            return None
+        except subprocess.TimeoutExpired:
+            _warn(
+                f"git {args[0]} timed out after 30s; skipping check. "
+                f"If this is unexpected, check for slow filesystems, "
+                f"stale .git/index.lock, or unusual credential prompts."
+            )
+            return None
+
+    base_check = _git("rev-parse", "--verify", f"{base_ref}^{{commit}}")
+    if base_check is None:
         return []
     if base_check.returncode != 0:
         _warn(
@@ -506,6 +521,8 @@ def check_version_bump_on_content_change(
         return []
 
     diff = _git("diff", "--name-only", f"{base_ref}...HEAD")
+    if diff is None:
+        return []
     if diff.returncode != 0:
         _warn(f"git diff against {base_ref} failed; skipping check")
         return []
@@ -535,6 +552,8 @@ def check_version_bump_on_content_change(
         )
         return []
     base_show = _git("show", f"{base_ref}:{marketplace_relpath}")
+    if base_show is None:
+        return []
     if base_show.returncode != 0:
         # marketplace.json didn't exist at base → treat as implicit bump.
         return []
