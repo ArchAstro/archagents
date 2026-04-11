@@ -110,6 +110,23 @@ def _is_content_path(relpath: str) -> bool:
     return any(relpath.startswith(p) for p in _CONTENT_PATH_PREFIXES)
 
 
+def _load_json_dict(path: Path) -> tuple[dict | None, str | None]:
+    """
+    Load a JSON file and verify the top level is an object. Returns
+    `(data, None)` on success or `(None, error_message)` on failure.
+    Exactly one of the two elements is None.
+    """
+    try:
+        data = json.loads(path.read_text())
+    except OSError as e:
+        return None, f"{_rel(path)}: cannot read ({e})"
+    except json.JSONDecodeError as e:
+        return None, f"{_rel(path)}: invalid JSON ({e})"
+    if not isinstance(data, dict):
+        return None, f"{_rel(path)}: top-level JSON is not an object"
+    return data, None
+
+
 def check_manifest_consistency(
     marketplace_path: Path = CLAUDE_MARKETPLACE_PATH,
     claude_plugin_path: Path = CLAUDE_PLUGIN_MANIFEST_PATH,
@@ -125,22 +142,15 @@ def check_manifest_consistency(
     errors: list[str] = []
 
     # Load all three files defensively. A parse/read error on any single
-    # file is reported as a check failure rather than a crash, but we stop
-    # after collecting all load errors since we can't compare against files
-    # we couldn't read.
+    # file is collected, but we stop after the loop since we can't compare
+    # against files we couldn't read.
     manifests: dict[Path, dict] = {}
     for path in (marketplace_path, claude_plugin_path, codex_plugin_path):
-        try:
-            data = json.loads(path.read_text())
-        except OSError as e:
-            errors.append(f"{_rel(path)}: cannot read ({e})")
+        data, err = _load_json_dict(path)
+        if err is not None:
+            errors.append(err)
             continue
-        except json.JSONDecodeError as e:
-            errors.append(f"{_rel(path)}: invalid JSON ({e})")
-            continue
-        if not isinstance(data, dict):
-            errors.append(f"{_rel(path)}: top-level JSON is not an object")
-            continue
+        assert data is not None  # contract of _load_json_dict
         manifests[path] = data
     if errors:
         return errors
@@ -225,15 +235,10 @@ def check_compat_key_refs(
     """
     errors: list[str] = []
 
-    try:
-        compat = json.loads(compat_path.read_text())
-    except OSError as e:
-        return [f"{_rel(compat_path)}: cannot read ({e})"]
-    except json.JSONDecodeError as e:
-        return [f"{_rel(compat_path)}: invalid JSON ({e})"]
-
-    if not isinstance(compat, dict):
-        return [f"{_rel(compat_path)}: top-level JSON is not an object"]
+    compat, err = _load_json_dict(compat_path)
+    if err is not None:
+        return [err]
+    assert compat is not None
 
     plugins_dict = compat.get("plugins")
     if not isinstance(plugins_dict, dict):
@@ -284,15 +289,10 @@ def check_slash_command_refs(
     """
     errors: list[str] = []
 
-    try:
-        marketplace = json.loads(marketplace_path.read_text())
-    except OSError as e:
-        return [f"{_rel(marketplace_path)}: cannot read ({e})"]
-    except json.JSONDecodeError as e:
-        return [f"{_rel(marketplace_path)}: invalid JSON ({e})"]
-
-    if not isinstance(marketplace, dict):
-        return [f"{_rel(marketplace_path)}: top-level JSON is not an object"]
+    marketplace, err = _load_json_dict(marketplace_path)
+    if err is not None:
+        return [err]
+    assert marketplace is not None
 
     plugins = marketplace.get("plugins")
     if not isinstance(plugins, list):
@@ -514,12 +514,15 @@ def check_version_bump_on_content_change(
     if not content_changed:
         return []
 
-    # Read current version from the working tree marketplace.
+    # Read current version from the working-tree marketplace. Load errors
+    # are silently skipped — a malformed current manifest is the manifest
+    # consistency check's concern, not this one's.
+    current, _ = _load_json_dict(marketplace_path)
+    if current is None:
+        return []
     try:
-        current = json.loads(marketplace_path.read_text())
         current_version = current["plugins"][0]["version"]
-    except (OSError, json.JSONDecodeError, KeyError, IndexError, TypeError):
-        # Malformed current manifest is check_manifest_consistency's concern.
+    except (KeyError, IndexError, TypeError):
         return []
 
     # Read base version from the marketplace at the base ref.
