@@ -7,11 +7,12 @@ Run directly:
     python3 scripts/test_check_plugin_repo.py
 
 Covers check_manifest_consistency, check_compat_key_refs,
-check_slash_command_refs, and check_hardcoded_versions. Test classes
-for the remaining #9 checks (version-bump-on-change) will be added
-as those checks are implemented.
+check_slash_command_refs, check_hardcoded_versions, and
+check_version_bump_on_content_change.
 """
 import json
+import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -1002,6 +1003,233 @@ class HardcodedVersionsTest(unittest.TestCase):
         self.assertTrue(any("7.8.9" in e for e in errors))
         self.assertFalse(any("0.1.0" in e for e in errors))  # frontmatter
         self.assertFalse(any("4.5.6" in e for e in errors))  # fenced
+
+
+class VersionBumpOnContentChangeTest(unittest.TestCase):
+    """Tests for check_version_bump_on_content_change().
+
+    Each test sets up a real git repo in a tmpdir with an initial commit
+    (base state), then the test body applies whatever changes it wants
+    and runs the check against `base_ref=HEAD~1`. This exercises the real
+    git shell-out path rather than mocking it.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+
+        self.marketplace_path = self.tmp / ".claude-plugin" / "marketplace.json"
+        self.marketplace_path.parent.mkdir()
+        self.sources_dir = self.tmp / "sources"
+        self.sources_dir.mkdir()
+        self.skills_dir = (
+            self.tmp / ".claude-plugins" / "archagents" / "skills"
+        )
+        self.skills_dir.mkdir(parents=True)
+
+        # Initialize a fresh git repo and make the base commit at 0.1.0.
+        self._git("init", "-q", "-b", "main")
+        self._git("config", "user.email", "test@example.com")
+        self._git("config", "user.name", "Test")
+        # Environment overrides are also set for commit authorship so the
+        # test doesn't depend on the developer's global git config.
+        self._write_marketplace("0.1.0")
+        self._write_source("baseline.md", "# baseline\n")
+        self._git("add", ".")
+        self._git("commit", "-q", "-m", "base state")
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def _git(self, *args: str) -> subprocess.CompletedProcess:
+        """Run `git -C <tmp> <args>`. Test envs force a clean git identity."""
+        env = os.environ.copy()
+        env.update(
+            {
+                "GIT_AUTHOR_NAME": "Test",
+                "GIT_AUTHOR_EMAIL": "test@example.com",
+                "GIT_COMMITTER_NAME": "Test",
+                "GIT_COMMITTER_EMAIL": "test@example.com",
+            }
+        )
+        return subprocess.run(
+            ["git", "-C", str(self.tmp), *args],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+    def _write_marketplace(self, version: str) -> None:
+        self.marketplace_path.write_text(
+            json.dumps(
+                {
+                    "plugins": [
+                        {"name": "archagents", "version": version}
+                    ]
+                }
+            )
+        )
+
+    def _write_source(self, name: str, text: str) -> None:
+        (self.sources_dir / name).write_text(text)
+
+    def _write_skill(self, name: str, text: str) -> None:
+        skill_dir = self.skills_dir / name
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text(text)
+
+    def _commit(self, message: str) -> None:
+        self._git("add", "-A")
+        self._git("commit", "-q", "-m", message)
+
+    def _check(self, base_ref: str = "HEAD~1") -> list[str]:
+        return check_plugin_repo.check_version_bump_on_content_change(
+            marketplace_path=self.marketplace_path,
+            base_ref=base_ref,
+            repo_root=self.tmp,
+        )
+
+    # Happy path ----------------------------------------------------------
+
+    def test_no_changes_passes(self):
+        # HEAD == HEAD~1 has no diff at the skin level but git's `diff
+        # base...HEAD` still returns empty when there's nothing to compare.
+        # We create an empty second commit to model "nothing changed".
+        self._git("commit", "-q", "--allow-empty", "-m", "empty")
+        self.assertEqual(self._check(), [])
+
+    def test_content_change_with_version_bump_passes(self):
+        self._write_source("baseline.md", "# baseline\n\nUpdated content.\n")
+        self._write_marketplace("0.1.1")
+        self._commit("update content and bump version")
+        self.assertEqual(self._check(), [])
+
+    def test_non_content_change_without_bump_passes(self):
+        # README changes don't require a bump — not plugin content.
+        (self.tmp / "README.md").write_text("# repo readme\n")
+        self._commit("add readme")
+        self.assertEqual(self._check(), [])
+
+    def test_scripts_change_without_bump_passes(self):
+        # scripts/ is infra, not plugin content.
+        scripts = self.tmp / "scripts"
+        scripts.mkdir()
+        (scripts / "helper.sh").write_text("#!/bin/sh\n")
+        self._commit("add helper script")
+        self.assertEqual(self._check(), [])
+
+    def test_manifest_only_change_passes(self):
+        # Bumping the manifest without touching content is fine — maybe a
+        # metadata update, maybe preparation for a release with no content
+        # diff yet. No content changed → no bump required → pass.
+        self._write_marketplace("0.2.0")
+        self._commit("bump version without touching content")
+        self.assertEqual(self._check(), [])
+
+    # Failure cases --------------------------------------------------------
+
+    def test_source_change_without_bump_fails(self):
+        self._write_source("baseline.md", "# baseline\n\nEdited body.\n")
+        self._commit("edit source without bumping version")
+        errors = self._check()
+        self.assertEqual(len(errors), 1)
+        self.assertIn("plugin content changed", errors[0])
+        self.assertIn("still '0.1.0'", errors[0])
+        self.assertIn("sources/baseline.md", errors[0])
+
+    def test_new_source_file_without_bump_fails(self):
+        self._write_source("new-skill.md", "# new skill\n")
+        self._commit("add new source")
+        errors = self._check()
+        self.assertEqual(len(errors), 1)
+        self.assertIn("sources/new-skill.md", errors[0])
+
+    def test_skill_tree_change_without_bump_fails(self):
+        # Changes under .claude-plugins/archagents/skills/ are content.
+        self._write_skill("chat", "---\nname: chat\n---\n\nbody\n")
+        self._commit("add skill")
+        errors = self._check()
+        self.assertEqual(len(errors), 1)
+        self.assertIn(".claude-plugins/archagents/skills/chat/SKILL.md", errors[0])
+
+    def test_multiple_content_files_listed_in_error(self):
+        self._write_source("a.md", "# a\n")
+        self._write_source("b.md", "# b\n")
+        self._commit("add two sources")
+        errors = self._check()
+        self.assertEqual(len(errors), 1)
+        self.assertIn("sources/a.md", errors[0])
+        self.assertIn("sources/b.md", errors[0])
+
+    def test_mixed_content_and_docs_still_fails(self):
+        # One content file + one non-content file, no bump → still fails
+        # (one content change is enough to require a bump).
+        self._write_source("content.md", "# content\n")
+        (self.tmp / "README.md").write_text("# readme\n")
+        self._commit("mixed change")
+        errors = self._check()
+        self.assertEqual(len(errors), 1)
+        self.assertIn("sources/content.md", errors[0])
+        self.assertNotIn("README.md", errors[0])
+
+    def test_deleted_content_file_without_bump_fails(self):
+        # Deleting a skill file is a content change and requires a bump.
+        (self.sources_dir / "baseline.md").unlink()
+        self._commit("delete baseline")
+        errors = self._check()
+        self.assertEqual(len(errors), 1)
+        self.assertIn("sources/baseline.md", errors[0])
+
+    # Skip conditions ------------------------------------------------------
+
+    def test_unreachable_base_ref_skips_with_warning(self):
+        # Skip returns empty (pass), but prints a warning to stderr so a
+        # misconfigured CI doesn't silently no-op the check.
+        import io
+        import contextlib
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            errors = check_plugin_repo.check_version_bump_on_content_change(
+                marketplace_path=self.marketplace_path,
+                base_ref="nonexistent-branch",
+                repo_root=self.tmp,
+            )
+        self.assertEqual(errors, [])
+        self.assertIn("WARN", stderr.getvalue())
+        self.assertIn("unreachable", stderr.getvalue())
+        self.assertIn("fetch-depth: 0", stderr.getvalue())
+
+    def test_base_without_marketplace_treats_as_implicit_bump(self):
+        # If marketplace.json didn't exist at the base ref (e.g. the file
+        # was added in this PR), there's no base version to compare against
+        # and the "current version" is definitionally new. Skip with no
+        # error — the contributor is bootstrapping the plugin.
+        self.marketplace_path.unlink()
+        self._git("add", "-A")
+        self._git("commit", "-q", "-m", "remove marketplace")
+        # Re-create marketplace and touch content — the base (HEAD~1) has no
+        # marketplace, so the check should treat this as an implicit bump.
+        self._write_marketplace("0.1.0")
+        self._write_source("baseline.md", "# baseline\n\nchange\n")
+        self._commit("add marketplace back with content change")
+        # base=HEAD~1 is the "remove marketplace" commit; marketplace.json
+        # does not exist there, so the show fails and we skip cleanly.
+        self.assertEqual(self._check(), [])
+
+    def test_push_to_main_scenario_trivially_passes(self):
+        # Simulates a push-to-main where HEAD has already advanced past the
+        # nominal base. The diff against HEAD itself is empty → pass.
+        self._write_source("baseline.md", "# baseline\n\nupdated\n")
+        self._write_marketplace("0.1.1")
+        self._commit("content update")
+        # Diff HEAD...HEAD is empty.
+        errors = check_plugin_repo.check_version_bump_on_content_change(
+            marketplace_path=self.marketplace_path,
+            base_ref="HEAD",
+            repo_root=self.tmp,
+        )
+        self.assertEqual(errors, [])
 
 
 if __name__ == "__main__":

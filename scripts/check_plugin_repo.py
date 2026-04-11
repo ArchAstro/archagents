@@ -32,13 +32,15 @@ ERROR CONTRACT
 
 CHECKS
     Implemented: check_manifest_consistency, check_compat_key_refs,
-                 check_slash_command_refs, check_hardcoded_versions
-    Planned (#9): check_version_bump_on_content_change
+                 check_slash_command_refs, check_hardcoded_versions,
+                 check_version_bump_on_content_change
 """
 from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Callable, Iterable, Iterator
@@ -87,6 +89,25 @@ def _iter_content_files(roots: Iterable[Path] | None = None) -> Iterator[Path]:
         if not root.exists():
             continue
         yield from sorted(root.rglob("*.md"))
+
+
+# Repo-relative path prefixes that count as "plugin content" for the
+# version-bump-on-change check. A change under any of these paths requires
+# a corresponding manifest version bump so the Claude Code and Codex plugin
+# caches refresh. Manifest files themselves are NOT content (they live under
+# `.claude-plugin/` and `...path.../.claude-plugin/`, which don't match any
+# of these prefixes).
+_CONTENT_PATH_PREFIXES: tuple[str, ...] = (
+    "sources/",
+    ".claude-plugins/archagents/skills/",
+    ".claude-plugins/archagents/commands/",
+    "plugins/archagents/skills/",
+)
+
+
+def _is_content_path(relpath: str) -> bool:
+    """True if `relpath` (repo-relative, forward-slash) is a content file."""
+    return any(relpath.startswith(p) for p in _CONTENT_PATH_PREFIXES)
 
 
 def check_manifest_consistency(
@@ -427,15 +448,122 @@ def check_hardcoded_versions(
     return errors
 
 
+def check_version_bump_on_content_change(
+    marketplace_path: Path = CLAUDE_MARKETPLACE_PATH,
+    base_ref: str | None = None,
+    repo_root: Path | None = None,
+) -> list[str]:
+    """
+    If any content file changed between `base_ref` and HEAD, verify the
+    marketplace plugin version also changed. Without a bump, Claude Code
+    and Codex serve stale content from their version-keyed caches.
+
+    Assumes check_manifest_consistency has already validated cross-file
+    version agreement, so comparing one manifest is sufficient.
+
+    Skips cleanly when:
+    - the base ref is unreachable (fresh clone, shallow fetch, local-only)
+    - git is unavailable
+    - no content files changed
+    - marketplace.json didn't exist at the base ref (new-plugin bootstrap)
+
+    Returns a list of error messages (empty on success or skip).
+    """
+    if repo_root is None:
+        repo_root = REPO_ROOT
+
+    # Auto-detect base ref from GITHUB_BASE_REF (PR context) or fall back
+    # to origin/main for local dev and push events. On push-to-main the
+    # diff will be empty and the check trivially passes.
+    if base_ref is None:
+        github_base = os.environ.get("GITHUB_BASE_REF")
+        base_ref = f"origin/{github_base}" if github_base else "origin/main"
+
+    def _git(*args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", "-C", str(repo_root), *args],
+            capture_output=True,
+            text=True,
+        )
+
+    def _warn(msg: str) -> None:
+        # Stderr warning that does NOT fail the check — lets skip conditions
+        # surface visibly so a misconfigured CI (shallow clone, missing
+        # origin/main) doesn't silently no-op this check.
+        print(f"WARN [version bump on content change]: {msg}", file=sys.stderr)
+
+    try:
+        base_check = _git("rev-parse", "--verify", f"{base_ref}^{{commit}}")
+    except FileNotFoundError:
+        _warn("git executable not found; skipping check")
+        return []
+    if base_check.returncode != 0:
+        _warn(
+            f"base ref {base_ref!r} is unreachable; skipping check. "
+            f"If unexpected, verify `fetch-depth: 0` on actions/checkout "
+            f"or run `git fetch origin main` locally."
+        )
+        return []
+
+    diff = _git("diff", "--name-only", f"{base_ref}...HEAD")
+    if diff.returncode != 0:
+        _warn(f"git diff against {base_ref} failed; skipping check")
+        return []
+    changed_files = [line for line in diff.stdout.splitlines() if line]
+    content_changed = [f for f in changed_files if _is_content_path(f)]
+    if not content_changed:
+        return []
+
+    # Read current version from the working tree marketplace.
+    try:
+        current = json.loads(marketplace_path.read_text())
+        current_version = current["plugins"][0]["version"]
+    except (OSError, json.JSONDecodeError, KeyError, IndexError, TypeError):
+        # Malformed current manifest is check_manifest_consistency's concern.
+        return []
+
+    # Read base version from the marketplace at the base ref.
+    try:
+        marketplace_relpath = marketplace_path.relative_to(repo_root).as_posix()
+    except ValueError:
+        _warn(
+            f"marketplace_path {marketplace_path!r} is not under "
+            f"repo_root {repo_root!r}; skipping check"
+        )
+        return []
+    base_show = _git("show", f"{base_ref}:{marketplace_relpath}")
+    if base_show.returncode != 0:
+        # marketplace.json didn't exist at base → treat as implicit bump.
+        return []
+    try:
+        base_data = json.loads(base_show.stdout)
+        base_version = base_data["plugins"][0]["version"]
+    except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+        return []
+
+    if current_version != base_version:
+        return []
+
+    detail = "\n".join(f"    {f}" for f in content_changed)
+    return [
+        f"plugin content changed but marketplace plugin version is still "
+        f"{current_version!r} (same as {base_ref}). Bump the version in all "
+        f"three manifest files or CI will serve stale content on install. "
+        f"Changed files:\n{detail}"
+    ]
+
+
 # Ordered list of (name, callable) pairs. Runner invokes each in order so
 # earlier checks can establish preconditions that later checks rely on
-# (e.g. check_version_bump_on_content_change, when added, will assume
-# check_manifest_consistency has already validated cross-file agreement).
+# (e.g. check_version_bump_on_content_change assumes check_manifest_consistency
+# has already validated cross-file agreement, so it can compare just one
+# manifest's version against the PR base).
 CHECKS: list[tuple[str, Callable[[], list[str]]]] = [
     ("manifest consistency", check_manifest_consistency),
     ("compat key refs", check_compat_key_refs),
     ("slash command refs", check_slash_command_refs),
     ("hardcoded versions", check_hardcoded_versions),
+    ("version bump on content change", check_version_bump_on_content_change),
 ]
 
 
