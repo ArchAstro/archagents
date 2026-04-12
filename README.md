@@ -106,7 +106,7 @@ impersonation.
 
 ## Docs
 
-- [Getting Started](https://docs.archagents.com/getting-started) — zero to one working agent
-- [For Coding Agents](https://docs.archagents.com/for-coding-agents) — machine-friendly setup
-- [CLI Reference](https://docs.archagents.com/cli) — terminal workflow
-- [Agents](https://docs.archagents.com/agents) — the full agent model
+- [Getting Started](https://docs.archagents.com/docs/getting-started) — zero to one working agent
+- [For Coding Agents](https://docs.archagents.com/docs/for-coding-agents) — machine-friendly setup
+- [CLI Reference](https://docs.archagents.com/docs/cli) — terminal workflow
+- [Agents](https://docs.archagents.com/docs/agents) — the full agent model
