@@ -397,6 +397,11 @@ def main() -> int:
 
     written = write_outputs(outputs)
     print(f"Wrote {written}/{len(outputs)} file(s) (others already up-to-date).")
+    if written > 0:
+        print(
+            "NOTE: content changed — remember to bump the plugin version in "
+            "all three manifest files or the plugin caches will not refresh."
+        )
     return 0
 
 
