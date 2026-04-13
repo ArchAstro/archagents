@@ -168,7 +168,7 @@ def split_frontmatter(text: str) -> tuple[dict, str]:
 
 
 def load_source(path: Path) -> Source:
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     fm, body = split_frontmatter(text)
     targets = fm.get("targets") or {}
     if not targets or not isinstance(targets, dict):
@@ -219,7 +219,17 @@ def apply_conditionals(text: str, target: TargetType) -> str:
         inner = match.group("body")
         return inner if key in active else ""
 
-    return CONDITIONAL_RE.sub(replace, text)
+    result = CONDITIONAL_RE.sub(replace, text)
+
+    # Post-check: markers surviving substitution indicate mismatched keys
+    remaining = CONDITIONAL_OPEN_RE.findall(result) + CONDITIONAL_CLOSE_RE.findall(result)
+    if remaining:
+        raise ValueError(
+            f"conditional markers survived substitution (likely mismatched "
+            f"keys): {remaining}"
+        )
+
+    return result
 
 
 def format_frontmatter(fm: dict) -> str:
@@ -347,9 +357,9 @@ def write_outputs(outputs: dict[Path, str]) -> int:
     written = 0
     for path, content in outputs.items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        existing = path.read_text() if path.exists() else None
+        existing = path.read_text(encoding="utf-8") if path.exists() else None
         if existing != content:
-            path.write_text(content)
+            path.write_text(content, encoding="utf-8")
             written += 1
     return written
 
@@ -361,7 +371,7 @@ def check_outputs(outputs: dict[Path, str]) -> list[Path]:
         if not path.exists():
             diffs.append(path)
             continue
-        if path.read_text() != content:
+        if path.read_text(encoding="utf-8") != content:
             diffs.append(path)
     return diffs
 

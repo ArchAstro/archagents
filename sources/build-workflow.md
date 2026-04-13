@@ -155,7 +155,7 @@ archagent validate workflow --file ./workflows/my-workflow.json
 
 Validate any referenced scripts:
 ```
-archagent validate script --file ./scripts/my-script.archscript
+archagent validate script --file ./scripts/my-script.agentscript
 ```
 
 Fix any validation errors before deploying.
