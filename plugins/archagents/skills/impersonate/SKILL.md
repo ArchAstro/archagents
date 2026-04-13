@@ -1,6 +1,6 @@
 ---
 name: impersonate
-description: Use when the user wants to impersonate an ArchAgent, asks about the active impersonation state, wants to refresh or stop impersonation, or refers to working as a specific ArchAgent inside Codex. Trigger phrases include "impersonate agent", "act as this agent", "be this agent", "start impersonation", "sync impersonation", "stop impersonation", "what agent am I impersonating", and "use the active agent identity".
+description: Use when the user wants to impersonate an ArchAgent agent, asks about the active impersonation state, wants to refresh or stop impersonation, or refers to working as a specific ArchAgent agent inside Codex. Trigger phrases include "impersonate agent", "act as this agent", "be this agent", "start impersonation", "sync impersonation", "stop impersonation", "what agent am I impersonating", and "use the active agent identity".
 allowed-tools: ["Bash(archagent:*)"]
 ---
 
