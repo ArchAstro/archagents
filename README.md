@@ -1,8 +1,16 @@
 # ArchAgents
 
-Production-ready agents you can deploy in minutes. Review PRs, triage
-vulnerabilities, enforce compliance, generate changelogs, and more —
-each agent comes with identity, tools, routines, and a one-command deploy.
+[![check-plugin-content](https://github.com/ArchAstro/archagents/actions/workflows/check-plugin-content.yml/badge.svg)](https://github.com/ArchAstro/archagents/actions/workflows/check-plugin-content.yml)
+[![installer-smoke-test](https://github.com/ArchAstro/archagents/actions/workflows/installer-smoke-test.yml/badge.svg)](https://github.com/ArchAstro/archagents/actions/workflows/installer-smoke-test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+[ArchAgents](https://archagents.com) accelerates post-sales work —
+discovery, integration, migration, and the long tail of customer-specific
+code — with agents that run on webhooks, schedules, and API triggers.
+Deploy a production-ready sample from this repo (PR review, compliance,
+security triage, changelogs, and more), or build your own: define behavior
+in YAML, plug in any model, add custom tools and routines. One-command
+deploy.
 
 ## Try it now
 
