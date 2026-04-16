@@ -181,7 +181,7 @@ routines:
       7. Post a Slack summary
 
       Be selective. If nothing's notable, say so explicitly.
-    status: active
+    status: paused
 
   - name: Auto-capture memories
     handler_type: preset
@@ -197,8 +197,6 @@ installations:
   - kind: memory/long-term
     config: {}
   - kind: archastro/thread
-    config: {}
-  - kind: integration/github
     config: {}
   - kind: integration/slack_bot
     config: {}

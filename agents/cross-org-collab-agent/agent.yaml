@@ -171,8 +171,6 @@ installations:
     config: {}
   - kind: archastro/thread
     config: {}
-  - kind: integration/github
-    config: {}
 
 metadata:
   category: engineering

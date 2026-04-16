@@ -111,14 +111,12 @@ routines:
       2. Group and categorize per the workflow in your identity
       3. File the draft via create_github_issue with labels [release-notes, draft]
       4. memory_store the date range
-    status: active
+    status: paused
 
 installations:
   - kind: memory/long-term
     config: {}
   - kind: archastro/thread
-    config: {}
-  - kind: integration/github
     config: {}
 
 metadata:

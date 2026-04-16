@@ -264,7 +264,7 @@ routines:
       1. Call scan_dependencies with the repo and ecosystem
       2. For each finding, follow the triage workflow (Outcome A, B, or C)
       3. Cite policies from knowledge_search where relevant
-    status: active
+    status: paused
 
   - name: hourly-log-analysis
     description: Scan GCP logs for security anomalies
@@ -279,7 +279,7 @@ routines:
       - Suspicious access patterns
 
       Filter out routine noise. Only alert on real signals.
-    status: active
+    status: paused
 
   - name: pr-review-poll
     description: Poll for new/updated PRs and flag security concerns
@@ -287,7 +287,7 @@ routines:
     preset_name: do_task
     event_type: schedule.cron
     schedule: "*/15 * * * *"
-    status: active
+    status: paused
 
   - name: Auto-capture memories
     handler_type: preset
@@ -305,8 +305,6 @@ installations:
   - kind: archastro/thread
     config: {}
   - kind: archastro/files
-    config: {}
-  - kind: integration/github
     config: {}
   - kind: integration/slack_bot
     config: {}

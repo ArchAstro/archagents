@@ -15,6 +15,11 @@ let jwt = import("jwt")
 let dt = import("datetime")
 let str = import("string")
 
+// Bail early if GCP credentials are not configured
+if (env.GCLOUD_SA_CLIENT_EMAIL == null || env.GCLOUD_SA_PRIVATE_KEY == null || env.GCLOUD_PROJECT_ID == null) {
+  {error: "GCP not configured", message: "Set GCLOUD_SA_CLIENT_EMAIL, GCLOUD_SA_PRIVATE_KEY, and GCLOUD_PROJECT_ID as org env vars to enable log monitoring. Skipping."}
+} else {
+
 let client_email = env.GCLOUD_SA_CLIENT_EMAIL
 let private_key = str.replace(env.GCLOUD_SA_PRIVATE_KEY, "\\n", "\n")
 
@@ -56,3 +61,5 @@ let logs_resp = unwrap(http.post("https://logging.googleapis.com/v2/entries:list
 }))
 
 logs_resp.body
+
+} // end GCP credentials guard
