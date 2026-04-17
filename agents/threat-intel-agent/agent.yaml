@@ -200,7 +200,7 @@ installations:
     config: {}
   - kind: integration/github
     config: {}
-  - kind: integration/slack_bot
+  - kind: enablement/slack_bot
     config: {}
 
 metadata:
