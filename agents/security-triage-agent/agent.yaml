@@ -167,7 +167,7 @@ tools:
         ref: { type: string }
       required: [owner, repo, path]
     handler_type: script
-    config_ref: get-repo-file
+    config_ref: st-get-repo-file
     status: active
 
   - kind: custom
@@ -182,7 +182,7 @@ tools:
         from: { type: string, description: "Base branch or SHA", default: "main" }
       required: [owner, repo, branch]
     handler_type: script
-    config_ref: create-branch
+    config_ref: st-create-branch
     status: active
 
   - kind: custom
@@ -199,7 +199,7 @@ tools:
         message: { type: string }
       required: [owner, repo, branch, path, content, message]
     handler_type: script
-    config_ref: commit-file
+    config_ref: st-commit-file
     status: active
 
   - kind: custom
@@ -216,7 +216,7 @@ tools:
         base: { type: string, description: "Target branch", default: "main" }
       required: [owner, repo, title, head]
     handler_type: script
-    config_ref: create-pull-request
+    config_ref: st-create-pull-request
     status: active
 
   - kind: custom
@@ -233,7 +233,7 @@ tools:
         assignees: { type: array, items: { type: string } }
       required: [owner, repo, title, body]
     handler_type: script
-    config_ref: create-github-issue
+    config_ref: st-create-github-issue
     status: active
 
   - kind: custom

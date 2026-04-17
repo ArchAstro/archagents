@@ -93,7 +93,7 @@ tools:
         pull_number: { type: integer }
       required: [owner, repo, pull_number]
     handler_type: script
-    config_ref: get-pr-files
+    config_ref: cp-get-pr-files
     status: active
 
   - kind: custom
@@ -108,7 +108,7 @@ tools:
         ref: { type: string }
       required: [owner, repo, path]
     handler_type: script
-    config_ref: get-repo-file
+    config_ref: cp-get-repo-file
     status: active
 
   - kind: custom
@@ -122,7 +122,7 @@ tools:
         pull_number: { type: integer }
       required: [owner, repo, pull_number]
     handler_type: script
-    config_ref: list-pr-reviews
+    config_ref: cp-list-pr-reviews
     status: active
 
   - kind: custom
@@ -147,7 +147,7 @@ tools:
             required: [path, line, body]
       required: [owner, repo, pull_number]
     handler_type: script
-    config_ref: create-pr-review
+    config_ref: cp-create-pr-review
     status: active
 
 routines:
