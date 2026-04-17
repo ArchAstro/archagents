@@ -94,7 +94,7 @@ tools:
         ref: { type: string }
       required: [owner, repo, path]
     handler_type: script
-    config_ref: get-repo-file
+    config_ref: cx-get-repo-file
     status: active
 
   - kind: custom
@@ -109,7 +109,7 @@ tools:
         from: { type: string, default: "main" }
       required: [owner, repo, branch]
     handler_type: script
-    config_ref: create-branch
+    config_ref: cx-create-branch
     status: active
 
   - kind: custom
@@ -126,7 +126,7 @@ tools:
         message: { type: string }
       required: [owner, repo, branch, path, content, message]
     handler_type: script
-    config_ref: commit-file
+    config_ref: cx-commit-file
     status: active
 
   - kind: custom
@@ -143,7 +143,7 @@ tools:
         base: { type: string, default: "main" }
       required: [owner, repo, title, head]
     handler_type: script
-    config_ref: create-pull-request
+    config_ref: cx-create-pull-request
     status: active
 
 routines:

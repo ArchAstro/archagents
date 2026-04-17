@@ -142,7 +142,7 @@ tools:
         ref: { type: string }
       required: [owner, repo, path]
     handler_type: script
-    config_ref: get-repo-file
+    config_ref: ti-get-repo-file
     status: active
 
   - kind: custom
@@ -158,7 +158,7 @@ tools:
         labels: { type: array, items: { type: string } }
       required: [owner, repo, title, body]
     handler_type: script
-    config_ref: create-github-issue
+    config_ref: ti-create-github-issue
     status: active
 
 routines:

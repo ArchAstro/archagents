@@ -135,7 +135,7 @@ tools:
         pull_number: { type: integer }
       required: [owner, repo, pull_number]
     handler_type: script
-    config_ref: get-pr-files
+    config_ref: cr-get-pr-files
     status: active
 
   - kind: custom
@@ -150,7 +150,7 @@ tools:
         ref: { type: string, description: "Branch, tag, or commit SHA" }
       required: [owner, repo, path]
     handler_type: script
-    config_ref: get-repo-file
+    config_ref: cr-get-repo-file
     status: active
 
   - kind: custom
@@ -164,7 +164,7 @@ tools:
         pull_number: { type: integer }
       required: [owner, repo, pull_number]
     handler_type: script
-    config_ref: list-pr-reviews
+    config_ref: cr-list-pr-reviews
     status: active
 
   - kind: custom
@@ -197,7 +197,7 @@ tools:
             required: [path, line, body]
       required: [owner, repo, pull_number]
     handler_type: script
-    config_ref: create-pr-review
+    config_ref: cr-create-pr-review
     status: active
 
   - kind: custom

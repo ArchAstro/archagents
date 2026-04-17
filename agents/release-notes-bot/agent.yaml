@@ -94,7 +94,7 @@ tools:
         labels: { type: array, items: { type: string } }
       required: [owner, repo, title, body]
     handler_type: script
-    config_ref: create-github-issue
+    config_ref: rn-create-github-issue
     status: active
 
 routines:
