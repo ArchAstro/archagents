@@ -45,7 +45,7 @@ let my_threads = arr.filter(threads, fn(t) {
 // If thread_ids is provided, only resolve those specific threads (selective resolve).
 // Otherwise resolve all bot threads (backward-compatible).
 let target_threads = if ($.thread_ids) {
-  arr.filter(my_threads, fn(t) { arr.includes($.thread_ids, t.id) })
+  arr.filter(my_threads, fn(t) { arr.indexOf($.thread_ids, t.id) >= 0 })
 } else { my_threads }
 
 let resolved = arr.map(target_threads, fn(t) {
