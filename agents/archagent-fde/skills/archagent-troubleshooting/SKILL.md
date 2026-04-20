@@ -17,8 +17,7 @@ archagent --version
 
 Common findings:
 - `Status: Expired` → `archagent auth login`
-- CLI older than `plugin-compatibility.json` minimum → reinstall via
-  the `archagent-install` skill.
+- CLI errors about version skew → reinstall via the `archagent-install` skill.
 - Wrong app selected → `archagent auth app list` and
   `archagent auth app set <id>`.
 

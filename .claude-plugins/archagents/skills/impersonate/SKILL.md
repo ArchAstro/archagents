@@ -22,14 +22,6 @@ Then route based on the combination of current state and user intent.
 
 ## Routing
 
-### CLI not installed or too old
-
-Before any impersonation work, verify the CLI:
-
-- Read `plugin-compatibility.json` from the plugin root. Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, direct the user to `/archagents:install`.
-- If authentication or app selection is missing, direct the user to `/archagents:auth`.
-
 ### Inactive + user wants to start
 
 ```

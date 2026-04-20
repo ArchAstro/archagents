@@ -10,20 +10,15 @@ Install or upgrade the public `archagent` binary from Homebrew or GitHub Release
 
 ## Workflow
 
-1. **Read the compatibility contract first**:
-   - Use `plugin-compatibility.json` from the plugin root.
-   - Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-   - Treat the resolved value as the minimum supported CLI version for every check below.
-
-2. **Check whether the CLI is already installed**:
+1. **Check whether the CLI is already installed**:
    ```
    archagent --version
    ```
    If this succeeds, record the version.
 
-3. **If the CLI is present and meets the resolved minimum**, confirm the version and stop unless the user explicitly asked to upgrade.
+2. **If the CLI is present** and the user didn't ask to upgrade, confirm the version and stop.
 
-4. **If the CLI is missing or older than the resolved minimum**, install it using the public distribution path:
+3. **If the CLI is missing or the user asked to upgrade**, install it using the public distribution path:
    - On macOS, if Homebrew is available:
      ```
      brew install ArchAstro/tools/archagent
@@ -41,16 +36,15 @@ Install or upgrade the public `archagent` binary from Homebrew or GitHub Release
      irm https://raw.githubusercontent.com/ArchAstro/archagents/main/install.ps1 | iex
      ```
 
-5. **Verify installation**:
+4. **Verify installation**:
    ```
    archagent --version
    ```
-   Confirm that the version now meets the resolved minimum.
 
-6. **On failure, help troubleshoot the public install path**:
+5. **On failure, help troubleshoot the public install path**:
    - Missing `brew` is expected on Linux and some macOS setups; fall back to `install.sh`.
    - `Permission denied` usually means they need `--install-dir` or a user-writable target directory.
    - `command not found: archagent` after install usually means the install directory is not on `PATH`.
    - Release download failures usually mean the target release asset has not been published yet.
 
-7. **On success**, tell the user the CLI is ready and suggest they run `archagent auth login` to authenticate.
+6. **On success**, tell the user the CLI is ready and suggest they run `archagent auth login` to authenticate.
