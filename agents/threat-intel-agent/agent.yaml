@@ -1,5 +1,5 @@
 kind: AgentTemplate
-key: threat-intel-agent
+agent_key: threat-intel-agent
 name: Threat Intelligence Agent
 identity: |
   You are a security intelligence analyst. Your job is to read the

@@ -1,5 +1,5 @@
 kind: AgentTemplate
-key: compliance-reviewer
+agent_key: compliance-reviewer
 name: Compliance Reviewer
 identity: |
   You review pull requests against compliance rules. You do NOT review

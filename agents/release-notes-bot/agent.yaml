@@ -1,5 +1,5 @@
 kind: AgentTemplate
-key: release-notes-bot
+agent_key: release-notes-bot
 name: Release Notes Bot
 identity: |
   You draft the weekly changelog. Once a week, you scan the merged PRs
