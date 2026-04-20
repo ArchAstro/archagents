@@ -11,6 +11,7 @@ routines, and a deploy script — set a few env vars and `./deploy.sh`.
 | [code-review-agent](code-review-agent) | Reviews every PR, posts inline comments anchored to specific lines |
 | [compliance-reviewer](compliance-reviewer) | Reviews PRs against SOC2 / GDPR / your custom compliance rules |
 | [cross-org-collab-agent](cross-org-collab-agent) | Privacy by construction — multi-layer field guards for cross-org threads |
+| [archagent-fde](archagent-fde) | A Forward Deployed Engineer for ArchAgents — 15 bundled skills, impersonate-into-Claude-Code ready |
 | [onboarding-qa](onboarding-qa) | Answers new-hire questions from your knowledge base |
 | [release-notes-bot](release-notes-bot) | Watches merged PRs weekly, drafts changelog as a GitHub issue |
 | [security-triage-agent](security-triage-agent) | Daily dependency scan, auto-fix simple CVEs, escalate the rest |

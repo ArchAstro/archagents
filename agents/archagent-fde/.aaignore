@@ -1,0 +1,13 @@
+# `deploy.sh` is the authoritative entry point for this sample — it
+# handles scripts, the AgentTemplate, and the skill bundle directly via
+# `archagent create scripts`, `archagent deploy agent`, and
+# `archagent create skill`. Don't re-upload any of that through
+# `archagent deploy configs`.
+README.md
+env.example
+.env
+deploy.sh
+examples/
+agent.yaml
+scripts/
+skills/
