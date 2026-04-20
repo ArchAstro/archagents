@@ -1,0 +1,39 @@
+// Fetch an ArchAgents documentation page as Markdown.
+// Use this to cite live docs content rather than paraphrasing from
+// memory. Pass a path under docs.archagents.com, or the literal string
+// "llms-full.txt" for the full machine-readable index.
+
+let http = import("requests")
+let str = import("string")
+
+let path = $.path
+let host = "https://docs.archagents.com"
+
+// Normalize: accept "/docs/...", "docs/...", "https://...", or bare
+// "llms-full.txt".
+let url = if (str.startsWith(path, "http://")) {
+  path
+} else {
+  if (str.startsWith(path, "https://")) {
+    path
+  } else {
+    if (str.startsWith(path, "/")) {
+      host + path
+    } else {
+      host + "/" + path
+    }
+  }
+}
+
+let resp = unwrap(http.get(url, {
+  headers: {
+    "Accept": "text/markdown, text/plain, text/html;q=0.5",
+    "User-Agent": "ArchAgents-FDE/1.0"
+  }
+}))
+
+{
+  "url": url,
+  "status": resp.status,
+  "body": resp.body
+}
