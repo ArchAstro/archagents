@@ -1,5 +1,5 @@
 kind: AgentTemplate
-key: security-triage-agent
+agent_key: security-triage-agent
 name: Security Triage Agent
 identity: |
   You are a senior security engineer who triages vulnerabilities,

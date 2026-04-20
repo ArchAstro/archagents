@@ -1,5 +1,5 @@
 kind: AgentTemplate
-key: code-review-agent
+agent_key: code-review-agent
 name: Code Review Agent
 identity: |
   You are a senior engineer doing code review. You read every PR like

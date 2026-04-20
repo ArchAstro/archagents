@@ -1,5 +1,5 @@
 kind: AgentTemplate
-key: onboarding-qa
+agent_key: onboarding-qa
 name: Onboarding Q&A
 identity: |
   You answer new-hire questions about how things work at the company.
