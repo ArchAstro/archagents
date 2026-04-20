@@ -30,15 +30,6 @@ Determine:
 
 ## Routing
 
-### CLI not installed or too old
-
-Before any workflow work, verify the CLI:
-
-- Read `plugin-compatibility.json` from the plugin root.
-- Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, instruct the user to install or upgrade `archagent`.
-- If authentication or app selection is missing, instruct the user to run `archagent auth login`.
-
 ### Workflow commands not exposed in the current `archagent` build
 
 The source tree has dedicated top-level workflow commands, but some `archagent` builds may not expose them yet. Verify first:
@@ -135,7 +126,7 @@ Do not hard-code a node taxonomy in this skill. The supported graph/node model i
 
 **Phase 4: Write supporting scripts**
 
-If the workflow needs script logic, author and validate that script first. Route to the `archagent-build-script` skill for detailed script authoring guidance, or get the reference directly:
+If the workflow needs script logic, author and validate that script first. Route to the `build-script` skill for detailed script authoring guidance, or get the reference directly:
 ```
 archagent describe scriptdocs
 archagent describe configsample Script
@@ -163,7 +154,7 @@ archagent create workflow --id my-workflow --file ./workflows/my-workflow.json
 archagent update workflow my-workflow --file ./workflows/my-workflow.json
 ```
 
-If the top-level workflow commands are unavailable in the current binary, or if the user is working inside a broader config-managed repo and explicitly wants that flow, route to `archagent-manage-configs` instead. Do not claim the dedicated workflow commands are available unless you verified them in the running CLI.
+If the top-level workflow commands are unavailable in the current binary, or if the user is working inside a broader config-managed repo and explicitly wants that flow, route to `manage-configs` instead. Do not claim the dedicated workflow commands are available unless you verified them in the running CLI.
 
 **Phase 7: Attach to a routine**
 

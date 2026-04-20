@@ -22,15 +22,6 @@ If the user is in a repo, inspect whether a `configs/` directory already exists 
 
 ## Routing
 
-### CLI not installed or too old
-
-Before any authoring work, verify the CLI:
-
-- Read `plugin-compatibility.json` from the plugin root.
-- Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, direct the user to `/archagents:install`.
-- If authentication or app selection is missing, direct the user to `/archagents:auth`.
-
 ### Local config directory not initialized
 
 If the user doesn't have a `configs/` directory set up yet, route to the `manage-configs` skill first. That skill owns `archagent init --enable-configs`, local file layout, and the sync/deploy workflow.

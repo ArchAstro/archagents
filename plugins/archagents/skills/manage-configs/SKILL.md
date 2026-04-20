@@ -36,15 +36,6 @@ Determine:
 
 ## Routing
 
-### CLI not installed or too old
-
-Before any config work, verify the CLI:
-
-- Read `plugin-compatibility.json` from the plugin root.
-- Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, instruct the user to install or upgrade `archagent`.
-- If authentication or app selection is missing, instruct the user to run `archagent auth login`.
-
 ### User wants to set up a configs directory for the first time
 
 1. **Initialize the config directory**:

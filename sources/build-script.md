@@ -41,15 +41,6 @@ Determine:
 
 ## Routing
 
-### CLI not installed or too old
-
-Before any script work, verify the CLI:
-
-- Read `plugin-compatibility.json` from the plugin root.
-- Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, {{INSTALL_ROUTE}}.
-- If authentication or app selection is missing, {{AUTH_ROUTE}}.
-
 ### User wants to write a new script
 
 **Phase 1: Get the language reference**

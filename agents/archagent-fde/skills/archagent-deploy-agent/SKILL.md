@@ -26,18 +26,9 @@ If the user is working from a local repo, also inspect whether a `configs/` dire
 
 ## Routing
 
-### CLI not installed or too old
-
-Before any deployment work, verify the CLI:
-
-- Read `plugin-compatibility.json` from the plugin root.
-- Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, instruct the user to install or upgrade `archagent`.
-- If authentication or app selection is missing, instruct the user to run `archagent auth login`.
-
 ### Local config directory not initialized
 
-If the user has config files but no `configs/` directory set up, route to the `archagent-manage-configs` skill first. That skill owns local config management.
+If the user has config files but no `configs/` directory set up, route to the `manage-configs` skill first. That skill owns local config management.
 
 ### User wants to deploy a new agent
 
@@ -62,11 +53,11 @@ Use the config-driven golden path. Do not skip straight to `create agent`.
    archagent list agents
    ```
 
-4. **Offer next steps**: ask if the user wants to add the agent to a thread and start chatting. If yes, create a thread with members and hand off to the `archagent-chat` skill.
+4. **Offer next steps**: ask if the user wants to add the agent to a thread and start chatting. If yes, create a thread with members and hand off to the `chat` skill.
 
 ### User needs help creating or editing the config files first
 
-Route to the `archagent-author-agent` skill before deploying. That skill owns:
+Route to the `author-agent` skill before deploying. That skill owns:
 - `AgentTemplate` and Script config creation
 - `archagent describe configsample`
 - `archagent describe scriptdocs`
@@ -104,7 +95,7 @@ Summarize what's deployed and offer to deploy a new one or add an existing one t
 ## Recovery Rules
 
 - If `archagent deploy agent` fails with a validation-style error, inspect the exact CLI output first. Do not immediately fall back to lower-level provisioning commands.
-- If the problem appears to be in the config files, route to `archagent-author-agent`.
+- If the problem appears to be in the config files, route to `author-agent`.
 - If a script-related validation error appears, use:
   ```
   archagent describe scriptdocs

@@ -62,15 +62,6 @@ Threads support multiple users and agents. Use when you need ongoing conversatio
 
 ## Routing
 
-### CLI not installed or too old
-
-Before any chat work, verify the CLI:
-
-- Read `plugin-compatibility.json` from the plugin root.
-- Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, {{INSTALL_ROUTE}}.
-- If authentication or app selection is missing, {{AUTH_ROUTE}}.
-
 ### User wants to ask an agent a question
 
 **Preferred: agent session with `--wait`**

@@ -30,14 +30,6 @@ Then route based on the combination of current state and user intent.
 
 ## Routing
 
-### CLI not installed or too old
-
-Before any impersonation work, verify the CLI:
-
-- Read `plugin-compatibility.json` from the plugin root. Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, {{INSTALL_ROUTE}}.
-- If authentication or app selection is missing, {{AUTH_ROUTE}}.
-
 ### Inactive + user wants to start
 
 ```
@@ -178,12 +170,10 @@ Pass arguments directly to `archagent impersonate`.
 
 ## Instructions
 
-1. Read `plugin-compatibility.json`. Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-2. Run `archagent --version`. If missing or too old, tell the user to run `/archagents:install`.
-3. Run:
+1. Run:
    ```
    archagent impersonate $ARGUMENTS
    ```
-4. If the command was `start` or `sync`, also run `archagent impersonate status --json`, read the `identity_file`, and adopt the identity for the current session.
-5. If the command was `stop`, drop any impersonated identity from the current session.
-6. If auth or app selection fails, direct the user to `/archagents:auth` or `--app <id>`.{{/CLAUDE_COMMAND}}
+2. If the command was `start` or `sync`, also run `archagent impersonate status --json`, read the `identity_file`, and adopt the identity for the current session.
+3. If the command was `stop`, drop any impersonated identity from the current session.
+4. If auth or app selection fails, direct the user to `/archagents:auth` or `--app <id>`.{{/CLAUDE_COMMAND}}

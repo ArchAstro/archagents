@@ -36,15 +36,6 @@ Determine:
 
 ## Routing
 
-### CLI not installed or too old
-
-Before any script work, verify the CLI:
-
-- Read `plugin-compatibility.json` from the plugin root.
-- Prefer `plugins.archagents.minimumCliVersion`, fall back to the top-level `minimumCliVersion`.
-- Run `archagent --version`. If missing or older than the resolved minimum, instruct the user to install or upgrade `archagent`.
-- If authentication or app selection is missing, instruct the user to run `archagent auth login`.
-
 ### User wants to write a new script
 
 **Phase 1: Get the language reference**
@@ -173,7 +164,7 @@ Place `.agentscript` files in `configs/scripts/` and deploy:
 archagent deploy configs
 ```
 
-The `scripts/` directory enforces that only `.agentscript` files and `.yaml`/`.json` with `kind: Script` are allowed — other file types are rejected. See the `archagent-manage-configs` skill for setting up the configs directory.
+The `scripts/` directory enforces that only `.agentscript` files and `.yaml`/`.json` with `kind: Script` are allowed — other file types are rejected. See the `manage-configs` skill for setting up the configs directory.
 
 **Phase 7: Wire it up**
 
@@ -195,7 +186,7 @@ archagent create agenttool --agent <agent-id> \
 
 Get the script's config ID from `archagent describe script <id> --output json` (the `configId` field).
 
-**In a workflow graph:** Follow the real `WorkflowGraph` shape from `archagent describe workflowdocs` and the `archagent-build-workflow` skill.
+**In a workflow graph:** Follow the real `WorkflowGraph` shape from `archagent describe workflowdocs` and the `build-workflow` skill.
 
 **As a routine handler** (reference by config ID — preferred for production):
 ```
