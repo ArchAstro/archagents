@@ -24,15 +24,26 @@ Then route based on the combination of current state and user intent.
 
 ### Inactive + user wants to start
 
-```
-archagent impersonate start <agent-or-flags>
-```
+**Do not ask the user to pick an agent by having them run `archagent list agents`.** You pick it for them.
 
-Then:
-
-```
-archagent impersonate status --json
-```
+1. **If the user named an agent** (slug, lookup_key, or `agi_…` id), go straight to step 3.
+2. **If the user did not name an agent**, resolve it yourself first:
+   ```
+   archagent list agents --output json
+   ```
+   Then:
+   - **One agent:** start it without asking.
+   - **A small number (≤ 10) of agents:** present them as a numbered list — `name`, `lookup_key`, `id`, and one-line `metadata.description` if present. Ask the user to pick by number, name, or id.
+   - **More than 10:** ask for a search term (e.g. "which agent?") and filter the list locally by `name` / `lookup_key` / `metadata.description` (case-insensitive substring). If the filter still returns more than 10, show the top 10 and ask them to narrow further.
+   - **Zero agents:** tell the user no agents are deployed in the current app, and suggest deploying one via the `deploy-agent` skill, or passing `--app <id>` if they meant a different app.
+3. Start impersonation:
+   ```
+   archagent impersonate start <agent-or-flags>
+   ```
+4. Fetch the resolved state:
+   ```
+   archagent impersonate status --json
+   ```
 
 Read the `identity_file` path from the returned state. Open and read that file. Adopt the identity for the current Codex session while retaining your normal capabilities.
 
@@ -146,5 +157,6 @@ After `stop`, fully drop the persona and return to your normal behavior.
 
 - Do not inspect or edit credential files directly — use the CLI only.
 - Do not ask the user to pick a subcommand — infer the action from their message and the current state.
+- **Do not tell the user to run CLI commands themselves.** Every `archagent …` command in this skill is something *you* run via your shell tool. If you need information (available agents, skills, tools), fetch it yourself and present the options — do not instruct the user to go discover it.
 - If the CLI reports an auth or app error, run `archagent auth login` or suggest `--app <id>`.
 - Keep responses concise — state the outcome, not the process.

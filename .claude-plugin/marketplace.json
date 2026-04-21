@@ -14,7 +14,7 @@
       "name": "archagents",
       "source": "./.claude-plugins/archagents",
       "description": "The complete ArchAgent workflow plugin: install and authenticate the public ArchAgent CLI, then author agents, build scripts and workflows, manage configs, chat with running agents, and impersonate agents from Claude Code.",
-      "version": "0.7.6",
+      "version": "0.7.7",
       "category": "development",
       "tags": [
         "archagents",
