@@ -1,6 +1,6 @@
 {
   "name": "archagents",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "description": "Author, deploy, manage, chat with, and impersonate ArchAgents from Codex through the ArchAgent CLI.",
   "author": {
     "name": "ArchAstro",
