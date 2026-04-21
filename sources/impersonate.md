@@ -1,14 +1,10 @@
 ---
 targets:
   claude-skill: impersonate
-  claude-command: impersonate.md
   codex-skill: impersonate
 skill:
   name: impersonate
   description: Use when the user wants to impersonate an ArchAgent agent, asks about the active impersonation state, wants to refresh or stop impersonation, or refers to working as a specific ArchAgent agent inside {{HARNESS_NAME}}. Trigger phrases include "impersonate agent", "act as this agent", "be this agent", "start impersonation", "sync impersonation", "stop impersonation", "what agent am I impersonating", and "use the active agent identity".
-  allowed-tools: ["Bash(archagent:*)"]
-command:
-  description: Start, inspect, refresh, or stop ArchAgent impersonation through the ArchAgent CLI
   allowed-tools: ["Bash(archagent:*)"]
 ---
 
@@ -155,25 +151,4 @@ After `stop`, fully drop the persona and return to your normal behavior.
 - Do not inspect or edit credential files directly — use the CLI only.
 - Do not ask the user to pick a subcommand — infer the action from their message and the current state.
 - If the CLI reports an auth or app error, {{AUTH_ROUTE_SHORT}} or suggest `--app <id>`.
-- Keep responses concise — state the outcome, not the process.{{/SKILL}}{{#CLAUDE_COMMAND}}# ArchAgent Impersonation (CLI passthrough)
-
-Pass arguments directly to `archagent impersonate`.
-
-```text
-/archagents:impersonate start <agent-id-or-flags>
-/archagents:impersonate status
-/archagents:impersonate sync
-/archagents:impersonate stop
-/archagents:impersonate list skills
-/archagents:impersonate install skill <id> [--harness codex] [--install-scope project]
-```
-
-## Instructions
-
-1. Run:
-   ```
-   archagent impersonate $ARGUMENTS
-   ```
-2. If the command was `start` or `sync`, also run `archagent impersonate status --json`, read the `identity_file`, and adopt the identity for the current session.
-3. If the command was `stop`, drop any impersonated identity from the current session.
-4. If auth or app selection fails, direct the user to `/archagents:auth` or `--app <id>`.{{/CLAUDE_COMMAND}}
+- Keep responses concise — state the outcome, not the process.{{/SKILL}}
