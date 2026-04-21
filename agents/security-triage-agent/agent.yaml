@@ -106,6 +106,9 @@ tools:
     builtin_tool_key: long_term_memory
     status: active
   - kind: builtin
+    builtin_tool_key: memory
+    status: active
+  - kind: builtin
     builtin_tool_key: skills
     status: active
   - kind: builtin
