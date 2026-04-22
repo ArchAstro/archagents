@@ -1,0 +1,12 @@
+schema_version: 1
+version: v0.1.0
+name: "Security Triage Agent"
+tagline: "A senior security engineer that triages vulnerabilities found by daily dependency scans."
+min_cli_version: "0.25.0"
+deploy_mode: generated
+
+capabilities:
+  scripts: true
+  skills: false
+  agent: true
+  env_example: true

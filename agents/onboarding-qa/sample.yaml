@@ -1,0 +1,8 @@
+schema_version: 1
+version: v0.1.0
+name: "Onboarding Q&A"
+tagline: "Answers new-hire questions about how things work at the company."
+min_cli_version: "0.25.0"
+# Custom: deploy.sh conditionally runs upload-knowledge.sh to seed the
+# FAQ corpus if a sample file is present.
+deploy_mode: custom
