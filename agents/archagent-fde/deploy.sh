@@ -2,7 +2,7 @@
 # Deploy the ArchAgents FDE agent.
 #
 # Prerequisites:
-#   - archagent CLI installed and authenticated (see install / auth skills)
+#   - archastro (or archagent) CLI installed and authenticated
 #   - .env file populated (copy from env.example)
 #
 # This script:
@@ -20,6 +20,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+# shellcheck disable=SC1091
+source ./detect_cli_env.sh
+
 if [[ ! -f .env ]]; then
   echo "❌ .env file not found. Copy env.example to .env if you need custom values."
   echo "   (The FDE agent ships with no required env vars, so .env is optional.)"
@@ -33,11 +36,11 @@ for script in scripts/*.aascript; do
   name=$(basename "$script" .aascript)
   pretty="$(echo "$name" | tr '-' ' ')"
   echo "  → $name"
-  archagent create scripts \
+  "$CLI" create scripts \
     --id "$name" \
     --name "$pretty" \
     --file "$script" 2>/dev/null || \
-  archagent update scripts "$name" --file "$script"
+  "$CLI" update scripts "$name" --file "$script"
 done
 
 echo "📚 Publishing skills..."
@@ -59,25 +62,25 @@ for skill_dir in skills/*/; do
   desc="${desc:-Skill: $slug}"
 
   echo "  → $slug"
-  archagent create skill \
+  "$CLI" create skill \
     -n "$name" \
     -d "$desc" \
     -s "$slug" \
     --file "$skill_md" 2>/dev/null || \
-  archagent update skillfile "$slug" SKILL.md --file "$skill_md"
+  "$CLI" update skillfile "$slug" SKILL.md --file "$skill_md"
 
   # Publish supporting reference files (if any)
   while IFS= read -r -d '' f; do
     rel="${f#$skill_dir}"
     if [[ "$rel" == "SKILL.md" ]]; then continue; fi
     echo "      · $rel"
-    archagent create skillfile "$slug" "$rel" --file "$f" 2>/dev/null || \
-    archagent update skillfile "$slug" "$rel" --file "$f"
+    "$CLI" create skillfile "$slug" "$rel" --file "$f" 2>/dev/null || \
+    "$CLI" update skillfile "$slug" "$rel" --file "$f"
   done < <(find "$skill_dir" -type f -print0)
 done
 
 echo "🤖 Deploying agent..."
-archagent deploy agent agent.yaml
+"$CLI" deploy agent agent.yaml
 
 echo ""
 echo "✅ ArchAgents FDE agent deployed."
@@ -85,17 +88,17 @@ echo ""
 echo "Next steps:"
 echo ""
 echo "  1. Open a thread with the agent:"
-echo "       archagent create agentsession \\"
+echo "       $CLI create agentsession \\"
 echo "         --agent archagent-fde \\"
 echo "         --instructions \"Help me deploy my first agent.\" \\"
 echo "         --wait"
 echo ""
 echo "  2. OR impersonate it into your coding harness:"
-echo "       archagent impersonate start archagent-fde"
-echo "       archagent impersonate list skills"
-echo "       archagent impersonate install skill <skill-id> --harness claude"
-echo "       archagent impersonate install skill <skill-id> --harness codex"
-echo "       archagent impersonate install skill <skill-id> --harness opencode"
+echo "       $CLI impersonate start archagent-fde"
+echo "       $CLI impersonate list skills"
+echo "       $CLI impersonate install skill <skill-id> --harness claude"
+echo "       $CLI impersonate install skill <skill-id> --harness codex"
+echo "       $CLI impersonate install skill <skill-id> --harness opencode"
 echo ""
 echo "     This installs the FDE's skills into your local .claude/ .codex/ or .opencode/"
 echo "     directory — turning your coding harness into an ArchAgents FDE."

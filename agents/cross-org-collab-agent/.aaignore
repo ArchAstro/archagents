@@ -1,0 +1,15 @@
+# deploy.sh is the authoritative entry point for this sample — it uploads
+# every file below directly via the CLI (create scripts, create configs,
+# deploy agent, update agentroutines). Listing them here prevents
+# `deploy configs` from re-uploading and clobbering what deploy.sh already
+# installed (especially the field-guard schema, which deploy.sh attaches
+# to the participate routine).
+README.md
+env.example
+.env
+deploy.sh
+detect_cli_env.sh
+agent.yaml
+scripts/
+schemas/
+examples/

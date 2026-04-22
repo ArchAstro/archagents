@@ -1,13 +1,15 @@
 # deploy.sh is the authoritative entry point for this sample — it uploads
-# every file below directly via the CLI (create scripts, deploy agent).
+# every file below directly via the CLI (create scripts, deploy agent),
+# and upload-rules.sh uploads the rule markdown files as ingestion sources.
 # Listing them here prevents `deploy configs` from re-uploading and
-# clobbering what deploy.sh already installed.
+# clobbering what those scripts already installed.
 README.md
 env.example
 .env
 deploy.sh
 detect_cli_env.sh
+upload-rules.sh
 agent.yaml
 scripts/
+rules/
 examples/
-test/

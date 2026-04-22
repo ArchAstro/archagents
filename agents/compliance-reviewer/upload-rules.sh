@@ -9,7 +9,10 @@ fi
 
 cd "$(dirname "$0")"
 
-INSTALLATION_ID=$(archagent list agentinstallations --agent compliance-reviewer -o json 2>/dev/null \
+# shellcheck disable=SC1091
+source ./detect_cli_env.sh
+
+INSTALLATION_ID=$("$CLI" list agentinstallations --agent compliance-reviewer -o json 2>/dev/null \
   | python3 -c "import sys,json; d=json.load(sys.stdin); [print(i['id']) for i in d['data'] if i['kind']=='archastro/files']" \
   | head -1)
 
@@ -23,13 +26,13 @@ for file in "$@"; do
   echo "📤 $filename"
   data=$(base64 < "$file" | tr -d '\n')
 
-  file_id=$(archagent create files \
+  file_id=$("$CLI" create files \
     --data "$data" \
     --filename "$filename" \
     --content-type "text/markdown" 2>&1 \
     | grep -oE 'fil_[A-Za-z0-9]+' | head -1)
 
-  archagent create agentinstallationsources \
+  "$CLI" create agentinstallationsources \
     --installation "$INSTALLATION_ID" \
     --type file/document \
     --payload "{\"file_id\": \"$file_id\"}" 2>&1 | head -1
