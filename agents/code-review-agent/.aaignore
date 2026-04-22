@@ -10,4 +10,3 @@ detect_cli_env.sh
 agent.yaml
 scripts/
 examples/
-test/

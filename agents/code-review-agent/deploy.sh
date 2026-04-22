@@ -2,7 +2,7 @@
 # Deploy the Code Review Agent to your ArchAgents app.
 #
 # Prerequisites:
-#   - archagent CLI installed and authenticated
+#   - archastro (or archagent) CLI installed and authenticated
 #   - .env file populated (copy from env.example)
 #   - GITHUB_TOKEN set as an org env var on the platform
 #
@@ -11,6 +11,9 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
+
+# shellcheck disable=SC1091
+source ./detect_cli_env.sh
 
 if [[ ! -f .env ]]; then
   echo "❌ .env file not found. Copy env.example to .env and fill in your values."
@@ -24,15 +27,15 @@ echo "📜 Deploying scripts..."
 for script in scripts/*.aascript; do
   name=$(basename "$script" .aascript | tr '_' '-')
   echo "  → $name"
-  archagent create scripts \
+  "$CLI" create scripts \
     --id "$name" \
     --name "$(echo "$name" | tr '-' ' ' | sed -E 's/(^|[[:space:]])./\U&/g')" \
     --file "$script" 2>/dev/null || \
-  archagent update scripts "$name" --file "$script"
+  "$CLI" update scripts "$name" --file "$script"
 done
 
 echo "🤖 Deploying agent..."
-archagent deploy agent agent.yaml
+"$CLI" deploy agent agent.yaml
 
 echo "✅ Done. The Code Review Agent is live."
 echo ""

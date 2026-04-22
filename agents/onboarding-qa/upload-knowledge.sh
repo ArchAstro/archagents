@@ -4,7 +4,7 @@
 # Usage:
 #   ./upload-knowledge.sh /path/to/handbook.pdf /path/to/setup.md
 #
-# Files are uploaded via `archagent create files` and then attached as
+# Files are uploaded via `<cli> create files` and then attached as
 # ingestion sources to the agent's archastro/files installation.
 
 set -euo pipefail
@@ -16,8 +16,11 @@ fi
 
 cd "$(dirname "$0")"
 
+# shellcheck disable=SC1091
+source ./detect_cli_env.sh
+
 # Find the agent's archastro/files installation ID
-INSTALLATION_ID=$(archagent list agentinstallations --agent onboarding-qa -o json 2>/dev/null \
+INSTALLATION_ID=$("$CLI" list agentinstallations --agent onboarding-qa -o json 2>/dev/null \
   | python3 -c "import sys,json; d=json.load(sys.stdin); [print(i['id']) for i in d['data'] if i['kind']=='archastro/files']" \
   | head -1)
 
@@ -52,7 +55,7 @@ for file in "$@"; do
   esac
 
   # 3. Upload the file
-  file_id=$(archagent create files \
+  file_id=$("$CLI" create files \
     --data "$data" \
     --filename "$filename" \
     --content-type "$content_type" 2>&1 \
@@ -66,7 +69,7 @@ for file in "$@"; do
   echo "  → file: $file_id"
 
   # 4. Attach as ingestion source
-  archagent create agentinstallationsources \
+  "$CLI" create agentinstallationsources \
     --installation "$INSTALLATION_ID" \
     --type file/document \
     --payload "{\"file_id\": \"$file_id\"}" 2>&1 | head -1

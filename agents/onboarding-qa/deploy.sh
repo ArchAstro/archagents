@@ -2,8 +2,11 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# shellcheck disable=SC1091
+source ./detect_cli_env.sh
+
 echo "🤖 Deploying Onboarding Q&A agent..."
-archagent deploy agent agent.yaml
+"$CLI" deploy agent agent.yaml
 
 if [[ -f knowledge/sample-faq.md ]]; then
   echo "📚 Uploading sample FAQ..."
