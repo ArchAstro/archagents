@@ -7,7 +7,6 @@ README.md
 env.example
 .env
 deploy.sh
-detect_cli_env.sh
 upload-knowledge.sh
 agent.yaml
 knowledge/
