@@ -78,9 +78,18 @@ jobs:
             # mode bits, so deploy.sh stays +x on extraction.
             tar -C agents -czf "$tarball" "$slug"
 
+            # --latest=false is load-bearing: without it, `gh release create`
+            # auto-promotes each new release to "Latest", which steals the
+            # flag from the CLI's vX.Y.Z release. install.sh resolves
+            # releases/latest/download/SHA256SUMS for the CLI binary; a
+            # sample release hijacking that URL 404s the installer for
+            # every new user until someone notices and flips it back.
+            # Sample releases are independently versioned per slug — there
+            # is no meaningful "latest sample" at the repo level.
             gh release create "$tag" "$tarball" \
               --title "$slug $version" \
-              --notes "Released from sample.yaml in commit ${GITHUB_SHA}."
+              --notes "Released from sample.yaml in commit ${GITHUB_SHA}." \
+              --latest=false
 
             rm -f "$tarball"
           done
