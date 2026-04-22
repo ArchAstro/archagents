@@ -1,0 +1,8 @@
+schema_version: 1
+version: v0.1.0
+name: "Compliance Reviewer"
+tagline: "Reviews pull requests against compliance rules — does not review style or bugs."
+min_cli_version: "0.25.0"
+# Custom: deploy.sh calls upload-rules.sh post-install to ingest rule
+# markdown files into the agent's knowledge base.
+deploy_mode: custom

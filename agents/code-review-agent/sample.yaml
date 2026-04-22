@@ -1,0 +1,14 @@
+schema_version: 1
+version: v0.1.0
+name: "Code Review Agent"
+tagline: "A senior engineer that reviews every PR like it's going into production at 3am."
+min_cli_version: "0.25.0"
+deploy_mode: generated
+
+# When deploy_mode: generated, these flags control which blocks appear in
+# the generated deploy.sh.
+capabilities:
+  scripts: true       # scripts/*.aascript deployed via `create scripts`
+  skills: false       # no skills/ directory
+  agent: true         # agent.yaml deployed via `deploy agent`
+  env_example: true   # env.example ships; deploy.sh sources .env if present

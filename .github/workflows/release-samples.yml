@@ -1,0 +1,86 @@
+name: release-samples
+
+# For every sample, if the version declared in agents/<slug>/sample.yaml
+# does not yet have a corresponding GitHub Release, cut one with the
+# whole sample directory packaged as <slug>-<version>.tar.gz.
+#
+# Runs on every push to main. Idempotent: re-running with no version
+# bumps is a no-op (the release-exists check short-circuits).
+#
+# On the first run after this workflow lands, it will cut v0.1.0 for
+# every sample — no manual bootstrap step.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agents/**"
+      - ".github/workflows/release-samples.yml"
+  # Manual trigger so we can re-run if a release was deleted or the
+  # workflow code changes after a sample was merged.
+  workflow_dispatch:
+
+# Required for `gh release create`. The default GITHUB_TOKEN has read-only
+# contents perm on PRs but is granted write on push events to main.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pyyaml==6.0.2
+
+      - name: Cut releases for any new sample versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Inline shell rather than a separate script: the loop is short,
+        # the failure surface is small, and the logic stays visible in
+        # the workflow file. If this grows past ~30 lines, lift it into
+        # scripts/release_samples.sh.
+        run: |
+          set -euo pipefail
+
+          mapfile -t samples < <(
+            python3 -c "
+          import pathlib, yaml
+          for d in sorted(pathlib.Path('agents').iterdir()):
+              if not d.is_dir():
+                  continue
+              data = yaml.safe_load((d / 'sample.yaml').read_text())
+              print(f\"{d.name} {data['version']}\")
+          "
+          )
+
+          for entry in "${samples[@]}"; do
+            slug="${entry%% *}"
+            version="${entry##* }"
+            tag="${slug}-${version}"
+            tarball="${slug}-${version}.tar.gz"
+
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "✓ $tag already released, skipping"
+              continue
+            fi
+
+            echo "→ cutting release $tag"
+            # Tar the WHOLE sample dir — no .aaignore filtering, no
+            # exclusions. Tarball is the sample as shipped, including
+            # README, examples/, test/, and any dev files. tar preserves
+            # mode bits, so deploy.sh stays +x on extraction.
+            tar -C agents -czf "$tarball" "$slug"
+
+            gh release create "$tag" "$tarball" \
+              --title "$slug $version" \
+              --notes "Released from sample.yaml in commit ${GITHUB_SHA}."
+
+            rm -f "$tarball"
+          done

@@ -1,0 +1,61 @@
+{
+  "$schema_version": 1,
+  "samples": [
+    {
+      "slug": "archagent-fde",
+      "name": "ArchAgents FDE (Forward Deployed Engineer)",
+      "tagline": "A Forward Deployed Engineer for ArchAgents teams that sets up new customers end-to-end.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.25.0"
+    },
+    {
+      "slug": "code-review-agent",
+      "name": "Code Review Agent",
+      "tagline": "A senior engineer that reviews every PR like it's going into production at 3am.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.25.0"
+    },
+    {
+      "slug": "compliance-reviewer",
+      "name": "Compliance Reviewer",
+      "tagline": "Reviews pull requests against compliance rules — does not review style or bugs.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.25.0"
+    },
+    {
+      "slug": "cross-org-collab-agent",
+      "name": "Cross-Org Collaboration Agent",
+      "tagline": "A code-aware engineering agent that participates in cross-org threads with field guards enforced.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.25.0"
+    },
+    {
+      "slug": "onboarding-qa",
+      "name": "Onboarding Q&A",
+      "tagline": "Answers new-hire questions about how things work at the company.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.25.0"
+    },
+    {
+      "slug": "release-notes-bot",
+      "name": "Release Notes Bot",
+      "tagline": "Drafts the weekly changelog by scanning merged PRs on a schedule.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.25.0"
+    },
+    {
+      "slug": "security-triage-agent",
+      "name": "Security Triage Agent",
+      "tagline": "A senior security engineer that triages vulnerabilities found by daily dependency scans.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.25.0"
+    },
+    {
+      "slug": "threat-intel-agent",
+      "name": "Threat Intelligence Agent",
+      "tagline": "A security intelligence analyst that produces daily threat briefs from monitored feeds.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.25.0"
+    }
+  ]
+}

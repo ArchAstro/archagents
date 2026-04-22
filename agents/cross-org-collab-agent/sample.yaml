@@ -1,0 +1,8 @@
+schema_version: 1
+version: v0.1.0
+name: "Cross-Org Collaboration Agent"
+tagline: "A code-aware engineering agent that participates in cross-org threads with field guards enforced."
+min_cli_version: "0.25.0"
+# Custom: deploy.sh uploads the field-guard schema, captures its ID, then
+# attaches it to the participate routine after the agent is deployed.
+deploy_mode: custom

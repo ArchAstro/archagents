@@ -1,0 +1,29 @@
+# sample.yaml is the source of truth for this sample's catalog metadata
+# and how its deploy artifacts (.aaignore, and for generated samples,
+# deploy.sh) are produced. Edit it, then run:
+#
+#   python3 scripts/generate_sample_artifacts.py
+#
+# to regenerate committed artifacts. CI fails if this file changes
+# without the committed artifacts being regenerated in the same PR.
+
+schema_version: 1
+
+# Bump this to cut a new per-sample release. CI creates GitHub Release
+# "<slug>-<version>" with a tarball of this directory on every merge to
+# main where the version tag does not yet exist.
+version: v0.1.0
+
+# Displayed in the CLI's sample-selection menu and in samples.json.
+name: "ArchAgents FDE (Forward Deployed Engineer)"
+tagline: "A Forward Deployed Engineer for ArchAgents teams that sets up new customers end-to-end."
+
+# Minimum CLI version that can correctly install this sample. CLI refuses
+# to install if the running archastro is older than this.
+min_cli_version: "0.25.0"
+
+# `generated` — deploy.sh is produced from the `capabilities` block below.
+# `custom`    — author commits their own deploy.sh (this sample's deploy
+#              publishes skills and prints custom impersonate hints, so it
+#              stays hand-written).
+deploy_mode: custom

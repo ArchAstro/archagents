@@ -1,0 +1,12 @@
+schema_version: 1
+version: v0.1.0
+name: "Release Notes Bot"
+tagline: "Drafts the weekly changelog by scanning merged PRs on a schedule."
+min_cli_version: "0.25.0"
+deploy_mode: generated
+
+capabilities:
+  scripts: true
+  skills: false
+  agent: true
+  env_example: true
