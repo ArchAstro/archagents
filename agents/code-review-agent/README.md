@@ -49,9 +49,12 @@ When a PR is opened or updated:
 ## Setup
 
 ```bash
-# 1. Set required env vars
-cp env.example .env
-# Edit .env with your GITHUB_TOKEN and other values
+# 1. Set each required env var on your ArchAstro org. The agent's
+#    scripts read these at runtime — env.example lists what's needed.
+for var in $(grep -oE '^[A-Z_]+' env.example); do
+  read -rsp "$var: " value; echo
+  archagent create orgenvvar --key "$var" --value "$value"
+done
 
 # 2. Deploy
 archagent install agentsample code-review-agent

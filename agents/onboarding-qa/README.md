@@ -47,7 +47,14 @@ Onboarding Q&A Agent solves this by being:
 ## Setup
 
 ```bash
-cp env.example .env
+# 1. Set each required env var on your ArchAstro org. The agent's
+#    scripts read these at runtime — env.example lists what's needed.
+for var in $(grep -oE '^[A-Z_]+' env.example); do
+  read -rsp "$var: " value; echo
+  archagent create orgenvvar --key "$var" --value "$value"
+done
+
+# 2. Deploy
 archagent install agentsample onboarding-qa
 ```
 
