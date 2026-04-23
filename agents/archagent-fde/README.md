@@ -87,10 +87,8 @@ Everything else is builtin tools: `skills`, `knowledge_search`,
 ## Setup
 
 ```bash
-# The FDE has no required env vars. .env is optional.
-cp env.example .env   # optional
-
-# Deploy scripts + agent + all 15 skills
+# The FDE has no required env vars. env.example is empty.
+# Deploy scripts + agent + all 15 skills in one shot:
 archagent install agentsample archagent-fde
 ```
 

@@ -59,8 +59,14 @@ The Threat Intel Agent solves this by being **selective and contextual**:
 ## Setup
 
 ```bash
-cp env.example .env
-# Edit .env with your values
+# 1. Set each required env var on your ArchAstro org. The agent's
+#    scripts read these at runtime — env.example lists what's needed.
+for var in $(grep -oE '^[A-Z_]+' env.example); do
+  read -rsp "$var: " value; echo
+  archagent create orgenvvar --key "$var" --value "$value"
+done
+
+# 2. Deploy
 archagent install agentsample threat-intel-agent
 ```
 
