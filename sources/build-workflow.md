@@ -216,6 +216,35 @@ Use `println()` in scripts for debugging output.
 
    The workflow resource versions on update; the agent picks up the linked workflow config on the next run.
 
+### User wants to chain a few steps without a full workflow graph
+
+Between "single script" and "full workflow graph" sits `handler_type: chain` —
+a linear sequence of `preset` / `script` / `workflow_graph` steps. Good for
+multi-step automations that don't need branching, loops, or a graph editor.
+
+```
+archagent create agentroutine --agent <agent-id> \
+  --name "Classify, then notify" \
+  --event-type agentroutine.invoked \
+  --handler-type chain \
+  --steps '[
+    {"handler_type":"preset","preset_name":"do_task","name":"classify",
+     "preset_config":{"instructions":"Classify the inbound message."}},
+    {"handler_type":"script","script":"println($.inputs.classify.output)","name":"log"}
+  ]'
+```
+
+Each step's output is addressable by name from downstream steps. See
+`archagent create agentroutine --help` (the chain handler section) for the
+full step shape.
+
+> **Chain-step script input shape:** Scripts inside chain steps see a
+> **wrapped** input — `{"trigger": <event>, "inputs": {"<step_name>": <output>, ...}}`
+> — so they address the trigger via `$.trigger.<field>` and upstream outputs
+> via `$.inputs.<step_name>`, not `$.<field>` directly. Single-handler script
+> routines (below) are unaffected. The `build-script` skill covers this in
+> detail.
+
 ### User wants to set up a simple scheduled routine (no workflow)
 
 Not everything needs a full workflow graph. For simple scheduled tasks, a routine can use a script directly.
