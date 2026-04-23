@@ -92,6 +92,21 @@ If the user doesn't have a `configs/` directory set up yet, route to the `manage
   ```
   The payload schema from `describe event` shows what `$` contains in the routine's script handler.
 
+### Chain routines (linear multi-step routines)
+
+When a single script or workflow isn't enough, use `handler_type: chain` — a
+linear sequence of `preset` / `script` / `workflow_graph` steps executed in
+order. Each step's output is addressable by name by downstream steps. Steps
+live under `steps:` in the template and each needs a unique `name`.
+
+> **Chain-step script input shape:** Scripts that run **inside a chain step**
+> do NOT see the raw event at `$`. Their input is wrapped as
+> `{"trigger": <event payload>, "inputs": {"<step_name>": <upstream_output>, ...}}`,
+> so they must address the trigger via `$.trigger.<field>` and upstream
+> outputs via `$.inputs.<step_name>`. Single-handler script routines
+> (`handler_type: script`) continue to see the raw event payload at `$`.
+> This only applies to chain steps — see the `build-script` skill for details.
+
 ### Config references
 
 - Prefer human-readable `config_ref` values that match deployed config lookup keys.
