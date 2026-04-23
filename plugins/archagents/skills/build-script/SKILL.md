@@ -85,6 +85,13 @@ Key language concepts:
 - **Expression-oriented**: The last expression in the script is the return value
 - **Debugging**: Use `println()` to inspect values
 
+> **Chain-step context:** When a script runs as a step inside a chain routine
+> (`handler_type: chain`), its input is wrapped. The triggering event is at
+> `$.trigger.<field>` and prior-step outputs are at `$.inputs.<step_name>`
+> — not at `$.<field>` directly. For single-handler script routines the input
+> is the raw event payload as usual. Name each step you want to reference
+> from downstream steps; unnamed steps are not addressable by name.
+
 Example — HTTP lookup script:
 ```
 let http = import("requests")
