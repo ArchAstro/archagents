@@ -1,8 +1,21 @@
-schema_version: 1
-version: v0.1.0
+schema_version: 2
+version: v0.2.0
 name: "Onboarding Q&A"
 tagline: "Answers new-hire questions about how things work at the company."
-min_cli_version: "0.25.0"
-# Custom: deploy.sh conditionally runs upload-knowledge.sh to seed the
-# FAQ corpus if a sample file is present.
-deploy_mode: custom
+min_cli_version: "0.28.0"
+
+# Deploy steps. The FAQ under knowledge/ gets base64'd, uploaded as a
+# File, and attached as an archastro/files installation source so the
+# agent has something to answer onboarding questions from out of the
+# box. Users can add more knowledge files post-deploy with:
+#
+#   archastro create files --data <base64> --filename X --content-type Y
+#   archastro create agentinstallationsources --installation <id> \
+#     --type file/document --payload '{"file_id": "fil_..."}'
+steps:
+  - type: deploy_agent
+    template_file: agent.yaml
+  - type: upload_files
+    source_dir: knowledge
+    installation_kind: archastro/files
+    source_type: file/document

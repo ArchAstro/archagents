@@ -12,7 +12,7 @@ Deploy the Release Notes Bot from this repo.
 3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
 4) Run: archagent auth login <my-email> && archagent init
 5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
-6) Deploy: cd agents/release-notes-bot && ./deploy.sh
+6) Deploy: archagent install agentsample release-notes-bot
 7) Test it: create an agent session and ask it to draft release notes for the last week
 8) Show me the result
 ```
@@ -56,7 +56,7 @@ Every Monday at 10:00 UTC:
 ```bash
 cp env.example .env
 # Edit .env with your values
-./deploy.sh
+archagent install agentsample release-notes-bot
 ```
 
 ## Required env vars
@@ -131,7 +131,6 @@ release-notes-bot/
 ├── README.md
 ├── agent.yaml
 ├── env.example
-├── deploy.sh
 ├── scripts/
 │   ├── list_merged_prs.aascript     # GET /repos/{o}/{r}/pulls?state=closed&base=main
 │   └── create_github_issue.aascript # file the draft

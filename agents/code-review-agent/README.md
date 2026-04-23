@@ -12,7 +12,7 @@ Deploy the Code Review Agent from this repo.
 3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
 4) Run: archagent auth login <my-email> && archagent init
 5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
-6) Deploy: cd agents/code-review-agent && ./deploy.sh
+6) Deploy: archagent install agentsample code-review-agent
 7) Test it: create an agent session and ask it to review the most recent open PR in ArchAstro/archagents
 8) Show me the result
 ```
@@ -54,7 +54,7 @@ cp env.example .env
 # Edit .env with your GITHUB_TOKEN and other values
 
 # 2. Deploy
-./deploy.sh
+archagent install agentsample code-review-agent
 ```
 
 ## Required env vars
@@ -127,7 +127,6 @@ code-review-agent/
 ├── README.md                    # this file
 ├── agent.yaml                   # AgentTemplate config
 ├── env.example                  # required env vars
-├── deploy.sh                    # one-shot deploy script
 ├── scripts/
 │   ├── get_pr_files.aascript    # GET /pulls/{n}/files
 │   ├── get_repo_file.aascript   # GET /repos/{o}/{r}/contents/{path}

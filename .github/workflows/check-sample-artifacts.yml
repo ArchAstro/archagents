@@ -3,9 +3,9 @@ name: check-sample-artifacts
 # Two jobs:
 #   - tests: runs the generator's unit tests
 #   - drift: runs the generator with --check, fails if any committed
-#     artifact (deploy.sh, .aaignore, samples.json) doesn't match what
-#     the generator would produce from the current sample.yaml files.
-#     Forces authors to regenerate locally before merging.
+#     artifact (.aaignore, samples.json) doesn't match what the generator
+#     would produce from the current sample.yaml files. Forces authors
+#     to regenerate locally before merging.
 
 on:
   push:

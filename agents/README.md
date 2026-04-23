@@ -2,7 +2,8 @@
 
 Production-grade agents you can deploy to the ArchAgents platform in
 minutes. Every sample includes the agent identity, custom scripts,
-routines, and a deploy script — set a few env vars and `./deploy.sh`.
+routines, and its deploy sequence declared in `sample.yaml` — one CLI
+command installs the whole thing.
 
 ## Agents
 
@@ -26,36 +27,41 @@ brew install ArchAstro/tools/archagent
 # 2. Authenticate
 archagent auth login you@company.com
 
-# 3. Link your project
-archagent init
-
-# 4. Pick an agent and deploy
-cd agents/code-review-agent
-cp env.example .env
-# Fill in your values (GITHUB_TOKEN, etc.)
-./deploy.sh
+# 3. Pick an agent and deploy
+archagent install agentsample code-review-agent
 ```
 
-Each agent's README has setup details, required env vars, and example output.
+`install agentsample <slug>` fetches the sample's release tarball,
+parses its `sample.yaml`'s `steps:` block, and runs every step
+(scripts upload, skills upload, agent create, knowledge ingest) in
+one pass. Nothing lands on your disk — the sample deploys straight
+to your app.
+
+Most samples have a few env vars to set first (GitHub PAT, webhook
+secret, etc.). Each agent's README covers the specifics.
 
 ## Structure
 
-Every agent follows the same layout:
+Every sample follows the same layout:
 
 ```
 agent-name/
   README.md        — what it does, how to configure it
   agent.yaml       — the AgentTemplate (identity, tools, routines, installations)
-  deploy.sh        — one-command deploy script
-  env.example      — required environment variables
+  sample.yaml      — catalog metadata + the `steps:` block that drives deploy
+  env.example      — required environment variables for the agent's tools
   scripts/         — custom ArchAstro scripts (PAT-based GitHub tools, etc.)
+  skills/          — (some samples) markdown skills the agent loads on demand
+  schemas/         — (some samples) message-schema configs referenced by agent.yaml
+  rules/           — (compliance-reviewer) markdown rules uploaded as knowledge
+  knowledge/       — (onboarding-qa) markdown docs seeded into the knowledge base
   examples/        — sample output so you know what to expect
 ```
 
 ## Recipes: agents working together
 
-These agents compose. Deploy multiples on the same repo for
-layered automation:
+These agents compose. Deploy multiples on the same repo for layered
+automation:
 
 ### PR Review Pipeline
 
@@ -65,8 +71,8 @@ architecture and correctness, the other checks compliance rules.
 Same webhook, two agents, two different sets of inline comments.
 
 ```bash
-cd code-review-agent && ./deploy.sh
-cd ../compliance-reviewer && ./deploy.sh
+archagent install agentsample code-review-agent
+archagent install agentsample compliance-reviewer
 # Both now review every PR — install the GitHub App on your repo
 ```
 
@@ -79,8 +85,8 @@ escalates the rest as GitHub issues. Together they cover awareness
 and action.
 
 ```bash
-cd threat-intel-agent && ./deploy.sh
-cd ../security-triage-agent && ./deploy.sh
+archagent install agentsample threat-intel-agent
+archagent install agentsample security-triage-agent
 # Daily brief at 07:00 UTC, dependency scan at 08:00 UTC
 ```
 
@@ -91,8 +97,8 @@ the weekly changelog from the same PRs once they merge. The review
 history informs what's worth highlighting in the notes.
 
 ```bash
-cd code-review-agent && ./deploy.sh
-cd ../release-notes-bot && ./deploy.sh
+archagent install agentsample code-review-agent
+archagent install agentsample release-notes-bot
 # Reviews land instantly, changelog drafts every Monday
 ```
 
@@ -111,6 +117,21 @@ archagent edit agent <id>
 # Change a cron schedule
 archagent update agentroutine <id> --schedule "0 9 * * MON"
 ```
+
+## Hacking on a sample locally
+
+Clone this repo, edit a sample, deploy from your checkout without
+waiting for a release:
+
+```bash
+cd agents/code-review-agent
+archagent install sample .
+```
+
+`install sample [path]` reads `sample.yaml` from the given directory
+and runs the same executor as `install agentsample <slug>` — useful
+for iterating on `agent.yaml`, scripts, or `steps:` before cutting a
+release.
 
 The [CLI docs](https://docs.archagents.com) and the
 [archagents plugin](https://github.com/ArchAstro/archagents) for

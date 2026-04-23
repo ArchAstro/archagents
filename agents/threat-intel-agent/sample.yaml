@@ -1,12 +1,11 @@
-schema_version: 1
-version: v0.1.0
+schema_version: 2
+version: v0.2.0
 name: "Threat Intelligence Agent"
 tagline: "A security intelligence analyst that produces daily threat briefs from monitored feeds."
-min_cli_version: "0.25.0"
-deploy_mode: generated
+min_cli_version: "0.28.0"
 
-capabilities:
-  scripts: true
-  skills: false
-  agent: true
-  env_example: true
+steps:
+  - type: upload_scripts
+    source_dir: scripts
+  - type: deploy_agent
+    template_file: agent.yaml

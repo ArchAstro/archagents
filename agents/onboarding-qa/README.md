@@ -11,7 +11,7 @@ Deploy the Onboarding Q&A Agent from this repo.
 2) No env vars required — this agent works out of the box
 3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
 4) Run: archagent auth login <my-email> && archagent init
-5) Deploy: cd agents/onboarding-qa && ./deploy.sh
+5) Deploy: archagent install agentsample onboarding-qa
 6) Test it: upload the bundled sample FAQ, create an agent session, and ask "What's the PTO policy?"
 7) Show me the result
 ```
@@ -48,9 +48,13 @@ Onboarding Q&A Agent solves this by being:
 
 ```bash
 cp env.example .env
-./deploy.sh
-./upload-knowledge.sh /path/to/your/onboarding-docs/*.pdf
+archagent install agentsample onboarding-qa
 ```
+
+The sample ships with a short seed FAQ (`knowledge/sample-faq.md`) that
+gets uploaded automatically as part of the install so the agent has
+something to answer from on day one. Real rollouts replace that seed
+with your own onboarding docs — see "Knowledge upload" below.
 
 ## Required env vars
 
@@ -62,15 +66,35 @@ That's it. No GitHub token, no Slack token (unless you want Slack delivery).
 
 ## Knowledge upload
 
-After deploying, upload your onboarding docs:
+After deploying, upload your onboarding docs via the platform's
+standard knowledge-ingestion flow:
 
 ```bash
-./upload-knowledge.sh /path/to/onboarding/employee-handbook.pdf
-./upload-knowledge.sh /path/to/onboarding/dev-environment-setup.md
-./upload-knowledge.sh /path/to/onboarding/team-orgchart.pdf
+# Find the agent's archastro/files installation (created at deploy time)
+INSTALLATION=$(archagent list agentinstallations --agent onboarding-qa -o json \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); [print(i['id']) for i in d['data'] if i['kind']=='archastro/files']" | head -1)
+
+# For each doc, base64-encode and attach as a source:
+for doc in /path/to/onboarding/*.pdf /path/to/onboarding/*.md; do
+  filename=$(basename "$doc")
+  content_type=$(case "$filename" in
+    *.pdf) echo "application/pdf" ;;
+    *.md)  echo "text/markdown" ;;
+    *)     echo "application/octet-stream" ;;
+  esac)
+  FILE_ID=$(archagent create files \
+    --data "$(base64 < "$doc")" \
+    --filename "$filename" --content-type "$content_type" \
+    | grep -oE 'fil_[A-Za-z0-9]+' | head -1)
+  archagent create agentinstallationsources \
+    --installation "$INSTALLATION" \
+    --type file/document \
+    --payload "{\"file_id\": \"$FILE_ID\"}"
+done
 ```
 
-The agent indexes them automatically and they become searchable.
+The agent indexes the uploaded files automatically and they become
+searchable.
 
 Recommended docs to upload:
 - Employee handbook
@@ -127,8 +151,8 @@ onboarding-qa/
 ├── README.md
 ├── agent.yaml             # All builtin tools, no custom scripts
 ├── env.example
-├── deploy.sh
-├── upload-knowledge.sh    # Helper to upload PDFs/markdown to the knowledge base
+├── knowledge/
+│   └── sample-faq.md      # Seed FAQ uploaded automatically on install
 └── examples/
     └── sample-conversation.md
 ```
