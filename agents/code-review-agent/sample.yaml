@@ -1,14 +1,36 @@
-schema_version: 1
-version: v0.1.0
+# sample.yaml is the source of truth for this sample's catalog metadata
+# and deploy sequence. Edit it, then run:
+#
+#   python3 scripts/generate_sample_artifacts.py
+#
+# to regenerate committed artifacts. CI fails if this file changes
+# without the generated artifacts being regenerated in the same PR.
+#
+# Users install this sample with:
+#
+#   archastro install agentsample code-review-agent
+#
+# which streams the release tarball and runs the `steps:` block below
+# against the caller's app.
+
+schema_version: 2
+
+# Bump this to cut a new per-sample release. CI creates GitHub Release
+# "<slug>-<version>" with a tarball of this directory on every merge to
+# main where the version tag does not yet exist.
+version: v0.2.0
+
 name: "Code Review Agent"
 tagline: "A senior engineer that reviews every PR like it's going into production at 3am."
-min_cli_version: "0.25.0"
-deploy_mode: generated
 
-# When deploy_mode: generated, these flags control which blocks appear in
-# the generated deploy.sh.
-capabilities:
-  scripts: true       # scripts/*.aascript deployed via `create scripts`
-  skills: false       # no skills/ directory
-  agent: true         # agent.yaml deployed via `deploy agent`
-  env_example: true   # env.example ships; deploy.sh sources .env if present
+# Minimum CLI version that can install this sample. `install agentsample`
+# + the DSL executor ship in 0.28.0.
+min_cli_version: "0.28.0"
+
+# Deploy steps. Executed top-to-bottom against the caller's app. See
+# @archastro/samples-catalog for the full DSL reference.
+steps:
+  - type: upload_scripts
+    source_dir: scripts
+  - type: deploy_agent
+    template_file: agent.yaml

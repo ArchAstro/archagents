@@ -74,8 +74,11 @@ jobs:
             echo "→ cutting release $tag"
             # Tar the WHOLE sample dir — no .aaignore filtering, no
             # exclusions. Tarball is the sample as shipped, including
-            # README, examples/, test/, and any dev files. tar preserves
-            # mode bits, so deploy.sh stays +x on extraction.
+            # README, examples/, test/, and any dev files. The consumer
+            # (CLI's `install agentsample`, portal's full-deploy)
+            # streams the tarball in-memory and runs sample.yaml's
+            # steps: block via @archastro/samples-catalog's DSL
+            # executor — no files land on disk.
             tar -C agents -czf "$tarball" "$slug"
 
             # --latest=false is load-bearing: without it, `gh release create`

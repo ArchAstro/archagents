@@ -12,7 +12,7 @@ Deploy the Threat Intelligence Agent from this repo.
 3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
 4) Run: archagent auth login <my-email> && archagent init
 5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
-6) Deploy: cd agents/threat-intel-agent && ./deploy.sh
+6) Deploy: archagent install agentsample threat-intel-agent
 7) Test it: create an agent session and ask it to generate today's threat brief
 8) Show me the result
 ```
@@ -61,7 +61,7 @@ The Threat Intel Agent solves this by being **selective and contextual**:
 ```bash
 cp env.example .env
 # Edit .env with your values
-./deploy.sh
+archagent install agentsample threat-intel-agent
 ```
 
 ## Required env vars
@@ -149,7 +149,6 @@ threat-intel-agent/
 ├── README.md
 ├── agent.yaml
 ├── env.example
-├── deploy.sh
 ├── scripts/
 │   ├── search_hn_security.aascript    # HN Algolia API
 │   ├── list_recent_advisories.aascript # GitHub Advisories filtered by date

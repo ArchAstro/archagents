@@ -19,7 +19,7 @@ Deploy the ArchAgents FDE agent from this repo.
 1) Read agents/archagent-fde/agent.yaml and agents/archagent-fde/env.example
 2) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
 3) Run: archagent auth login <my-email> && archagent init
-4) Deploy: cd agents/archagent-fde && ./deploy.sh
+4) Deploy: archagent install agentsample archagent-fde
 5) Start an FDE thread:
      archagent create agentsession \
        --agent archagent-fde \
@@ -91,7 +91,7 @@ Everything else is builtin tools: `skills`, `knowledge_search`,
 cp env.example .env   # optional
 
 # Deploy scripts + agent + all 15 skills
-./deploy.sh
+archagent install agentsample archagent-fde
 ```
 
 ## Using the FDE
@@ -132,8 +132,10 @@ the same; only the identity changes.
 
 When an engagement produces repeatable steps that don't fit the generic
 playbook, author a new skill (load the `archagent-build-skill` skill for the
-authoring flow), drop it in `skills/<slug>/SKILL.md`, re-run
-`./deploy.sh`, and the FDE picks it up on the next session.
+authoring flow), drop it in `skills/<slug>/SKILL.md`, then re-run
+`archagent install agentsample archagent-fde` (or, if you're iterating
+on a local checkout, `archagent install sample .` from the sample dir).
+The FDE picks up the new skill on the next session.
 
 ### Different model
 
@@ -166,7 +168,6 @@ archagent-fde/
 ├── README.md                                      # this file
 ├── agent.yaml                                     # AgentTemplate
 ├── env.example                                    # (optional) env vars
-├── deploy.sh                                      # scripts + agent + skills
 ├── scripts/
 │   └── fde-fetch-archagents-docs.aascript        # docs-fetch tool
 ├── skills/

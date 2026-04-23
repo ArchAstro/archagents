@@ -12,7 +12,7 @@ Deploy the Security Triage Agent from this repo.
 3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
 4) Run: archagent auth login <my-email> && archagent init
 5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
-6) Deploy: cd agents/security-triage-agent && ./deploy.sh
+6) Deploy: archagent install agentsample security-triage-agent
 7) Test it: create an agent session and ask it to scan a small repo for vulnerabilities
 8) Show me the result
 ```
@@ -67,7 +67,7 @@ same CVE — so it doesn't re-file the same finding every day.
 ```bash
 cp env.example .env
 # Edit .env with your values
-./deploy.sh
+archagent install agentsample security-triage-agent
 ```
 
 Then upload your security policy documents (see "Knowledge base setup" below).
@@ -92,11 +92,24 @@ Optional:
 
 ## Knowledge base setup
 
-After deploying, upload your security policies. The agent's
-`knowledge_search` will index them and reference them during triage.
+After deploying, upload your security policies via the platform's
+standard knowledge-ingestion flow. The agent's `knowledge_search`
+will index them and reference them during triage.
 
 ```bash
-./scripts/upload-policies.sh /path/to/your/policies/*.pdf
+INSTALLATION=$(archagent list agentinstallations --agent security-triage-agent -o json \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); [print(i['id']) for i in d['data'] if i['kind']=='archastro/files']" | head -1)
+
+for pdf in /path/to/your/policies/*.pdf; do
+  FILE_ID=$(archagent create files \
+    --data "$(base64 < "$pdf")" \
+    --filename "$(basename "$pdf")" --content-type application/pdf \
+    | grep -oE 'fil_[A-Za-z0-9]+' | head -1)
+  archagent create agentinstallationsources \
+    --installation "$INSTALLATION" \
+    --type file/document \
+    --payload "{\"file_id\": \"$FILE_ID\"}"
+done
 ```
 
 Recommended policies to upload:
@@ -162,20 +175,16 @@ security-triage-agent/
 ├── README.md
 ├── agent.yaml                   # AgentTemplate config
 ├── env.example
-├── deploy.sh
 ├── scripts/
-│   ├── query_osv.aascript
-│   ├── query_github_advisories.aascript
-│   ├── scan_dependencies.aascript
-│   ├── get_repo_file.aascript
-│   ├── create_branch.aascript
-│   ├── commit_file.aascript
-│   ├── create_pull_request.aascript
-│   ├── create_github_issue.aascript
-│   ├── query_gcloud_logs.aascript
-│   └── upload-policies.sh
-├── skills/
-│   └── security-triage/SKILL.md
+│   ├── query-osv.aascript
+│   ├── query-github-advisories.aascript
+│   ├── scan-dependencies.aascript
+│   ├── st-get-repo-file.aascript
+│   ├── st-create-branch.aascript
+│   ├── st-commit-file.aascript
+│   ├── st-create-pull-request.aascript
+│   ├── st-create-github-issue.aascript
+│   └── query-gcloud-logs.aascript
 └── examples/
     ├── sample-triage-noise.md
     ├── sample-triage-autofix.md

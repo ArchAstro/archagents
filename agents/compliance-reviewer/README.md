@@ -12,7 +12,7 @@ Deploy the Compliance Reviewer Agent from this repo.
 3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
 4) Run: archagent auth login <my-email> && archagent init
 5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
-6) Deploy: cd agents/compliance-reviewer && ./deploy.sh
+6) Deploy: archagent install agentsample compliance-reviewer
 7) Test it: create an agent session and ask it to review a PR for compliance
 8) Show me the result
 ```
@@ -62,8 +62,27 @@ Reviewer reviews the rules.
 
 ```bash
 cp env.example .env
-./deploy.sh
-./upload-rules.sh /path/to/your/compliance/rules/*.md
+archagent install agentsample compliance-reviewer
+```
+
+The sample ships with a seed set of rules under `rules/*.md` that are
+uploaded to the agent's knowledge base automatically as part of the
+install. To add your own rules later, use the generic knowledge flow:
+
+```bash
+# Find the installation the seed rules live on
+INSTALLATION=$(archagent list agentinstallations --agent compliance-reviewer -o json \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); [print(i['id']) for i in d['data'] if i['kind']=='archastro/files']" | head -1)
+
+# For each rule file:
+FILE_ID=$(archagent create files \
+  --data "$(base64 < /path/to/your/rule.md)" \
+  --filename rule.md --content-type text/markdown \
+  | grep -oE 'fil_[A-Za-z0-9]+' | head -1)
+archagent create agentinstallationsources \
+  --installation "$INSTALLATION" \
+  --type file/document \
+  --payload "{\"file_id\": \"$FILE_ID\"}"
 ```
 
 ## Required env vars
@@ -153,8 +172,6 @@ compliance-reviewer/
 ├── README.md
 ├── agent.yaml
 ├── env.example
-├── deploy.sh
-├── upload-rules.sh
 ├── scripts/
 │   ├── get_pr_files.aascript
 │   ├── get_repo_file.aascript

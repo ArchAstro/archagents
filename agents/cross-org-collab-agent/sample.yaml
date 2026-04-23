@@ -1,8 +1,19 @@
-schema_version: 1
-version: v0.1.0
+schema_version: 2
+version: v0.2.0
 name: "Cross-Org Collaboration Agent"
 tagline: "A code-aware engineering agent that participates in cross-org threads with field guards enforced."
-min_cli_version: "0.25.0"
-# Custom: deploy.sh uploads the field-guard schema, captures its ID, then
-# attaches it to the participate routine after the agent is deployed.
-deploy_mode: custom
+min_cli_version: "0.28.0"
+
+# Deploy steps. The field-guard schema (schemas/cross-org-hardened.yaml)
+# uploads as a regular AgentMessageSchema config BEFORE the agent — so
+# agent.yaml's participate routine can reference it via
+# `structured_message_template_refs: [{config_ref: cross-org-hardened}]`,
+# and the AgentProvisioner resolves the ref + attaches it to the routine
+# atomically at POST /agents time. No post-deploy routine PATCH needed.
+steps:
+  - type: upload_scripts
+    source_dir: scripts
+  - type: upload_configs
+    source_dir: schemas
+  - type: deploy_agent
+    template_file: agent.yaml

@@ -7,11 +7,14 @@
 # What this does:
 #   1. Checks for the archagent CLI (installs via Homebrew if missing)
 #   2. Signs you in
-#   3. Links this repo as a project
-#   4. Deploys the Onboarding Q&A agent with a sample FAQ
-#   5. Asks it a question and prints the answer
+#   3. Deploys the Onboarding Q&A agent (scripts + agent.yaml + seed FAQ)
+#      via `archagent install agentsample onboarding-qa` — no files land
+#      on your disk, the whole thing deploys in-memory from the release
+#      tarball.
+#   4. Asks the agent a question and prints the answer
 #
-# After this, try the other agents in agents/ — each has a deploy.sh.
+# After this, try the other agents: `archagent install agentsample <slug>`
+# or browse agents/<slug>/README.md for per-sample setup details.
 
 set -euo pipefail
 
@@ -47,27 +50,12 @@ step "Signing in as $EMAIL..."
 archagent auth login "$EMAIL"
 ok "Authenticated"
 
-# --- Step 3: Init ---
-step "Linking project..."
-if [[ ! -f archagent.json ]]; then
-  yes | archagent init
-fi
-ok "Project linked"
-
-# --- Step 4: Deploy ---
+# --- Step 3: Deploy ---
 step "Deploying Onboarding Q&A agent..."
-cd agents/onboarding-qa
-archagent deploy agent agent.yaml
-ok "Agent deployed"
+archagent install agentsample onboarding-qa
+ok "Agent deployed (agent.yaml + sample FAQ knowledge seeded)"
 
-# Upload sample FAQ if the upload script exists
-if [[ -f upload-knowledge.sh && -f knowledge/sample-faq.md ]]; then
-  step "Uploading sample FAQ to knowledge base..."
-  chmod +x upload-knowledge.sh
-  ./upload-knowledge.sh knowledge/sample-faq.md || echo "  (knowledge upload skipped — you can retry later)"
-fi
-
-# --- Step 5: Test ---
+# --- Step 4: Test ---
 step "Testing the agent..."
 AGENT_ID=$(archagent list agents --search "onboarding" -o json 2>/dev/null \
   | python3 -c "import sys,json; d=json.load(sys.stdin); items=d if isinstance(d,list) else d.get('data',[]); print(items[0]['id'])" 2>/dev/null || echo "")
@@ -89,9 +77,9 @@ fi
 echo ""
 echo -e "${BOLD}${GREEN}Done!${RESET} Your first agent is live."
 echo ""
-echo -e "Next steps:"
-echo -e "  ${CYAN}cd agents/code-review-agent${RESET}  — review every PR automatically"
-echo -e "  ${CYAN}cd agents/security-triage-agent${RESET}  — daily vulnerability scans"
-echo -e "  ${CYAN}cd agents/threat-intel-agent${RESET}  — daily security brief"
+echo -e "Try another sample:"
+echo -e "  ${CYAN}archagent install agentsample code-review-agent${RESET}     — review every PR automatically"
+echo -e "  ${CYAN}archagent install agentsample security-triage-agent${RESET} — daily vulnerability scans"
+echo -e "  ${CYAN}archagent install agentsample threat-intel-agent${RESET}    — daily security brief"
 echo ""
-echo -e "Each agent has a ${BOLD}deploy.sh${RESET} and a ${BOLD}README.md${RESET} with setup details."
+echo -e "Browse the full catalog with ${BOLD}archagent list agentsamples${RESET} — each sample's ${BOLD}README.md${RESET} has setup details."

@@ -12,7 +12,7 @@ Deploy the Cross-Org Collaboration Agent from this repo.
 3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
 4) Run: archagent auth login <my-email> && archagent init
 5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
-6) Deploy: cd agents/cross-org-collab-agent && ./deploy.sh
+6) Deploy: archagent install agentsample cross-org-collab-agent
 7) Test it: create an agent session, send a message with a fake code snippet and verify it gets blocked by field guards
 8) Show me the result
 ```
@@ -123,7 +123,7 @@ fooling a single model.
 ```bash
 cp env.example .env
 # Edit .env with your values
-./deploy.sh
+archagent install agentsample cross-org-collab-agent
 ```
 
 ## Required env vars
@@ -185,7 +185,6 @@ cross-org-collab-agent/
 ├── README.md
 ├── agent.yaml
 ├── env.example
-├── deploy.sh
 ├── schemas/
 │   └── cross-org-hardened.yaml      # The 5-layer field guard schema
 ├── scripts/
