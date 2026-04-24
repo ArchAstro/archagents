@@ -259,7 +259,7 @@ field_guards:
 
   - kind: LLMJudge
     fields: ["summary", "interface_shape", "proposed_approach"]
-    model: openai/gpt-4o-mini
+    model: openai/gpt-5-mini-latest
     prompt: |
       You are a strict content classifier. The following text is being
       sent from an internal engineer to an external business partner
@@ -282,7 +282,7 @@ field_guards:
       This is a whitelist check — if the content does not clearly fall
       into the 5 allowed categories, REJECT it.
     on_match: reject
-    message: "Layer-4 LLM judge (GPT-4o-mini) — content failed whitelist check"
+    message: "Layer-4 LLM judge (GPT-5 mini) — content failed whitelist check"
 
   # ─── Layer 5: LLM judge #3 — self-check verification ───
 
