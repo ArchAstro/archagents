@@ -162,11 +162,15 @@ routines:
     # lookup_key: cross-org-hardened — values come from
     # schemas/cross-org-hardened.yaml's own fields). The
     # AgentProvisioner already walks `structured_message_template_refs`
-    # for config_refs (see agent_provisioner.ex @routine_ref_fields) and
+    # for config refs (see agent_provisioner.ex @routine_ref_fields) and
     # writes the resolved id into preset_config.structured_message_template_ids
     # on the routine row. No post-deploy PATCH needed.
+    #
+    # Format: bare-string refs (lookup_key, virtual_path, or config id).
+    # The object loader rejects `{config_ref: ...}` map shorthand here —
+    # that's the tools/skills pattern, not the structured-message-refs one.
     structured_message_template_refs:
-      - config_ref: cross-org-hardened
+      - cross-org-hardened
     status: active
 
   - name: Auto-capture memories
