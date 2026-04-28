@@ -28,7 +28,7 @@ let url = if (str.startsWith(path, "http://")) {
 let resp = unwrap(http.get(url, {
   headers: {
     "Accept": "text/markdown, text/plain, text/html;q=0.5",
-    "User-Agent": "ArchAgents-FDE/1.0"
+    "User-Agent": "ArchAstro/1.0"
   }
 }))
 

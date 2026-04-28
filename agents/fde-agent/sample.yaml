@@ -8,7 +8,7 @@
 #
 # Users install this sample with:
 #
-#   archastro install agentsample archagent-fde
+#   archastro install agentsample fde-agent
 #
 # which streams the release tarball and runs the `steps:` block below
 # against the caller's app.
@@ -16,20 +16,18 @@
 schema_version: 2
 
 # Bump this to cut a new per-sample release.
-version: v0.2.0
+version: v0.1.0
 
-name: "ArchAgents FDE (Forward Deployed Engineer)"
-tagline: "A Forward Deployed Engineer for ArchAgents teams that sets up new customers end-to-end."
+name: "FDE Agent"
+tagline: "A generic Forward Deployed Engineer base agent customers can specialize with their own docs and knowledge."
 
 # The DSL executor (+ `install agentsample` command) ship in 0.28.0.
 min_cli_version: "0.28.0"
 
-# Deploy steps. The skills under skills/ get uploaded as Skill + File
-# configs keyed by their bare directory name so agent.yaml's
-# `skills: [{config_ref: <slug>}]` references resolve cleanly.
+# Deploy steps. The generic playbook skill is uploaded first so
+# agent.yaml's `skills: [{config_ref: fde-engagement-playbook}]`
+# reference resolves during deploy.
 steps:
-  - type: upload_scripts
-    source_dir: scripts
   - type: upload_skills
     source_dir: skills
   - type: deploy_agent

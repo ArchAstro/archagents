@@ -1,0 +1,29 @@
+# sample.yaml is the source of truth for this sample's catalog metadata
+# and deploy sequence. Edit it, then run:
+#
+#   python3 scripts/generate_sample_artifacts.py
+#
+# to regenerate committed artifacts. CI fails if this file changes
+# without the generated artifacts being regenerated in the same PR.
+#
+# Users install this sample with:
+#
+#   archastro install agentsample archastro-onboarding
+#
+# which streams the release tarball and runs the `steps:` block below
+# against the caller's app.
+
+schema_version: 2
+
+# Bump this to cut a new per-sample release.
+version: v0.1.0
+
+name: "ArchAstro Onboarding"
+tagline: "Guides a new user through setting up their first agent in ArchAstro."
+
+# The DSL executor (+ `install agentsample` command) ship in 0.28.0.
+min_cli_version: "0.28.0"
+
+steps:
+  - type: deploy_agent
+    template_file: agent.yaml
