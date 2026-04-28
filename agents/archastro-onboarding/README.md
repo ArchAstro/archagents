@@ -7,6 +7,11 @@ production, create it through `createAgentAction` with the default template ref
 `default-agent`; that action provisions the backing thread, adds the onboarding
 agent as a member, and stores `thread_id` in metadata.
 
+This sample also owns the ArchAgents onboarding support bundle: docs fetching,
+concept explanations, integration patterns, CLI setup/auth/config workflows,
+script/workflow/skill authoring, deploy guidance, chat testing, impersonation,
+and troubleshooting.
+
 ## Agent Contract
 
 - **Name:** ArchAstro Onboarding
@@ -30,6 +35,29 @@ pretend there is a hidden onboarding surface. It should direct users to:
 - **Chat with your agent** for testing
 
 The exact identity and kickoff prompts are in [prompts.md](prompts.md).
+
+## Support Bundle
+
+The onboarding agent ships these skills:
+
+- `archastro-engagement-playbook`
+- `archagent-concepts`
+- `archagent-docs-map`
+- `archagent-integration-patterns`
+- `archagent-troubleshooting`
+- `archagent-install`
+- `archagent-auth`
+- `archagent-manage-configs`
+- `archagent-author-agent`
+- `archagent-build-script`
+- `archagent-build-workflow`
+- `archagent-build-skill`
+- `archagent-deploy-agent`
+- `archagent-chat`
+- `archagent-impersonate`
+
+It also ships `fetch_archagents_docs`, backed by
+`scripts/archastro-fetch-archagents-docs.aascript`.
 
 ## Local Sample Install
 

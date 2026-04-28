@@ -1,0 +1,40 @@
+// Hand a concierge conversation to a specialist peer agent.
+
+let agents = import("agents")
+let threads = import("threads")
+
+let target_handle = $.target_handle
+let summary = $.summary || ""
+let user_message = $.user_message
+let channel_id = $.channel_id
+let thread_ts = $.thread_ts
+
+let target = unwrap(agents.get({agent: target_handle}))
+
+let thread = unwrap(threads.ensure_by_key({
+  key: "concierge-handoff:" + channel_id + ":" + target_handle,
+  title: target.name,
+  agent_user_id: target.id
+}))
+
+unwrap(threads.send_message({
+  thread: thread.id,
+  content: user_message,
+  agent: target.id,
+  metadata: {
+    "slack_source": {
+      "channel_id": channel_id,
+      "thread_ts": thread_ts
+    },
+    "handoff": {
+      "from": "concierge",
+      "reason": summary
+    }
+  }
+}))
+
+{
+  handed_off_to: target_handle,
+  agent_name: target.name,
+  reason: summary
+}

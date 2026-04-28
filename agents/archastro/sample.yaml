@@ -19,18 +19,13 @@ schema_version: 2
 version: v0.1.0
 
 name: "ArchAstro"
-tagline: "The default ArchAgents concierge for every agent network org."
+tagline: "The default ArchAstro project concierge."
 
 # The DSL executor (+ `install agentsample` command) ship in 0.28.0.
 min_cli_version: "0.28.0"
 
-# Deploy steps. The skills under skills/ get uploaded as Skill + File
-# configs keyed by their bare directory name so agent.yaml's
-# `skills: [{config_ref: <slug>}]` references resolve cleanly.
 steps:
   - type: upload_scripts
     source_dir: scripts
-  - type: upload_skills
-    source_dir: skills
   - type: deploy_agent
     template_file: agent.yaml

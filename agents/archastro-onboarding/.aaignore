@@ -9,3 +9,5 @@ agent.yaml
 env.example
 prompts.md
 sample.yaml
+scripts/
+skills/

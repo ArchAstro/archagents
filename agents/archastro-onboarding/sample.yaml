@@ -25,5 +25,9 @@ tagline: "Guides a new user through setting up their first agent in ArchAstro."
 min_cli_version: "0.28.0"
 
 steps:
+  - type: upload_scripts
+    source_dir: scripts
+  - type: upload_skills
+    source_dir: skills
   - type: deploy_agent
     template_file: agent.yaml

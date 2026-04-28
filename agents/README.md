@@ -9,7 +9,7 @@ command installs the whole thing.
 
 | Agent | What it does |
 |---|---|
-| [archastro](archastro) | Default ArchAgents concierge for every agent network org |
+| [archastro](archastro) | Default ArchAstro concierge for ongoing project and account maintenance |
 | [archastro-onboarding](archastro-onboarding) | Guides a new user through setting up their first agent in ArchAstro |
 | [code-review-agent](code-review-agent) | Reviews every PR, posts inline comments anchored to specific lines |
 | [compliance-reviewer](compliance-reviewer) | Reviews PRs against SOC2 / GDPR / your custom compliance rules |

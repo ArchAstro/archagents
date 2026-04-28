@@ -4,7 +4,7 @@
     {
       "slug": "archastro",
       "name": "ArchAstro",
-      "tagline": "The default ArchAgents concierge for every agent network org.",
+      "tagline": "The default ArchAstro project concierge.",
       "current_version": "v0.1.0",
       "min_cli_version": "0.28.0"
     },
