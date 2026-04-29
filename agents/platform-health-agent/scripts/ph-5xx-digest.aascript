@@ -1,0 +1,236 @@
+// Daily 5xx digest emitter. Queries Cloud Logging for the last 24h of
+// ERROR-severity entries in the configured K8s namespace, groups by Elixir
+// exception class, and prompts the agent to format a Slack post with
+// per-signature Cloud Logging Console drill-down URLs.
+//
+// The agent makes ZERO additional tool calls — all data is in the prompt —
+// to keep the turn fast and avoid turn-coordinator timeout.
+
+let http = import("requests")
+let arr = import("array")
+let str = import("string")
+let dt = import("datetime")
+let j = import("jwt")
+let storage = import("storage")
+let threads = import("threads")
+
+// Bound the API query to the last 24h with an absolute RFC 3339 timestamp.
+// pageSize alone is not a substitute — on a high-error day the recent 1000
+// entries could compress into a few hours and the digest would undercount
+// while still claiming "last 24h."
+let cutoff = unwrap(dt.add(dt.now(), -24, "hours"), dt.now())
+
+let project_id = env.GCLOUD_PROJECT_ID
+let namespace = env.LOG_NAMESPACE
+
+// Cloud Logging filter: last 24h ERROR-severity in the configured namespace.
+//
+// Why severity>=ERROR rather than httpRequest.status>=500: most platforms log
+// via formatters that don't emit GCP-native httpRequest fields. Almost all
+// production 500s come from unhandled exceptions, which land at ERROR severity
+// via the framework's default error handler.
+let log_filter_for_api = "resource.type=\"k8s_container\" AND resource.labels.namespace_name=\"" + namespace + "\" AND severity>=ERROR AND timestamp>=\"" + cutoff + "\""
+
+// GCloud SA auth: sign a JWT from the SA private key and exchange at
+// oauth2.googleapis.com/token for an access token usable against the
+// Cloud Logging API.
+let client_email = env.GCLOUD_SA_CLIENT_EMAIL
+let private_key = str.replace(env.GCLOUD_SA_PRIVATE_KEY, "\\n", "\n")
+
+let now_unix = dt.unix()
+let signed_jwt = unwrap(j.sign({
+  "iss": client_email,
+  "scope": "https://www.googleapis.com/auth/logging.read",
+  "aud": "https://oauth2.googleapis.com/token",
+  "iat": now_unix,
+  "exp": now_unix + 3600
+}, private_key, "RS256"))
+
+let token_resp = unwrap(http.post("https://oauth2.googleapis.com/token", {
+  headers: {"Content-Type": "application/x-www-form-urlencoded"},
+  body: "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=" + signed_jwt
+}))
+let access_token = token_resp.body.access_token
+
+let logs_resp = unwrap(http.post("https://logging.googleapis.com/v2/entries:list", {
+  headers: {
+    "Authorization": "Bearer " + access_token,
+    "Content-Type": "application/json"
+  },
+  body: {
+    "resourceNames": ["projects/" + project_id],
+    "filter": log_filter_for_api,
+    "orderBy": "timestamp desc",
+    "pageSize": 1000
+  }
+}))
+
+let entries = ((logs_resp.body || {}).entries) || []
+
+// Compute signature for each entry: extract Elixir exception class via regex
+// `** (Module.Submodule.Class) ...`. Anything that doesn't match is bucketed
+// under a fixed sentinel — we intentionally do NOT fall back to message text,
+// because raw error messages can contain user input (emails, request paths
+// with query strings) and the signature is published to Slack via the agent.
+let UNCATEGORIZED_SIG = "(non-exception entry)"
+
+let signature_for = fn(entry) {
+  let payload = entry.jsonPayload || {}
+  let msg = payload.message || ""
+  let m = str.match(msg, "\\*\\*\\s+\\(([\\w.]+)\\)")
+  if (m != null) {
+    m.groups[0]
+  } else {
+    UNCATEGORIZED_SIG
+  }
+}
+
+// Collect signatures, then dedupe and count using only confirmed-working arr
+// primitives.
+let all_sigs = arr.map(entries, signature_for)
+
+let unique_sigs = arr.reduce(all_sigs, [], fn(acc, sig) {
+  if (arr.indexOf(acc, sig) >= 0) { acc } else { arr.concat(acc, [sig]) }
+})
+
+let counted = arr.map(unique_sigs, fn(sig) {
+  let count = arr.length(arr.filter(all_sigs, fn(s) { s == sig }))
+  {sig: sig, count: count}
+})
+
+let total = arr.length(entries)
+let unique_count = arr.length(counted)
+
+// URL-encode special chars within the matrix-param value of the Cloud Logging
+// Console URL. Critical: `>` and `<` MUST be encoded — Slack's mrkdwn parser
+// uses `<` and `>` as link delimiters; an unencoded `>` in the URL closes the
+// `<url|label>` link prematurely. `=` and `&` also need encoding inside the
+// matrix-param value to avoid colliding with structural URL parsing.
+let url_encode = fn(s) {
+  let s1 = str.replace(s, " ", "%20")
+  let s2 = str.replace(s1, "\"", "%22")
+  let s3 = str.replace(s2, "\n", "%0A")
+  let s4 = str.replace(s3, ">", "%3E")
+  let s5 = str.replace(s4, "<", "%3C")
+  let s6 = str.replace(s5, "=", "%3D")
+  let s7 = str.replace(s6, "&", "%26")
+  s7
+}
+
+let base_filter = "resource.type=\"k8s_container\"\nresource.labels.namespace_name=\"" + namespace + "\"\nseverity>=ERROR"
+
+let log_explorer_url_for = fn(extra_filter) {
+  let q = if (extra_filter == null || extra_filter == "") {
+    base_filter
+  } else {
+    base_filter + "\n" + extra_filter
+  }
+  "https://console.cloud.google.com/logs/query;query=" + url_encode(q) + ";timeRange=PT24H?project=" + project_id
+}
+
+// Per-signature drill-down URLs. Uncategorized bucket can't filter by class,
+// so its drill URL is just the base 24h view.
+let with_urls = arr.map(counted, fn(entry) {
+  let extra = if (entry.sig == UNCATEGORIZED_SIG) {
+    ""
+  } else {
+    "textPayload:\"" + entry.sig + "\""
+  }
+  {sig: entry.sig, count: entry.count, drill_url: log_explorer_url_for(extra)}
+})
+
+let all_url = log_explorer_url_for("")
+
+// Fetch GitHub context: open issues + recent merged PRs. The agent uses these
+// to suggest possible matches for each signature without making its own tool
+// calls. Use unwrap-with-default so a transient GitHub outage degrades to
+// "(none)" in the prompt rather than crashing the digest.
+let monitored_repo = env.MONITORED_REPO
+
+let issues_resp = unwrap(http.get("https://api.github.com/repos/" + monitored_repo + "/issues?state=open&per_page=30&sort=updated", {
+  headers: {
+    "Accept": "application/vnd.github+json",
+    "Authorization": "Bearer " + env.GITHUB_TOKEN
+  }
+}), null)
+
+let open_issues = if (issues_resp == null || issues_resp.status != 200 || issues_resp.body == null) {
+  []
+} else {
+  arr.map(arr.filter(issues_resp.body, fn(i) { (i.pull_request || null) == null }), fn(i) {
+    "#" + str.toString(i.number) + " — " + (i.title || "")
+  })
+}
+
+let prs_resp = unwrap(http.get("https://api.github.com/repos/" + monitored_repo + "/pulls?state=closed&sort=updated&direction=desc&per_page=30", {
+  headers: {
+    "Accept": "application/vnd.github+json",
+    "Authorization": "Bearer " + env.GITHUB_TOKEN
+  }
+}), null)
+
+let recent_prs = if (prs_resp == null || prs_resp.status != 200 || prs_resp.body == null) {
+  []
+} else {
+  arr.map(arr.filter(prs_resp.body, fn(p) { p.merged_at != null }), fn(p) {
+    "#" + str.toString(p.number) + " — " + (p.title || "") + " (" + ((p.user || {}).login || "?") + ", " + (p.merged_at || "") + ")"
+  })
+}
+
+let prev = unwrap(storage.get("last_5xx_digest_summary"), "")
+let prev_section = if (prev != "") {
+  "\n\n**Previous 5xx digest summary** (use to identify novel vs recurring signatures):\n" + prev
+} else {
+  ""
+}
+
+let signatures_block = arr.join(arr.map(with_urls, fn(t) {
+  "- `" + t.sig + "` — " + str.toString(t.count) + "× — drill: " + t.drill_url
+}), "\n")
+
+let issues_block = if (arr.length(open_issues) > 0) {
+  arr.join(open_issues, "\n")
+} else {
+  "(none)"
+}
+
+let prs_block = if (arr.length(recent_prs) > 0) {
+  arr.join(recent_prs, "\n")
+} else {
+  "(none)"
+}
+
+// Prompt assembly order: data first, then format instructions, then continuity
+// instruction, then the final "no tools" rule LAST so it dominates LLM
+// recency bias.
+let prompt = "5xx digest for " + monitored_repo + " production — last 24 hours.\n\n" +
+  "Total ERROR-severity log entries: " + str.toString(total) + "\n" +
+  "Unique exception signatures: " + str.toString(unique_count) + "\n\n" +
+  "**All exception signatures (pick the top 5 by count for the Slack post):**\n" + signatures_block + "\n\n" +
+  "**All-errors view URL** (last 24h, all signatures): " + all_url + "\n\n" +
+  "**Currently open issues:**\n" + issues_block + "\n\n" +
+  "**Recently merged PRs:**\n" + prs_block +
+  prev_section + "\n\n" +
+  "**Format your response as a Slack-ready post:**\n" +
+  "1. Heading: `*Platform 5xx digest — last 24h: " + str.toString(total) + " errors across " + str.toString(unique_count) + " signatures*`\n" +
+  "2. One bullet per top-5 signature, formatted: `\\u2022 \\`<sig>\\` (<count>x) — <one-line correlation note: most likely related open issue or culprit PR if obvious from the lists above; say \"(no obvious match)\" if nothing fits — do NOT speculate beyond what the data supports>` followed on its own line by `   <drill-down URL with the label \"view <count> errors \\u2192\">`\n" +
+  "3. Final line: `<" + all_url + "|View all in Cloud Logging \\u2192>`\n\n" +
+  "Also include EXACTLY this block at the very end (replace the bullet lines with your continuity summary):\n\n" +
+  "<summary>\n" +
+  "- Top 1-2 most concerning signatures and why\n" +
+  "- Whether any new (vs previous-digest) signatures appeared\n" +
+  "- Any signatures you couldn't confidently correlate to anything\n" +
+  "</summary>\n\n" +
+  "Use ONLY the data provided above. Do NOT call any additional tools. Be concise."
+
+let thread = unwrap(threads.ensure_by_key({
+  key: "5xx-digest",
+  title: "5xx Daily Digest"
+}))
+
+unwrap(threads.send_message({
+  thread: thread.id,
+  content: prompt
+}))
+
+{status: "prompted", thread_id: thread.id, total_errors: total, unique_signatures: unique_count}

@@ -37,6 +37,13 @@
       "min_cli_version": "0.28.0"
     },
     {
+      "slug": "platform-health-agent",
+      "name": "Platform Health Agent",
+      "tagline": "Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.28.0"
+    },
+    {
       "slug": "release-notes-bot",
       "name": "Release Notes Bot",
       "tagline": "Drafts the weekly changelog by scanning merged PRs on a schedule.",

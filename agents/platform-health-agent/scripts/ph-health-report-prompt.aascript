@@ -1,0 +1,61 @@
+// Daily prompt-emitter for the health report.
+//
+// Posts a prompt to the `health-reports` thread. The agent's `participate`
+// routine sees the new message, generates the report, and the deliver script
+// forwards the response to Slack. The capture script extracts the trailing
+// `<summary>` block and persists it for tomorrow's prompt as continuity.
+
+let threads = import("threads")
+let storage = import("storage")
+let str = import("string")
+let dt = import("datetime")
+
+// Yesterday's continuity summary, written by ph-capture. 3-day TTL covers
+// weekend gaps so a Sunday/Monday absence doesn't lose context.
+let yesterday = unwrap(storage.get("last_report_summary"), "")
+
+let yesterday_section = if (yesterday != "") {
+  "\n\n**Yesterday's continuity summary** (use as starting context — focus on what's new or changed since, do not reiterate items still listed there):\n" + yesterday
+} else {
+  ""
+}
+
+let today_iso = str.toString(dt.now())
+let monitored_repo = env.MONITORED_REPO
+
+let base_prompt = "Today is " + today_iso + ".\n\n" +
+  "Generate today's daily health report for " + monitored_repo + ". Be concise — use bullet points, not paragraphs.\n\n" +
+  "**Output structure (in this order):**\n\n" +
+  "1. **TL;DR** — 2-3 lines summarizing the day. Lead with what changed and what needs attention. No PR/issue numbers in this section.\n" +
+  "2. **Notable** — Top 1-3 items from any section that deserve immediate attention. Cite specific PRs/issues. Keep terse — these are what someone reading only the first 30 seconds should see.\n" +
+  "3. **CI Status** — is main green? If failures, use user-friendly descriptions, not internal test path identifiers. Do not split the same suite into multiple bullets.\n" +
+  "4. **Issues needing attention** — open issues, grouped by theme (e.g., analytics, auth, infrastructure). One bullet per theme listing related items in parentheses with suggested owner.\n" +
+  "5. **Possibly resolved** — open issues that may be fixed by MERGED PRs (cross-reference 'fixes #X' / 'closes #X' patterns in PR bodies). Only include PRs that have actually been merged. Group by theme.\n" +
+  "6. **Customer fixes/ships** — user-facing fixes and features merged since last Saturday at 09:00 UTC. Compute that cutoff date from today's date above and state it explicitly. Group by theme. Skip internal refactors, CI fixes, dependency bumps.\n" +
+  "7. **Notable activity** — anything else unusual worth flagging.\n\n" +
+  "**Conventions:**\n" +
+  "- Use `PR #X` for pull requests and `issue #X` for issues. Example: `PR #4334 closes issue #4329`.\n" +
+  "- Group by theme — one bullet per theme listing all related PRs/issues in parentheses, NOT one bullet per item.\n" +
+  "- Stick to what the source data says — do not add severity claims that aren't in the issue title/labels, do not extrapolate impact.\n\n" +
+  "At the very end of your report, include EXACTLY this block (replace the bullet lines with your continuity summary):\n\n" +
+  "<summary>\n" +
+  "- Most important open issue today: ...\n" +
+  "- Active sprint context (if any): ...\n" +
+  "- Anything tomorrow's report should pick up on: ...\n" +
+  "</summary>\n\n" +
+  "The platform extracts the <summary> block automatically and stores it for tomorrow's continuity. Do NOT call working_memory_set yourself — the capture is handled by a separate routine. Keep the summary terse — 3-5 lines max.\n\n" +
+  "Respond with ONLY the report. Do not post it anywhere else."
+
+let prompt = base_prompt + yesterday_section
+
+let thread = unwrap(threads.ensure_by_key({
+  key: "health-reports",
+  title: "Daily Health Reports"
+}))
+
+unwrap(threads.send_message({
+  thread: thread.id,
+  content: prompt
+}))
+
+{status: "prompted", thread_id: thread.id, has_yesterday_context: yesterday != ""}
