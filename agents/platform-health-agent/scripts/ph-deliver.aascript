@@ -2,8 +2,9 @@
 //
 // Listens on every thread.message_added event, but only acts on messages
 // from the agent (not script-posted prompts) on a thread whose key matches
-// the allowlist. The 4 routines on the agent template all share this one
-// script — the per-thread split is intentionally flat for sample clarity.
+// the `is_allowed` allowlist below. Filtering happens in this script
+// rather than at the routine level so adding a new monitored thread is
+// one entry in this allowlist — no new routine needed.
 
 let threads = import("threads")
 let slack = import("slack")

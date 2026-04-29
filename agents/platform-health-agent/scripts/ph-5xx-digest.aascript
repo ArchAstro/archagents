@@ -152,14 +152,23 @@ let all_url = log_explorer_url_for("")
 // to suggest possible matches for each signature without making its own tool
 // calls. Use unwrap-with-default so a transient GitHub outage degrades to
 // "(none)" in the prompt rather than crashing the digest.
+//
+// If MONITORED_REPO is unset, skip the fetches entirely (avoid firing
+// malformed URLs at GitHub) and surface that to the operator in the prompt
+// rather than silently presenting a clean digest with no correlation context.
 let monitored_repo = env.MONITORED_REPO
+let has_monitored_repo = monitored_repo != null && monitored_repo != ""
 
-let issues_resp = unwrap(http.get("https://api.github.com/repos/" + monitored_repo + "/issues?state=open&per_page=30&sort=updated", {
-  headers: {
-    "Accept": "application/vnd.github+json",
-    "Authorization": "Bearer " + env.GITHUB_TOKEN
-  }
-}), null)
+let issues_resp = if (has_monitored_repo) {
+  unwrap(http.get("https://api.github.com/repos/" + monitored_repo + "/issues?state=open&per_page=30&sort=updated", {
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Authorization": "Bearer " + env.GITHUB_TOKEN
+    }
+  }), null)
+} else {
+  null
+}
 
 let open_issues = if (issues_resp == null || issues_resp.status != 200 || issues_resp.body == null) {
   []
@@ -169,12 +178,16 @@ let open_issues = if (issues_resp == null || issues_resp.status != 200 || issues
   })
 }
 
-let prs_resp = unwrap(http.get("https://api.github.com/repos/" + monitored_repo + "/pulls?state=closed&sort=updated&direction=desc&per_page=30", {
-  headers: {
-    "Accept": "application/vnd.github+json",
-    "Authorization": "Bearer " + env.GITHUB_TOKEN
-  }
-}), null)
+let prs_resp = if (has_monitored_repo) {
+  unwrap(http.get("https://api.github.com/repos/" + monitored_repo + "/pulls?state=closed&sort=updated&direction=desc&per_page=30", {
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Authorization": "Bearer " + env.GITHUB_TOKEN
+    }
+  }), null)
+} else {
+  null
+}
 
 let recent_prs = if (prs_resp == null || prs_resp.status != 200 || prs_resp.body == null) {
   []
@@ -195,16 +208,26 @@ let signatures_block = arr.join(arr.map(with_urls, fn(t) {
   "- `" + t.sig + "` — " + str.toString(t.count) + "× — drill: " + t.drill_url
 }), "\n")
 
-let issues_block = if (arr.length(open_issues) > 0) {
-  arr.join(open_issues, "\n")
+let unset_note = "(MONITORED_REPO env var not set — no GitHub correlation context available)"
+
+let issues_block = if (!has_monitored_repo) {
+  unset_note
 } else {
-  "(none)"
+  if (arr.length(open_issues) > 0) {
+    arr.join(open_issues, "\n")
+  } else {
+    "(none)"
+  }
 }
 
-let prs_block = if (arr.length(recent_prs) > 0) {
-  arr.join(recent_prs, "\n")
+let prs_block = if (!has_monitored_repo) {
+  unset_note
 } else {
-  "(none)"
+  if (arr.length(recent_prs) > 0) {
+    arr.join(recent_prs, "\n")
+  } else {
+    "(none)"
+  }
 }
 
 // Prompt assembly order: data first, then format instructions, then continuity

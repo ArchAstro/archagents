@@ -46,7 +46,7 @@ The sample makes trust assumptions you should verify before deploying:
 
 - **GitHub issue and PR titles from `MONITORED_REPO` flow into agent prompts** (event alerts, daily report, 5xx digest), whose responses are forwarded to Slack. The sample assumes contributors to the monitored repo are trusted. Public repos with anonymous issue creation are outside this model — a crafted title could attempt prompt injection. The anti-interpretation rules in the prompts are LLM-level guards, not deterministic filters.
 - **`SLACK_OUTPUT_CHANNEL` audience** sees issue titles, PR titles, exception class signatures, and PR author handles unredacted. Pick a channel whose audience matches.
-- **Minimum-privilege tokens.** `GITHUB_TOKEN` needs `repo` scope (the sample reads but does not write). `GCLOUD_SA_*` needs only `roles/logging.viewer`.
+- **Minimum-privilege tokens.** `GITHUB_TOKEN` needs `repo` scope (the sample reads but does not write). For strict minimum-privilege, prefer a fine-grained PAT (`github_pat_*`) with read-only access to Issues, Pull requests, and Metadata — a classic `repo`-scoped PAT grants write capability the sample doesn't need. `GCLOUD_SA_*` needs only `roles/logging.viewer`.
 
 ## Setup
 
@@ -69,7 +69,7 @@ archagent install agentsample platform-health-agent
 
 | Variable | What it is |
 |---|---|
-| `GITHUB_TOKEN` | PAT with `repo` scope. Used to read issues/PRs and post resolution comments. |
+| `GITHUB_TOKEN` | PAT with `repo` scope. Used to read issues, PRs, and PR comments — the sample does not write to GitHub. |
 | `MONITORED_REPO` | `owner/name` of the repo to monitor. Webhook events from other repos are silently ignored. |
 | `SLACK_OUTPUT_CHANNEL` | Slack channel for delivery. Include the leading `#`. |
 | `GCLOUD_PROJECT_ID` | GCP project hosting the K8s cluster whose logs to scan. |
@@ -178,8 +178,8 @@ add new branches in the if/else chain that builds `prompt`.
   exchange for an access token, query `entries:list`. Same pattern as
   the security-triage-agent sample.
 - **Defensive output stripping** — `<thought>`/`<thinking>`/`<summary>` blocks
-  filtered before Slack delivery; tool-call fragments and memory keys
-  trigger SKIP rather than leak.
+  filtered before Slack delivery; tool-call fragments and bare memory-key
+  responses trigger SKIP rather than leak.
 - **Multi-routine, multi-script agent** — 7 routines (1 participate,
   2 cron, 1 webhook, 2 thread-listener, 1 auto-memory-capture) sharing
   5 scripts.
