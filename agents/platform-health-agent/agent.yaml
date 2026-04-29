@@ -41,6 +41,19 @@ tools:
   - kind: builtin
     builtin_tool_key: memory
     status: active
+  - kind: builtin
+    builtin_tool_key: artifacts
+    status: active
+  - kind: builtin
+    builtin_tool_key: skills
+    status: active
+  # Required: the platform expands `integrations` into per-install agent tools
+  # (e.g. integration/slack_bot install becomes a "Slack Bot" agent tool, and
+  # integration/github becomes a "GitHub" agent tool). Without this, the
+  # agent has no surface to call into installed integrations.
+  - kind: builtin
+    builtin_tool_key: integrations
+    status: active
 
 routines:
   - name: Participate in conversations
@@ -150,9 +163,9 @@ installations:
   - kind: integration/github
     config: {}
   # Slack bot for posting messages. Required for the Slack Delivery routine.
-  # `slack.send` is provided by integration/slack_bot specifically; the
-  # read-only integration/slack does not include the send capability.
-  - kind: integration/slack_bot
+  # `slack.send` is provided by the slack_bot install. Sister samples
+  # (security-triage-agent, threat-intel-agent) use the same kind name.
+  - kind: enablement/slack_bot
     config: {}
 
 metadata:

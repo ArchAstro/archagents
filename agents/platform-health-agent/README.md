@@ -46,7 +46,7 @@ The sample makes trust assumptions you should verify before deploying:
 
 - **GitHub issue and PR titles from `MONITORED_REPO` flow into agent prompts** (event alerts, daily report, 5xx digest), whose responses are forwarded to Slack. The sample assumes contributors to the monitored repo are trusted. Public repos with anonymous issue creation are outside this model — a crafted title could attempt prompt injection. The anti-interpretation rules in the prompts are LLM-level guards, not deterministic filters.
 - **`SLACK_OUTPUT_CHANNEL` audience** sees issue titles, PR titles, exception class signatures, and PR author handles unredacted. Pick a channel whose audience matches.
-- **Minimum-privilege tokens.** `GITHUB_TOKEN` needs `repo` scope (the sample reads but does not write). For strict minimum-privilege, prefer a fine-grained PAT (`github_pat_*`) with read-only access to Issues, Pull requests, and Metadata — a classic `repo`-scoped PAT grants write capability the sample doesn't need. `GCLOUD_SA_*` needs only `roles/logging.viewer`.
+- **Minimum-privilege tokens.** `GITHUB_TOKEN` — for strict minimum-privilege, use a fine-grained PAT (`github_pat_*`) with read-only access to Issues, Pull requests, and Metadata. A classic `repo`-scoped PAT (`ghp_*`) also works but grants write capability the sample's identity instructs against (the agent has tool-level access to GitHub via `integrations` + `integration/github`; the only thing keeping it read-only is its identity instructions). `GCLOUD_SA_*` needs only `roles/logging.viewer`.
 
 ## Setup
 
@@ -79,8 +79,8 @@ archagent install agentsample platform-health-agent
 
 ## Post-deploy steps
 
-The agent template declares three integrations — the platform creates
-empty installation rows, but you connect each one yourself.
+The agent template declares two integrations — the platform creates
+empty installation rows on deploy, but you connect each one yourself.
 
 ### 1. GitHub App
 
@@ -97,13 +97,6 @@ archagent describe agent platform-health-agent
 
 Same process for `integration/slack_bot` — link a Slack workspace and
 invite the bot to the output channel.
-
-### 3. (Optional) Connect the daily report context
-
-If you want the agent to search Slack for context on open issues
-(e.g. "is anyone discussing this in #engineering?"), also attach
-`integration/slack` (the read-side integration). Edit the agent
-identity to list the channels you want it to reference.
 
 ## Sample output
 

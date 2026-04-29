@@ -159,6 +159,12 @@ let all_url = log_explorer_url_for("")
 let monitored_repo = env.MONITORED_REPO
 let has_monitored_repo = monitored_repo != null && monitored_repo != ""
 
+// Use repo_label everywhere monitored_repo gets concatenated into prompt
+// text. Avoids null-concat hazards (agentscript doesn't coerce types with
+// `+`) and surfaces the unset state to the agent rather than rendering
+// it as a malformed double-space.
+let repo_label = if (has_monitored_repo) { monitored_repo } else { "(MONITORED_REPO unset)" }
+
 let issues_resp = if (has_monitored_repo) {
   unwrap(http.get("https://api.github.com/repos/" + monitored_repo + "/issues?state=open&per_page=30&sort=updated", {
     headers: {
@@ -233,7 +239,7 @@ let prs_block = if (!has_monitored_repo) {
 // Prompt assembly order: data first, then format instructions, then continuity
 // instruction, then the final "no tools" rule LAST so it dominates LLM
 // recency bias.
-let prompt = "5xx digest for " + monitored_repo + " production — last 24 hours" + cap_note + ".\n\n" +
+let prompt = "5xx digest for " + repo_label + " production — last 24 hours" + cap_note + ".\n\n" +
   "Total ERROR-severity log entries: " + str.toString(total) + "\n" +
   "Unique exception signatures: " + str.toString(unique_count) + "\n\n" +
   "**All exception signatures (pick the top 5 by count for the Slack post):**\n" + signatures_block + "\n\n" +
