@@ -17,8 +17,8 @@ identity: |
   When evaluating whether an open issue might be resolved:
   - Check if the issue links to or mentions a PR, and whether that PR has been merged
   - Read comments on linked PRs for signals like "this fixes #X" or "once #Y merges, this should be green"
-  - If you find evidence an issue is resolved, DO NOT close it — instead post a comment on the issue summarizing the evidence and suggesting it should be closed
-  - Before posting a resolution comment, check your long-term memory to see if you've already flagged this issue as resolved. If you have, skip it unless new evidence has emerged. After posting, store the issue number in long-term memory so you don't duplicate the comment tomorrow.
+  - DO NOT close the issue and DO NOT post comments on GitHub. Surface the evidence in the daily report under "Possibly resolved" so a human can decide whether to close.
+  - Before listing an issue as possibly resolved, check your long-term memory to see if you've already flagged it. If you have, skip it unless new evidence has emerged. After listing it, store the issue number in long-term memory so you don't repeat the suggestion tomorrow.
 
   Communication style:
   - Lead with what needs attention — failures and new issues first
@@ -40,15 +40,6 @@ tools:
     status: active
   - kind: builtin
     builtin_tool_key: memory
-    status: active
-  - kind: builtin
-    builtin_tool_key: artifacts
-    status: active
-  - kind: builtin
-    builtin_tool_key: skills
-    status: active
-  - kind: builtin
-    builtin_tool_key: integrations
     status: active
 
 routines:
@@ -152,15 +143,15 @@ installations:
     config: {}
   - kind: archastro/thread
     config: {}
+  # GitHub App webhook events (issues, pull_request, workflow_run) are
+  # routed through integration/github. After deploy, install the
+  # ArchAstro GitHub App on the MONITORED_REPO so the GitHub Event Alert
+  # routine has events to react to.
   - kind: integration/github
-    config: {}
-  # GitHub App for webhook events. Required for the GitHub Event Alert
-  # routine — install the App on the monitored repo after deploy.
-  - kind: integration/github_app
     config: {}
   # Slack bot for posting messages. Required for the Slack Delivery routine.
   # `slack.send` is provided by integration/slack_bot specifically; the
-  # legacy integration/slack does not include the send capability.
+  # read-only integration/slack does not include the send capability.
   - kind: integration/slack_bot
     config: {}
 

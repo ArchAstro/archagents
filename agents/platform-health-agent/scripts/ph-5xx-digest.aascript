@@ -10,7 +10,7 @@ let http = import("requests")
 let arr = import("array")
 let str = import("string")
 let dt = import("datetime")
-let j = import("jwt")
+let jwt = import("jwt")
 let storage = import("storage")
 let threads = import("threads")
 
@@ -38,7 +38,7 @@ let client_email = env.GCLOUD_SA_CLIENT_EMAIL
 let private_key = str.replace(env.GCLOUD_SA_PRIVATE_KEY, "\\n", "\n")
 
 let now_unix = dt.unix()
-let signed_jwt = unwrap(j.sign({
+let signed_jwt = unwrap(jwt.sign({
   "iss": client_email,
   "scope": "https://www.googleapis.com/auth/logging.read",
   "aud": "https://oauth2.googleapis.com/token",
@@ -48,7 +48,7 @@ let signed_jwt = unwrap(j.sign({
 
 let token_resp = unwrap(http.post("https://oauth2.googleapis.com/token", {
   headers: {"Content-Type": "application/x-www-form-urlencoded"},
-  body: "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=" + signed_jwt
+  body: "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=" + signed_jwt
 }))
 let access_token = token_resp.body.access_token
 
@@ -100,6 +100,13 @@ let counted = arr.map(unique_sigs, fn(sig) {
 
 let total = arr.length(entries)
 let unique_count = arr.length(counted)
+
+// pageSize:1000 above is a hard cap. When `total == 1000` we may have
+// dropped earlier entries in the 24h window — annotate this in the
+// heading so a quiet "47 errors" never gets confused with a noisy day
+// where 1000 was the most recent slice.
+let cap_hit = total >= 1000
+let cap_note = if (cap_hit) { " (1000-entry cap reached — earlier entries in the window may be missing)" } else { "" }
 
 // URL-encode special chars within the matrix-param value of the Cloud Logging
 // Console URL. Critical: `>` and `<` MUST be encoded — Slack's mrkdwn parser
@@ -203,7 +210,7 @@ let prs_block = if (arr.length(recent_prs) > 0) {
 // Prompt assembly order: data first, then format instructions, then continuity
 // instruction, then the final "no tools" rule LAST so it dominates LLM
 // recency bias.
-let prompt = "5xx digest for " + monitored_repo + " production — last 24 hours.\n\n" +
+let prompt = "5xx digest for " + monitored_repo + " production — last 24 hours" + cap_note + ".\n\n" +
   "Total ERROR-severity log entries: " + str.toString(total) + "\n" +
   "Unique exception signatures: " + str.toString(unique_count) + "\n\n" +
   "**All exception signatures (pick the top 5 by count for the Slack post):**\n" + signatures_block + "\n\n" +
@@ -212,7 +219,7 @@ let prompt = "5xx digest for " + monitored_repo + " production — last 24 hours
   "**Recently merged PRs:**\n" + prs_block +
   prev_section + "\n\n" +
   "**Format your response as a Slack-ready post:**\n" +
-  "1. Heading: `*Platform 5xx digest — last 24h: " + str.toString(total) + " errors across " + str.toString(unique_count) + " signatures*`\n" +
+  "1. Heading: `*Platform 5xx digest — last 24h: " + str.toString(total) + " errors across " + str.toString(unique_count) + " signatures" + cap_note + "*`\n" +
   "2. One bullet per top-5 signature, formatted: `\\u2022 \\`<sig>\\` (<count>x) — <one-line correlation note: most likely related open issue or culprit PR if obvious from the lists above; say \"(no obvious match)\" if nothing fits — do NOT speculate beyond what the data supports>` followed on its own line by `   <drill-down URL with the label \"view <count> errors \\u2192\">`\n" +
   "3. Final line: `<" + all_url + "|View all in Cloud Logging \\u2192>`\n\n" +
   "Also include EXACTLY this block at the very end (replace the bullet lines with your continuity summary):\n\n" +

@@ -40,6 +40,14 @@ Three signals, one channel:
 
 **No tool calls during the 5xx digest.** All data — last-24h log entries grouped by signature, recent open issues, recent merged PRs, previous digest summary — is assembled in the prompt-emitter script. The agent's job is only to format the Slack post. Zero tool calls per turn keeps it well under the turn-coordinator timeout.
 
+## Trust model
+
+The sample makes trust assumptions you should verify before deploying:
+
+- **GitHub issue and PR titles from `MONITORED_REPO` flow into agent prompts** (event alerts, daily report, 5xx digest), whose responses are forwarded to Slack. The sample assumes contributors to the monitored repo are trusted. Public repos with anonymous issue creation are outside this model — a crafted title could attempt prompt injection. The anti-interpretation rules in the prompts are LLM-level guards, not deterministic filters.
+- **`SLACK_OUTPUT_CHANNEL` audience** sees issue titles, PR titles, exception class signatures, and PR author handles unredacted. Pick a channel whose audience matches.
+- **Minimum-privilege tokens.** `GITHUB_TOKEN` needs `repo` scope (the sample reads but does not write). `GCLOUD_SA_*` needs only `roles/logging.viewer`.
+
 ## Setup
 
 ```bash
@@ -76,13 +84,13 @@ empty installation rows, but you connect each one yourself.
 
 ### 1. GitHub App
 
-Find the agent's `integration/github_app` installation and install the
+Find the agent's `integration/github` installation and install the
 ArchAstro GitHub App on the monitored repo. Without this, the GitHub
 Event Alert routine has nothing to react to.
 
 ```bash
 archagent describe agent platform-health-agent
-# Locate the integration/github_app installation, follow its install URL
+# Locate the integration/github installation, follow its install URL
 ```
 
 ### 2. Slack bot
@@ -107,11 +115,15 @@ See `examples/`:
 
 ## Customization
 
+This sample is a reference implementation, not a finished product. Most teams will fork it and adapt — the agent identity, prompt structure, schedule, log filter, and event-handling rules are all tuned to one specific monitoring story (a single repo, a single Slack channel, an Elixir-on-K8s production deployment). The sub-sections below are the seams where adaptation is expected.
+
 ### Schedule
 
 Edit cron expressions in `agent.yaml`:
 - `Daily Health Report Prompt`: default `5 9 * * *` (09:05 UTC daily)
 - `5xx Daily Digest`: default `30 14 * * *` (14:30 UTC daily)
+
+Cron is evaluated in UTC. If you want a 9am-local report, factor in the offset — e.g., `5 17 * * *` for 09:05 PT.
 
 ### Report structure
 
@@ -138,6 +150,12 @@ Edit `scripts/ph-5xx-digest.aascript`'s `log_filter_for_api` if you
 need a different severity floor or resource filter. The matching
 `base_filter` (used to build the Console drill-down URLs) lives a
 few lines below — keep them in sync.
+
+The signature extractor regex in `signature_for` assumes Elixir's
+`** (Module.Submodule.Class)` exception format. If your platform uses
+a different convention (Python tracebacks, Java stack traces, Go
+panics), edit the regex accordingly — otherwise everything will
+bucket under `(non-exception entry)`.
 
 ### GitHub event filter
 

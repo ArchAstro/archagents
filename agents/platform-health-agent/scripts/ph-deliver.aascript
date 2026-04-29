@@ -65,7 +65,13 @@ if (thread_id != null && message != null && is_agent && has_trigger) {
   // Treat as SKIP to avoid leaking internals to Slack.
   let starts_thought = str.startsWith(content, "<thought") || str.startsWith(content, "<thinking")
   let has_tool_frags = str.includes(content, "</invoke>") || str.includes(content, "<tool_use>")
-  let has_memory_keys = str.includes(content, "alerted_issue_") || str.includes(content, "alerted_ci_")
+  // Catch the pathological case where the agent emits ONLY a bare memory
+  // key as its entire response. A valid alert that cites the key inline
+  // (e.g. "tracked under alerted_issue_4360") is fine — only the
+  // single-token-and-nothing-else case is malformed.
+  let starts_with_key = str.startsWith(content, "alerted_issue_") || str.startsWith(content, "alerted_ci_")
+  let is_single_token = !str.includes(content, " ") && !str.includes(content, "\n")
+  let has_memory_keys = starts_with_key && is_single_token
   let has_leaked_tags = starts_thought || has_tool_frags || has_memory_keys
 
   // SKIP gate: the agent prefixes low-signal responses with "SKIP:" to

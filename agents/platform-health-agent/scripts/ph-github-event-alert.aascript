@@ -16,7 +16,15 @@ let repo = (raw.repository || {}).full_name
 let monitored_repo = env.MONITORED_REPO
 
 if (repo != monitored_repo) {
-  {status: "skipped", reason: "wrong repo", repo: repo}
+  // Differentiate "MONITORED_REPO not set" from "event from a different
+  // repo" so an unconfigured deployment doesn't look like a working one
+  // that just happens to never alert.
+  let reason = if (monitored_repo == null || monitored_repo == "") {
+    "MONITORED_REPO env var not set — script is a no-op until configured"
+  } else {
+    "wrong repo"
+  }
+  {status: "skipped", reason: reason, repo: repo}
 } else {
 
 let issue = raw.issue
