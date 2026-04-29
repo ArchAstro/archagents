@@ -1,0 +1,24 @@
+// Return a detailed profile for one agent by handle or ID.
+
+let agents = import("agents")
+let array = import("array")
+
+let handle = $.handle
+let agent = unwrap(agents.get({agent: handle}))
+
+let routines_resp = agents.routines.list({agent: agent.id})
+let tools_resp = agents.tools.list({agent: agent.id})
+let installations_resp = agents.installations.list({agent: agent.id})
+
+let routine_data = (routines_resp.value || {data: []}).data || []
+let tool_data = (tools_resp.value || {data: []}).data || []
+let installation_data = (installations_resp.value || {data: []}).data || []
+
+{
+  handle: agent.lookup_key,
+  name: agent.name,
+  identity: agent.identity,
+  routines: array.map(routine_data, fn(r) { r.name }),
+  tools: array.map(tool_data, fn(t) { t.name }),
+  installations: array.map(installation_data, fn(i) { i.kind })
+}

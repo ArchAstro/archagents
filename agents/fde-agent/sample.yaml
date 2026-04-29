@@ -1,0 +1,34 @@
+# sample.yaml is the source of truth for this sample's catalog metadata
+# and deploy sequence. Edit it, then run:
+#
+#   python3 scripts/generate_sample_artifacts.py
+#
+# to regenerate committed artifacts. CI fails if this file changes
+# without the generated artifacts being regenerated in the same PR.
+#
+# Users install this sample with:
+#
+#   archastro install agentsample fde-agent
+#
+# which streams the release tarball and runs the `steps:` block below
+# against the caller's app.
+
+schema_version: 2
+
+# Bump this to cut a new per-sample release.
+version: v0.1.0
+
+name: "FDE Agent"
+tagline: "A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff."
+
+# The DSL executor (+ `install agentsample` command) ship in 0.28.0.
+min_cli_version: "0.28.0"
+
+# Deploy steps. The FDE playbook skill is uploaded first so
+# agent.yaml's `skills: [{config_ref: fde-engagement-playbook}]`
+# reference resolves during deploy.
+steps:
+  - type: upload_skills
+    source_dir: skills
+  - type: deploy_agent
+    template_file: agent.yaml

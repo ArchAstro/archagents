@@ -2,10 +2,17 @@
   "$schema_version": 1,
   "samples": [
     {
-      "slug": "archagent-fde",
-      "name": "ArchAgents FDE (Forward Deployed Engineer)",
-      "tagline": "A Forward Deployed Engineer for ArchAgents teams that sets up new customers end-to-end.",
-      "current_version": "v0.2.0",
+      "slug": "archastro",
+      "name": "ArchAstro",
+      "tagline": "The default ArchAstro project concierge.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.28.0"
+    },
+    {
+      "slug": "archastro-onboarding",
+      "name": "ArchAstro Onboarding",
+      "tagline": "Guides a new user through setting up their first agent in ArchAstro.",
+      "current_version": "v0.1.0",
       "min_cli_version": "0.28.0"
     },
     {
@@ -27,6 +34,13 @@
       "name": "Cross-Org Collaboration Agent",
       "tagline": "A code-aware engineering agent that participates in cross-org threads with field guards enforced.",
       "current_version": "v0.2.1",
+      "min_cli_version": "0.28.0"
+    },
+    {
+      "slug": "fde-agent",
+      "name": "FDE Agent",
+      "tagline": "A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff.",
+      "current_version": "v0.1.0",
       "min_cli_version": "0.28.0"
     },
     {

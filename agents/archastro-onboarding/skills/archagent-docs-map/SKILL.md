@@ -7,7 +7,7 @@ description: Curated index of the most useful ArchAgents docs pages, with one-li
 
 Linking beats paraphrasing. When a customer asks how something works,
 cite the exact doc URL — then summarize in one sentence, not a wall of
-text. This skill is the FDE's canonical URL list.
+text. This skill is ArchAstro's canonical URL list.
 
 The docs root is `https://docs.archagents.com`. There is also a
 machine-readable full index at `https://docs.archagents.com/llms-full.txt`

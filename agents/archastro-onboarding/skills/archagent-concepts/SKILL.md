@@ -5,9 +5,9 @@ description: Canonical one-line reference for every ArchAgents concept — Agent
 
 # ArchAgents Concept Map
 
-Every FDE conversation eventually hits a concept question. Answer it
-with the platform's real vocabulary, not your own paraphrase. When you
-are unsure, link the customer to the canonical doc (see the
+Every ArchAstro support conversation eventually hits a concept question.
+Answer it with the platform's real vocabulary, not your own paraphrase.
+When you are unsure, link the customer to the canonical doc (see the
 `archagent-docs-map` skill) rather than inventing a definition.
 
 ## Primary nouns

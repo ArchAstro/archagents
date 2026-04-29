@@ -1,0 +1,27 @@
+// Return a concise roster of peer agents in this org.
+
+let agents = import("agents")
+let array = import("array")
+let str = import("string")
+
+let listing = unwrap(agents.list({page_size: 50}))
+let all_agents = listing.data || []
+
+let self_handle = $.self_handle
+let peers = if (self_handle != null) {
+  array.filter(all_agents, fn(a) { a.lookup_key != self_handle })
+} else {
+  all_agents
+}
+
+let lines = array.map(peers, fn(a) {
+  let identity = a.identity || ""
+  let first_sentence = str.split(identity, ".")[0]
+  let handle = a.lookup_key || a.id
+  "- @" + handle + " - " + (a.name || "") + ": " + first_sentence
+})
+
+{
+  agent_count: array.length(peers),
+  brief: "Team in this org:\n" + array.join(lines, "\n")
+}
