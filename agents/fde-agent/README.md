@@ -1,7 +1,7 @@
 # FDE Agent
 
-> A generic Forward Deployed Engineer base agent. Install it, add your
-> own docs and knowledge, then specialize the identity for your team.
+> A production Forward Deployed Engineer agent for discovery, implementation,
+> validation, and handoff inside an agent network.
 
 ## Deploy with your coding agent
 
@@ -19,30 +19,19 @@ Deploy the FDE Agent from this repo.
        --agent fde-agent \
        --instructions "Help me scope my first engagement." \
        --wait
-6) Show me the result and the docs/knowledge gaps I should fill next
+6) Show me the result
 ```
 
 ## What this agent is
 
-This is a base Forward Deployed Engineer agent. It is intentionally not
-tied to one company, product, or platform. Customers install it, then add:
-
-- product docs
-- architecture docs
-- API references
-- runbooks
-- support procedures
-- implementation examples
-- customer-specific engagement notes
-
-Once those docs are available through knowledge search, the agent uses
-them as its source of truth for scoping, implementation planning,
-handoff, and follow-up work.
+This is a production Forward Deployed Engineer agent for scoped technical work
+inside an agent network. It works from the configured project context available
+in the thread, memory, knowledge base, tools, and integrations.
 
 ## What it does
 
-- Runs a generic FDE engagement playbook from discovery through handoff
-- Searches uploaded knowledge before answering customer-specific
+- Runs an FDE engagement playbook from discovery through handoff
+- Searches configured project knowledge before answering project-specific
   questions
 - Turns ambiguous requests into thin-slice implementation plans
 - Produces concrete artifacts such as code, configs, prompts, runbooks,
@@ -56,7 +45,7 @@ This sample ships one skill:
 
 | Skill | Purpose |
 |---|---|
-| `fde-engagement-playbook` | A generic phase-by-phase FDE playbook for discovery, architecture, thin-slice implementation, validation, memory capture, and handoff |
+| `fde-engagement-playbook` | A phase-by-phase FDE playbook for discovery, architecture, thin-slice implementation, validation, memory capture, and handoff |
 
 The agent also uses builtin tools: `skills`, `knowledge_search`,
 `long_term_memory`, `memory`, and `search`.
@@ -64,41 +53,9 @@ The agent also uses builtin tools: `skills`, `knowledge_search`,
 ## Setup
 
 ```bash
-# The base FDE has no required env vars.
+# The FDE agent has no required env vars.
 archagent install agentsample fde-agent
 ```
-
-## Add customer knowledge
-
-After installing the base agent, ingest customer-specific docs into the
-same app and make them available to the agent's files/knowledge
-installation. Good first documents are:
-
-- `product-overview.md`
-- `architecture.md`
-- `api-reference.md`
-- `runbooks.md`
-- `support-playbook.md`
-- `glossary.md`
-- `engagement-history.md`
-
-The agent is designed to say when this knowledge is missing instead of
-guessing from general background knowledge.
-
-## Specialize the identity
-
-For a customer-specific FDE, fork `agent.yaml` and add a short section to
-the `identity` block with:
-
-- the customer or team name
-- the primary product or workflow
-- systems and repositories it may discuss
-- docs it should treat as canonical
-- actions it is allowed to take
-- actions that require human approval
-
-Keep the generic rules in place. The specialization should add context,
-not weaken the safety and grounding behavior.
 
 ## Example use
 
@@ -114,9 +71,9 @@ first engagement.
 
 ## What this demonstrates
 
-- **Base agent templates** - a reusable starting point intended to be
-  specialized per customer
-- **Knowledge-grounded FDE work** - customer docs are the source of truth
+- **Production FDE templates** - an operational agent pattern for embedded
+  discovery, implementation, and handoff work
+- **Knowledge-grounded FDE work** - configured project context is the source of truth
 - **Long-term engagement memory** - context, decisions, and handoffs
   persist across sessions
 - **Skill bundles** - a small playbook shipped with the agent and loaded

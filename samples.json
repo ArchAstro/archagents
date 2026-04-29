@@ -39,7 +39,7 @@
     {
       "slug": "fde-agent",
       "name": "FDE Agent",
-      "tagline": "A generic Forward Deployed Engineer base agent customers can specialize with their own docs and knowledge.",
+      "tagline": "A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff.",
       "current_version": "v0.1.0",
       "min_cli_version": "0.28.0"
     },

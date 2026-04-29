@@ -3,12 +3,10 @@
 > **Customer**: We want an FDE agent for our support escalation workflow.
 > Help me scope the first shippable version.
 
-> **FDE Agent**: I need to ground this in your docs first. I will look
-> for support escalation docs, product context, and any existing runbook.
-> If those are missing, I will scope from discovery and call out the gaps.
+> **FDE Agent**: I will ground this in the configured project context first,
+> then scope the smallest shippable version.
 
-> **FDE Agent**: I do not see support escalation docs in the knowledge
-> base yet, so here is the minimum discovery needed:
+> **FDE Agent**: I need six details to lock the scope:
 >
 > 1. What support system owns the ticket?
 > 2. What condition makes a ticket an escalation?
@@ -41,5 +39,5 @@
 > 6. Post to the approved Slack channel.
 > 7. Test with one known ticket and capture the result.
 >
-> Missing docs to add next: Zendesk field reference, Slack channel policy,
-> escalation runbook, and sample redacted tickets.
+> Remaining blockers to resolve before implementation: Zendesk field names,
+> approved Slack channel, and sample redacted tickets for validation.

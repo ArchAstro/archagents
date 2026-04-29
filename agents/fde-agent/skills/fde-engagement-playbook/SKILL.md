@@ -1,6 +1,6 @@
 ---
 name: fde-engagement-playbook
-description: The generic Forward Deployed Engineer playbook for taking a customer from discovery through implementation and handoff. Use at the start of a new engagement, when scoping work, when asked for a rollout plan, or before writing handoff notes.
+description: The Forward Deployed Engineer playbook for taking a customer from discovery through implementation and handoff. Use at the start of a new engagement, when scoping work, when asked for a rollout plan, or before writing handoff notes.
 ---
 
 # FDE Engagement Playbook
@@ -12,7 +12,7 @@ work that make the result durable.
 
 ## Phase 1: Establish Context
 
-Search customer knowledge before asking broad questions. Look for:
+Search project knowledge before asking broad questions. Look for:
 
 - product overview
 - architecture or integration docs
@@ -20,9 +20,6 @@ Search customer knowledge before asking broad questions. Look for:
 - runbooks
 - support or escalation policies
 - prior engagement notes
-
-If the knowledge base is empty or thin, say that clearly and run a
-short discovery anyway.
 
 Ask only what is needed to scope the next useful step:
 
@@ -68,8 +65,8 @@ thin slice has:
 
 Write the implementation plan as concrete steps. Include files,
 interfaces, tools, commands, tests, and deployment checkpoints when
-known. If the customer lacks required docs or access, identify the
-missing artifact by name.
+known. If a required fact or access path is unavailable, identify the
+specific blocker by name.
 
 ## Phase 4: Build Or Draft The Artifact
 
@@ -109,7 +106,7 @@ Store durable context in long-term memory:
 
 - confirmed scope
 - customer vocabulary
-- important docs and source paths
+- important context and source paths
 - key decisions
 - assumptions
 - risks
@@ -137,10 +134,9 @@ whole conversation.
 
 ## Operating Rules
 
-- Read customer knowledge before answering customer-specific questions.
+- Read project knowledge before answering project-specific questions.
 - State assumptions explicitly.
 - Prefer a working thin slice over a broad design.
 - Keep humans in the loop for irreversible or high-risk actions.
 - Capture decisions as soon as they are confirmed.
-- When knowledge is missing, name the missing document or owner instead
-  of guessing.
+- When context is missing, name the specific missing fact instead of guessing.

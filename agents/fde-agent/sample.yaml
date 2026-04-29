@@ -19,12 +19,12 @@ schema_version: 2
 version: v0.1.0
 
 name: "FDE Agent"
-tagline: "A generic Forward Deployed Engineer base agent customers can specialize with their own docs and knowledge."
+tagline: "A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff."
 
 # The DSL executor (+ `install agentsample` command) ship in 0.28.0.
 min_cli_version: "0.28.0"
 
-# Deploy steps. The generic playbook skill is uploaded first so
+# Deploy steps. The FDE playbook skill is uploaded first so
 # agent.yaml's `skills: [{config_ref: fde-engagement-playbook}]`
 # reference resolves during deploy.
 steps:
