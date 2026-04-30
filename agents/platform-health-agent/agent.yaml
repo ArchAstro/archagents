@@ -1,0 +1,173 @@
+kind: AgentTemplate
+agent_key: platform-health-agent
+name: Platform Health Agent
+identity: |
+  You are Platform Health, a monitoring agent for a single GitHub repository
+  configured via the `MONITORED_REPO` environment variable.
+
+  Your responsibilities:
+  1. Track open GitHub issues and surface new or critical ones
+  2. Monitor CI/CD pipeline failures from GitHub Actions
+  3. Provide concise daily summaries of repository health
+  4. Categorize and prioritize issues by severity and theme
+  5. Track patterns across issues (e.g., recurring failures, issue spikes, unassigned items)
+  6. Cross-reference open issues against merged PRs to identify issues that may already be resolved
+  7. For unassigned issues, suggest an owner based on who has authored related PRs or owns the relevant code area
+
+  When evaluating whether an open issue might be resolved:
+  - Check if the issue links to or mentions a PR, and whether that PR has been merged
+  - Read comments on linked PRs for signals like "this fixes #X" or "once #Y merges, this should be green"
+  - DO NOT close the issue and DO NOT post comments on GitHub. Surface the evidence in the daily report under "Possibly resolved" so a human can decide whether to close.
+  - Before listing an issue as possibly resolved, check your long-term memory to see if you've already flagged it. If you have, skip it unless new evidence has emerged. After listing it, store the issue number in long-term memory so you don't repeat the suggestion tomorrow.
+
+  Communication style:
+  - Lead with what needs attention — failures and new issues first
+  - Be concise — use bullet points and short summaries
+  - Include links to issues and failed runs so they're easy to follow up on
+  - Flag patterns (e.g., recurring failures, issue spikes, items without assignees)
+  - When asked for a health report, group issues by category and note trends
+  - For unassigned issues, suggest who should own them with a brief rationale
+
+tools:
+  - kind: builtin
+    builtin_tool_key: search
+    status: active
+  - kind: builtin
+    builtin_tool_key: knowledge_search
+    status: active
+  - kind: builtin
+    builtin_tool_key: long_term_memory
+    status: active
+  - kind: builtin
+    builtin_tool_key: memory
+    status: active
+  - kind: builtin
+    builtin_tool_key: artifacts
+    status: active
+  - kind: builtin
+    builtin_tool_key: skills
+    status: active
+  # Required: the platform expands `integrations` into per-install agent tools
+  # (e.g. integration/slack_bot install becomes a "Slack Bot" agent tool, and
+  # integration/github becomes a "GitHub" agent tool). Without this, the
+  # agent has no surface to call into installed integrations.
+  - kind: builtin
+    builtin_tool_key: integrations
+    status: active
+
+routines:
+  - name: Participate in conversations
+    description: Join monitored threads and generate responses to script-posted prompts
+    handler_type: preset
+    preset_name: participate
+    event_type: thread.session.join
+    event_config:
+      thread.session.join: {}
+    status: active
+
+  - name: Daily Health Report Prompt
+    description: |
+      Cron-fires once per morning. Posts a prompt to the `health-reports`
+      thread, which triggers the agent (via the participate routine) to
+      generate today's report. The script reads the previous day's
+      continuity summary from `storage` (key `last_report_summary`) and
+      embeds it as starting context.
+    handler_type: script
+    config_ref: ph-health-report-prompt
+    event_type: schedule.cron
+    event_config:
+      schedule.cron: {}
+    schedule: "5 9 * * *"
+    status: active
+
+  - name: GitHub Event Alert
+    description: |
+      Reacts to GitHub webhook events (issues opened/closed/reopened, PR
+      closed+merged, CI failures) by prompting the agent in the
+      `health-alerts` thread. Memory-gated: new problems write
+      `alerted_issue_<N>` / `alerted_ci_*` keys via `working_memory_set`;
+      closures look up the matching key and only post a "✅ resolved"
+      update on a hit. For issue close/reopen events the script
+      pre-fetches memory state via `storage.get` and embeds it in the
+      prompt to remove an LLM tool call.
+    handler_type: script
+    config_ref: ph-github-event-alert
+    event_type: webhook.github_app.*
+    event_config:
+      webhook.github_app.*: {}
+    status: active
+
+  - name: 5xx Daily Digest
+    description: |
+      Cron-fires once per afternoon. Queries Cloud Logging for the last 24h
+      of ERROR-severity entries in the configured K8s namespace, groups by
+      Elixir exception class, pre-fetches recent open issues and merged PRs,
+      and prompts the agent (via participate on the `5xx-digest` thread) to
+      format a Slack post with per-signature drill-down URLs into the Cloud
+      Logging Console. The agent makes ZERO additional tool calls — all
+      data is in the prompt — to keep the turn fast.
+    handler_type: script
+    config_ref: ph-5xx-digest
+    event_type: schedule.cron
+    event_config:
+      schedule.cron: {}
+    schedule: "30 14 * * *"
+    status: active
+
+  - name: Slack Delivery
+    description: |
+      Forwards agent responses from monitored threads (health-reports,
+      health-alerts, 5xx-digest) to the configured Slack output channel.
+      Strips `<thought>`, `<thinking>`, and `<summary>` blocks; suppresses
+      `SKIP:`-prefixed responses; guards against tool-call leakage.
+    handler_type: script
+    config_ref: ph-deliver
+    event_type: thread.message_added
+    event_config:
+      thread.message_added: {}
+    status: active
+
+  - name: Continuity Capture
+    description: |
+      Captures the trailing `<summary>...</summary>` block from agent
+      responses on monitored threads and writes it to `storage` (3-day TTL)
+      under a per-thread key. Tomorrow's prompter reads the matching key
+      as continuity context. Branches by `thread.key` so the daily report
+      and 5xx digest share one capture script.
+    handler_type: script
+    config_ref: ph-capture
+    event_type: thread.message_added
+    event_config:
+      thread.message_added: {}
+    status: active
+
+  - name: Auto-capture memories
+    description: Automatically extract and store key facts after conversations
+    handler_type: preset
+    preset_name: auto_memory_capture
+    event_type: thread.session.leave
+    event_config:
+      thread.session.leave:
+        subject_is_agent: true
+    status: active
+
+installations:
+  - kind: memory/long-term
+    config: {}
+  - kind: archastro/thread
+    config: {}
+  # GitHub App webhook events (issues, pull_request, workflow_run) are
+  # routed through integration/github. After deploy, install the
+  # ArchAstro GitHub App on the MONITORED_REPO so the GitHub Event Alert
+  # routine has events to react to.
+  - kind: integration/github
+    config: {}
+  # Slack bot for posting messages. Required for the Slack Delivery routine.
+  # `slack.send` is provided by the slack_bot install. Sister samples
+  # (security-triage-agent, threat-intel-agent) use the same kind name.
+  - kind: enablement/slack_bot
+    config: {}
+
+metadata:
+  category: devops
+  version: "1.0"

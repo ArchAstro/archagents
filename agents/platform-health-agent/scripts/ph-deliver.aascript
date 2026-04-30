@@ -1,0 +1,93 @@
+// Forwards agent responses from monitored threads to Slack.
+//
+// Listens on every thread.message_added event, but only acts on messages
+// from the agent (not script-posted prompts) on a thread whose key matches
+// the `is_allowed` allowlist below. Filtering happens in this script
+// rather than at the routine level so adding a new monitored thread is
+// one entry in this allowlist — no new routine needed.
+
+let threads = import("threads")
+let slack = import("slack")
+let str = import("string")
+
+let thread_id = $.thread_id
+let message = $.message
+
+// Only forward agent responses that are replying to a prompt.
+// - agent_user_id: message is from the agent (not a user or system)
+// - triggering_message_id: agent is responding to a specific message.
+//   Prompts posted by scripts have agent_user_id but NOT triggering_message_id.
+//   Agent responses have both. This filters out the prompts themselves.
+let is_agent = message.agent_user_id != null
+let has_trigger = (message.metadata || {}).triggering_message_id != null
+
+if (thread_id != null && message != null && is_agent && has_trigger) {
+  let thread = unwrap(threads.get({thread: thread_id}))
+  let key = thread.key
+
+  // Delivery allowlist. To add a new monitored thread, ensure_by_key it from
+  // a prompter script with the new key, then add the key here.
+  let is_allowed = key == "health-reports" || key == "health-alerts" || key == "5xx-digest"
+
+  // Strip <thought>...</thought>, <thinking>...</thinking> blocks from the
+  // start of the content (LLMs commonly emit chain-of-thought reasoning
+  // inside these tags before the real response), and strip the trailing
+  // <summary>...</summary> block (continuity-context for the next day's
+  // run; captured by ph-capture, not user-facing).
+  //
+  // We take whichever closing tag appears LATEST among thought/thinking (to
+  // handle multiple or nested blocks defensively) and treat everything after
+  // it as the response body.
+  let raw_content = message.content || ""
+  let thought_end = str.lastIndexOf(raw_content, "</thought>")
+  let thinking_end = str.lastIndexOf(raw_content, "</thinking>")
+  let body_start = if (thought_end > thinking_end) {
+    thought_end + 10
+  } else {
+    if (thinking_end >= 0) {
+      thinking_end + 11
+    } else {
+      0
+    }
+  }
+  let body = str.substring(raw_content, body_start)
+
+  // Strip trailing <summary>...</summary> block if present.
+  let summary_open = str.indexOf(body, "<summary>")
+  let body_without_summary = if (summary_open >= 0) {
+    str.substring(body, 0, summary_open)
+  } else {
+    body
+  }
+  let content = str.trim(body_without_summary)
+
+  // Guard: if after stripping, content still starts with a thought/XML tag
+  // or contains LLM tool-call fragments, the agent emitted malformed output.
+  // Treat as SKIP to avoid leaking internals to Slack.
+  let starts_thought = str.startsWith(content, "<thought") || str.startsWith(content, "<thinking")
+  let has_tool_frags = str.includes(content, "</invoke>") || str.includes(content, "<tool_use>")
+  // Catch the pathological case where the agent emits ONLY a bare memory
+  // key as its entire response. A valid alert that cites the key inline
+  // (e.g. "tracked under alerted_issue_4360") is fine — only the
+  // single-token-and-nothing-else case is malformed.
+  let starts_with_key = str.startsWith(content, "alerted_issue_") || str.startsWith(content, "alerted_ci_")
+  let is_single_token = !str.includes(content, " ") && !str.includes(content, "\n")
+  let has_memory_keys = starts_with_key && is_single_token
+  let has_leaked_tags = starts_thought || has_tool_frags || has_memory_keys
+
+  // SKIP gate: the agent prefixes low-signal responses with "SKIP:" to
+  // suppress delivery (e.g., a closure event with no prior alert match).
+  let is_skip = str.startsWith(content, "SKIP:")
+
+  let should_deliver = is_allowed && !is_skip && !has_leaked_tags && str.length(content) > 0
+
+  if (should_deliver) {
+    // format: "markdown" tells the Slack namespace to translate
+    // GitHub-flavored markdown into Slack mrkdwn server-side.
+    unwrap(slack.send({
+      channel: env.SLACK_OUTPUT_CHANNEL,
+      text: content,
+      format: "markdown"
+    }))
+  }
+}

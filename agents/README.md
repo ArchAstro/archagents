@@ -16,6 +16,7 @@ command installs the whole thing.
 | [cross-org-collab-agent](cross-org-collab-agent) | Privacy by construction — multi-layer field guards for cross-org threads |
 | [fde-agent](fde-agent) | Generic Forward Deployed Engineer base agent for customers to specialize with their own docs and knowledge |
 | [onboarding-qa](onboarding-qa) | Answers new-hire questions from your knowledge base |
+| [platform-health-agent](platform-health-agent) | Daily report on repo health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack |
 | [release-notes-bot](release-notes-bot) | Watches merged PRs weekly, drafts changelog as a GitHub issue |
 | [security-triage-agent](security-triage-agent) | Daily dependency scan, auto-fix simple CVEs, escalate the rest |
 | [threat-intel-agent](threat-intel-agent) | Daily security brief from HN + GitHub Advisories + your dependency exposure |
