@@ -46,7 +46,8 @@ The sample makes trust assumptions you should verify before deploying:
 
 - **GitHub issue and PR titles from `MONITORED_REPO` flow into agent prompts** (event alerts, daily report, 5xx digest), whose responses are forwarded to Slack. The sample assumes contributors to the monitored repo are trusted. Public repos with anonymous issue creation are outside this model — a crafted title could attempt prompt injection. The anti-interpretation rules in the prompts are LLM-level guards, not deterministic filters.
 - **`SLACK_OUTPUT_CHANNEL` audience** sees issue titles, PR titles, exception class signatures, and PR author handles unredacted. Pick a channel whose audience matches.
-- **Minimum-privilege tokens.** `GITHUB_TOKEN` — for strict minimum-privilege, use a fine-grained PAT (`github_pat_*`) with read-only access to Issues, Pull requests, and Metadata. A classic `repo`-scoped PAT (`ghp_*`) also works but grants write capability the sample's identity instructs against (the agent has tool-level access to GitHub via `integrations` + `integration/github`; the only thing keeping it read-only is its identity instructions). `GCLOUD_SA_*` needs only `roles/logging.viewer`.
+- **GitHub auth — two paths.** **Reads** (issue/PR fetching by scripts) use the `GITHUB_TOKEN` PAT. Recommend a fine-grained PAT (`github_pat_*`) with **read-only** access to Issues, Pull requests, and Metadata — that's all the scripts need. **Writes** (the agent posting resolution comments via `github_create_issue_comment`) go through the `enablement/github_app` install, authenticating as the ArchAstro GitHub App's installation token on `MONITORED_REPO`. The App's permissions are managed at install time on the repo. Same write path Calvin uses for PR review comments.
+- **`GCLOUD_SA_*`** needs only `roles/logging.viewer` for the 5xx digest's read-only Cloud Logging access.
 
 ## Setup
 
@@ -69,11 +70,12 @@ archagent install agentsample platform-health-agent
 
 | Variable | What it is |
 |---|---|
-| `GITHUB_TOKEN` | PAT with `repo` scope. Used to read issues, PRs, and PR comments — the sample does not write to GitHub. |
+| `GITHUB_TOKEN` | Read-only PAT for script-level issue/PR fetches (a fine-grained `github_pat_*` with Issues + PRs + Metadata read access is sufficient). The agent's *write* path — posting resolution comments — goes through the `enablement/github_app` install, not this PAT. |
 | `MONITORED_REPO` | `owner/name` of the repo to monitor. Webhook events from other repos are silently ignored. |
 | `SLACK_OUTPUT_CHANNEL` | Slack channel for delivery. Include the leading `#`. |
 | `GCLOUD_PROJECT_ID` | GCP project hosting the K8s cluster whose logs to scan. |
 | `LOG_NAMESPACE` | K8s namespace for the 5xx digest's `severity>=ERROR` query. |
+| `LOG_CONTAINERS` | (Optional) Comma-separated container names to scope the 5xx digest to (e.g. `app,admin-app`). Without this, sidecars at ERROR severity (Browserless, log agents) often drown out real platform exceptions. |
 | `GCLOUD_SA_CLIENT_EMAIL` | Service account email. SA needs `roles/logging.viewer`. |
 | `GCLOUD_SA_PRIVATE_KEY` | Service account private key (PEM). Escape newlines as `\n`. |
 
@@ -84,18 +86,19 @@ empty installation rows on deploy, but you connect each one yourself.
 
 ### 1. GitHub App
 
-Find the agent's `integration/github` installation and install the
+Find the agent's `enablement/github_app` installation and install the
 ArchAstro GitHub App on the monitored repo. Without this, the GitHub
-Event Alert routine has nothing to react to.
+Event Alert routine has nothing to react to AND the agent can't post
+resolution comments (the App's installation token is the auth path).
 
 ```bash
 archagent describe agent platform-health-agent
-# Locate the integration/github installation, follow its install URL
+# Locate the enablement/github_app installation, follow its install URL
 ```
 
 ### 2. Slack bot
 
-Same process for `integration/slack_bot` — link a Slack workspace and
+Same process for `enablement/slack_bot` — link a Slack workspace and
 invite the bot to the output channel.
 
 ## Sample output
@@ -139,10 +142,19 @@ or change conventions.
 
 ### Different log filter
 
-Edit `scripts/ph-5xx-digest.aascript`'s `log_filter_for_api` if you
-need a different severity floor or resource filter. The matching
-`base_filter` (used to build the Console drill-down URLs) lives a
-few lines below — keep them in sync.
+The 5xx digest queries Cloud Logging at `severity>=ERROR` in
+`LOG_NAMESPACE`, optionally scoped to specific containers via
+`LOG_CONTAINERS` (comma-separated). **Set `LOG_CONTAINERS` to your
+platform's application container names** — without it, the digest
+also catches sidecars (Browserless, log agents) whose ERROR-level
+stderr typically dominates and produces useless `(non-exception
+entry)` buckets. The same scope applies to the Cloud Logging Console
+drill-down URLs the digest emits.
+
+For other adjustments (different severity floor, additional resource
+labels, different region scope), edit `scripts/ph-5xx-digest.aascript`'s
+`log_filter_for_api` and the matching `base_filter` — keep them in
+sync so drill-down URLs reflect the same query the digest computed.
 
 The signature extractor regex in `signature_for` assumes Elixir's
 `** (Module.Submodule.Class)` exception format. If your platform uses
@@ -167,6 +179,12 @@ add new branches in the if/else chain that builds `prompt`.
   resolution-without-prior-alert noise.
 - **Continuity via `<summary>` capture** — agent emits a structured trailer;
   separate routine extracts it; storage key is read by the next run.
+- **GitHub commenting via `enablement/github_app` + `integrations` builtin** —
+  the `github_create_issue_comment` tool is auto-exposed at runtime when
+  both are present, authenticating as the GitHub App's installation token
+  (broad write capability) instead of a PAT. Same path Calvin uses for PR
+  review comments. Avoids the PAT-scope-pitfall where read-only tokens 403
+  on every comment attempt.
 - **Cloud Logging API integration via JWT-bearer SA auth** — sign a JWT,
   exchange for an access token, query `entries:list`. Same pattern as
   the security-triage-agent sample.
