@@ -25,20 +25,27 @@ let monitored_repo = env.MONITORED_REPO
 let has_monitored_repo = monitored_repo != null && monitored_repo != ""
 let repo_label = if (has_monitored_repo) { monitored_repo } else { "(MONITORED_REPO unset)" }
 
+// Pre-split owner/repo so the prompt can embed concrete values for the
+// `github_create_issue_comment` tool call (no agent-side string parsing)
+// and the markdown-link templates can reference https://github.com/<owner>/<repo>/...
+let slash_idx = if (has_monitored_repo) { str.indexOf(monitored_repo, "/") } else { -1 }
+let owner = if (slash_idx >= 0) { str.substring(monitored_repo, 0, slash_idx) } else { "" }
+let repo = if (slash_idx >= 0) { str.substring(monitored_repo, slash_idx + 1) } else { "" }
+let repo_url_root = "https://github.com/" + owner + "/" + repo
+
 let base_prompt = "Today is " + today_iso + ".\n\n" +
   "Generate today's daily health report for " + repo_label + ". Be concise — use bullet points, not paragraphs.\n\n" +
   "**Output structure (in this order):**\n\n" +
-  "1. **TL;DR** — 2-3 lines summarizing the day. Lead with what changed and what needs attention. No PR/issue numbers in this section.\n" +
-  "2. **Notable** — Top 1-3 items from any section that deserve immediate attention. Cite specific PRs/issues. Keep terse — these are what someone reading only the first 30 seconds should see.\n" +
-  "3. **CI Status** — is main green? If failures, use user-friendly descriptions, not internal test path identifiers. Do not split the same suite into multiple bullets.\n" +
-  "4. **Issues needing attention** — open issues, grouped by theme (e.g., analytics, auth, infrastructure). One bullet per theme listing related items in parentheses with suggested owner.\n" +
-  "5. **Possibly resolved** — open issues that may be fixed by MERGED PRs (cross-reference 'fixes #X' / 'closes #X' patterns in PR bodies). Only include PRs that have actually been merged. Group by theme.\n" +
-  "6. **Customer fixes/ships** — user-facing fixes and features merged since last Saturday at 09:00 UTC. Compute that cutoff date from today's date above and state it explicitly. Group by theme. Skip internal refactors, CI fixes, dependency bumps.\n" +
-  "7. **Notable activity** — anything else unusual worth flagging.\n\n" +
+  "1. **TL;DR** — 2-3 lines max. What changed today and what needs attention?\n" +
+  "2. **Notable** — Top 1-3 items needing immediate attention (from anywhere — issues, CI, PRs, infrastructure). One line each plus linked PR/issue. Roll any 'unusual but not urgent' notes in here too rather than a separate section.\n" +
+  "3. **CI Status** — Is main green? One line. If failures, name them and link the workflow run. Use user-friendly descriptions, not internal test-path identifiers.\n" +
+  "4. **Issues needing attention** — Group by theme (analytics, auth, infrastructure, agent runtime, etc.). **One bullet per theme** with all related items linked in parentheses and a suggested owner. NO per-item commentary unless P0/P1 — trust the links to carry detail. Example: `Analytics — data loss ([issue #4418](" + repo_url_root + "/issues/4418), fix [PR #4419](" + repo_url_root + "/pull/4419) open), drilldown ([issue #4372](" + repo_url_root + "/issues/4372)) → rob`.\n" +
+  "5. **Possibly resolved** — issues that ARE STILL OPEN on GitHub and appear resolved by a recently MERGED PR (cross-reference 'fixes #X' / 'closes #X' in PR bodies). For each candidate issue N: (a) verify it's currently OPEN on GitHub — if already closed, skip (there's nothing to suggest). (b) call `working_memory_get(key='commented_on_issue_<N>')` — if a marker is set, skip the entire item (you've already handled it; don't re-list). For surviving items only: call `github_create_issue_comment(owner='" + owner + "', repo='" + repo + "', issue_number=<N>, body='<1-2 sentence summary citing the merged PR(s)>')` — this is the integrations-builtin tool backed by the GitHub App's installation token (Calvin uses the same), NOT a PAT — then `working_memory_set(key='commented_on_issue_<N>', value='<brief context>')`. Use the KV memory tool, not vector-search. Report output: one line per surviving item — linked issue + linked culprit PR.\n" +
+  "6. **Customer fixes/ships** — user-facing merges since last Saturday 09:00 UTC. Compute the cutoff and state it explicitly (e.g., 'since 2026-04-25 09:00 UTC'). **One bullet per theme** with linked PRs in parentheses. NO per-PR descriptions — let the links speak. Skip internal refactors, CI fixes, dependency bumps.\n\n" +
   "**Conventions:**\n" +
-  "- Use `PR #X` for pull requests and `issue #X` for issues. Example: `PR #4334 closes issue #4329`.\n" +
-  "- Group by theme — one bullet per theme listing all related PRs/issues in parentheses, NOT one bullet per item.\n" +
-  "- Stick to what the source data says — do not add severity claims that aren't in the issue title/labels, do not extrapolate impact.\n\n" +
+  "- Render PR/issue references as markdown links to GitHub: `[PR #X](" + repo_url_root + "/pull/X)` for pull requests, `[issue #Y](" + repo_url_root + "/issues/Y)` for issues. Never use bare `PR #X` text — readers should be able to click through.\n" +
+  "- Trust the links to carry detail. Don't paraphrase PR descriptions — readers click through for full context.\n" +
+  "- Stick to source data. No severity claims absent from issue title/labels. No extrapolated impact.\n\n" +
   "At the very end of your report, include EXACTLY this block (replace the bullet lines with your continuity summary):\n\n" +
   "<summary>\n" +
   "- Most important open issue today: ...\n" +

@@ -23,13 +23,29 @@ let cutoff = unwrap(dt.add(dt.now(), -24, "hours"), dt.now())
 let project_id = env.GCLOUD_PROJECT_ID
 let namespace = env.LOG_NAMESPACE
 
+// Optional container scope. Without LOG_CONTAINERS, the digest catches
+// every container in the namespace at severity>=ERROR — including
+// sidecars (Browserless, log agents, K8s system pods) whose stderr at
+// ERROR severity often dominates volume and drowns out real platform
+// exceptions. Set LOG_CONTAINERS to a comma-separated list of your
+// platform's application container names (e.g. "app,admin-app") to
+// scope the digest to those containers only.
+let log_containers = env.LOG_CONTAINERS
+let containers_clause = if (log_containers == null || log_containers == "") {
+  ""
+} else {
+  let names = arr.map(str.split(log_containers, ","), fn(n) { str.trim(n) })
+  let or_parts = arr.map(names, fn(n) { "resource.labels.container_name=\"" + n + "\"" })
+  " AND (" + arr.join(or_parts, " OR ") + ")"
+}
+
 // Cloud Logging filter: last 24h ERROR-severity in the configured namespace.
 //
 // Why severity>=ERROR rather than httpRequest.status>=500: most platforms log
 // via formatters that don't emit GCP-native httpRequest fields. Almost all
 // production 500s come from unhandled exceptions, which land at ERROR severity
 // via the framework's default error handler.
-let log_filter_for_api = "resource.type=\"k8s_container\" AND resource.labels.namespace_name=\"" + namespace + "\" AND severity>=ERROR AND timestamp>=\"" + cutoff + "\""
+let log_filter_for_api = "resource.type=\"k8s_container\" AND resource.labels.namespace_name=\"" + namespace + "\"" + containers_clause + " AND severity>=ERROR AND timestamp>=\"" + cutoff + "\""
 
 // GCloud SA auth: sign a JWT from the SA private key and exchange at
 // oauth2.googleapis.com/token for an access token usable against the
@@ -124,7 +140,18 @@ let url_encode = fn(s) {
   s7
 }
 
-let base_filter = "resource.type=\"k8s_container\"\nresource.labels.namespace_name=\"" + namespace + "\"\nseverity>=ERROR"
+// base_filter feeds the Cloud Logging Console drill-down URL — must
+// mirror log_filter_for_api's scope so the URL shows the same slice
+// the digest computed over. When LOG_CONTAINERS is set, the URL gets
+// the container OR-clause too.
+let base_filter_containers_line = if (log_containers == null || log_containers == "") {
+  ""
+} else {
+  let names = arr.map(str.split(log_containers, ","), fn(n) { str.trim(n) })
+  let or_parts = arr.map(names, fn(n) { "resource.labels.container_name=\"" + n + "\"" })
+  "(" + arr.join(or_parts, " OR ") + ")\n"
+}
+let base_filter = "resource.type=\"k8s_container\"\nresource.labels.namespace_name=\"" + namespace + "\"\n" + base_filter_containers_line + "severity>=ERROR"
 
 let log_explorer_url_for = fn(extra_filter) {
   let q = if (extra_filter == null || extra_filter == "") {

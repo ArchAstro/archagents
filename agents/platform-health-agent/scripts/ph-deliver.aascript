@@ -29,37 +29,22 @@ if (thread_id != null && message != null && is_agent && has_trigger) {
   // a prompter script with the new key, then add the key here.
   let is_allowed = key == "health-reports" || key == "health-alerts" || key == "5xx-digest"
 
-  // Strip <thought>...</thought>, <thinking>...</thinking> blocks from the
-  // start of the content (LLMs commonly emit chain-of-thought reasoning
-  // inside these tags before the real response), and strip the trailing
-  // <summary>...</summary> block (continuity-context for the next day's
-  // run; captured by ph-capture, not user-facing).
+  // Strip leading <thought>/<thinking> blocks (LLM chain-of-thought) and
+  // any trailing <summary>...</summary> block (continuity context for the
+  // next-day capture, not user-facing).
   //
-  // We take whichever closing tag appears LATEST among thought/thinking (to
-  // handle multiple or nested blocks defensively) and treat everything after
-  // it as the response body.
+  // Use regex-based replacement (str.replacePattern) instead of indexOf +
+  // substring because the agentscript stdlib mixes position models there:
+  // str.indexOf returns BYTE offsets, while str.substring(s, start, len)
+  // interprets `len` as a GRAPHEME COUNT. With multi-byte UTF-8 in the body
+  // (emojis like 🩺 ✅ 🔴 🔥, em-dashes —), byte offset > grapheme count
+  // and the slice extends past the intended boundary, leaving the tagged
+  // block in the output. Tracked as ArchAstro/firstlanding#4434.
   let raw_content = message.content || ""
-  let thought_end = str.lastIndexOf(raw_content, "</thought>")
-  let thinking_end = str.lastIndexOf(raw_content, "</thinking>")
-  let body_start = if (thought_end > thinking_end) {
-    thought_end + 10
-  } else {
-    if (thinking_end >= 0) {
-      thinking_end + 11
-    } else {
-      0
-    }
-  }
-  let body = str.substring(raw_content, body_start)
-
-  // Strip trailing <summary>...</summary> block if present.
-  let summary_open = str.indexOf(body, "<summary>")
-  let body_without_summary = if (summary_open >= 0) {
-    str.substring(body, 0, summary_open)
-  } else {
-    body
-  }
-  let content = str.trim(body_without_summary)
+  let no_thought = str.replacePattern(raw_content, "^\\s*<thought>[\\s\\S]*?</thought>\\s*", "")
+  let no_thinking = str.replacePattern(no_thought, "^\\s*<thinking>[\\s\\S]*?</thinking>\\s*", "")
+  let no_summary = str.replacePattern(no_thinking, "<summary>[\\s\\S]*", "")
+  let content = str.trim(no_summary)
 
   // Guard: if after stripping, content still starts with a thought/XML tag
   // or contains LLM tool-call fragments, the agent emitted malformed output.

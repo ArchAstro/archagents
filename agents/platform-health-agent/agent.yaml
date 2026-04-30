@@ -17,8 +17,9 @@ identity: |
   When evaluating whether an open issue might be resolved:
   - Check if the issue links to or mentions a PR, and whether that PR has been merged
   - Read comments on linked PRs for signals like "this fixes #X" or "once #Y merges, this should be green"
-  - DO NOT close the issue and DO NOT post comments on GitHub. Surface the evidence in the daily report under "Possibly resolved" so a human can decide whether to close.
-  - Before listing an issue as possibly resolved, check your long-term memory to see if you've already flagged it. If you have, skip it unless new evidence has emerged. After listing it, store the issue number in long-term memory so you don't repeat the suggestion tomorrow.
+  - Verify the issue is still OPEN on GitHub before listing — if it's already CLOSED, skip (there's nothing to suggest).
+  - DO NOT close the issue. Instead, post a comment on the issue summarizing the resolution evidence using `github_create_issue_comment` (auto-exposed by the `integrations` builtin via the `enablement/github_app` install — auth uses the GitHub App's installation token, not the read-only `GITHUB_TOKEN` PAT).
+  - Before commenting, check working memory for `commented_on_issue_<N>` (KV, not vector-search). If a marker is set, skip — you've already posted. After commenting, set `commented_on_issue_<N>` so you don't duplicate the comment tomorrow.
 
   Communication style:
   - Lead with what needs attention — failures and new issues first
@@ -47,10 +48,12 @@ tools:
   - kind: builtin
     builtin_tool_key: skills
     status: active
-  # Required: the platform expands `integrations` into per-install agent tools
-  # (e.g. integration/slack_bot install becomes a "Slack Bot" agent tool, and
-  # integration/github becomes a "GitHub" agent tool). Without this, the
-  # agent has no surface to call into installed integrations.
+  # Required: the `integrations` builtin auto-exposes per-install agent
+  # tools at runtime — `enablement/slack_bot` becomes a "Slack Bot" agent
+  # tool, and `enablement/github_app` exposes `github_create_issue_comment`,
+  # `github_create_pull_request_review_comment`, and the rest of the GitHub
+  # tool surface used by Calvin and the daily-report commenting flow.
+  # Without this, the agent has no callable surface for those integrations.
   - kind: builtin
     builtin_tool_key: integrations
     status: active
@@ -156,11 +159,13 @@ installations:
     config: {}
   - kind: archastro/thread
     config: {}
-  # GitHub App webhook events (issues, pull_request, workflow_run) are
-  # routed through integration/github. After deploy, install the
-  # ArchAstro GitHub App on the MONITORED_REPO so the GitHub Event Alert
-  # routine has events to react to.
-  - kind: integration/github
+  # GitHub App enablement: receives webhook.github_app.* events AND exposes
+  # `github_create_issue_comment` etc. via the `integrations` builtin so
+  # the agent can post resolution comments using the App's installation
+  # token (broad write capability) rather than the read-only PAT.
+  # Same install kind calvin-bot-v3 uses for PR review commenting.
+  # After deploy, install the ArchAstro GitHub App on `MONITORED_REPO`.
+  - kind: enablement/github_app
     config: {}
   # Slack bot for posting messages. Required for the Slack Delivery routine.
   # `slack.send` is provided by the slack_bot install. Sister samples

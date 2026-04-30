@@ -35,15 +35,13 @@ if (thread_id != null && message != null && is_agent && has_trigger) {
   }
 
   if (storage_key != null) {
+    // Regex match avoids the byte-vs-grapheme bug in str.indexOf +
+    // str.substring (see ph-deliver.aascript header comment, and
+    // ArchAstro/firstlanding#4434 for the platform fix).
     let content = message.content || ""
-    let start_idx = str.indexOf(content, "<summary>")
-    let end_idx = str.indexOf(content, "</summary>")
-
-    if (start_idx >= 0 && end_idx > start_idx) {
-      // length of "<summary>" is 9
-      let body_start = start_idx + 9
-      let summary = str.trim(str.substring(content, body_start, end_idx))
-
+    let m = str.match(content, "<summary>([\\s\\S]*?)</summary>")
+    if (m != null) {
+      let summary = str.trim(m.groups[0])
       if (str.length(summary) > 0) {
         // 3-day TTL covers weekend gaps; if Friday's report is the latest one,
         // Monday's prompt still has it.
