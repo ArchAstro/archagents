@@ -54,7 +54,7 @@
       "slug": "platform-health-agent",
       "name": "Platform Health Agent",
       "tagline": "Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack.",
-      "current_version": "v0.1.0",
+      "current_version": "v0.1.1",
       "min_cli_version": "0.28.0"
     },
     {
