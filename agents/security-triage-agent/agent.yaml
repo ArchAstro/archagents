@@ -316,6 +316,105 @@ installations:
   - kind: enablement/slack_bot
     config: {}
 
+# Post-install checklist. The platform materializes one
+# agent_health_actions row per entry on install; users see a
+# "Finish setup" panel that burns down as they resolve each item.
+# Verifiers re-run on a daily sweep so a deleted secret or revoked
+# install transitions back to :degraded.
+setup_requirements:
+  # Required env vars — all stored as org-scoped secrets so every
+  # agent install in the org reads from the same source of truth.
+  - kind: env_var
+    key: GITHUB_TOKEN
+    scope: org_env_var
+    secret: true
+    description: |
+      GitHub PAT with `repo` scope. Auto-fix PRs and escalation
+      issues post as this account. For a clean audit trail, create a
+      dedicated bot user (e.g. `acme-security-bot`).
+    example: "ghp_xxxxxxxxxxxx"
+
+  - kind: env_var
+    key: DEFAULT_REPO_OWNER
+    scope: org_env_var
+    description: "Org/user that owns the default repo for ad-hoc scans."
+
+  - kind: env_var
+    key: DEFAULT_REPO_NAME
+    scope: org_env_var
+    description: "Repo name to use when no override is provided."
+
+  - kind: env_var
+    key: DEFAULT_ECOSYSTEM
+    scope: org_env_var
+    description: |
+      Default package ecosystem (e.g. `hex`, `npm`, `pip`). Used by
+      `query_github_advisories` when no override is provided.
+
+  - kind: env_var
+    key: MONITORED_REPOS
+    scope: org_env_var
+    description: |
+      Comma-separated `owner/repo` list to scan daily.
+      Example: `acme/api,acme/web,acme/infra`.
+
+  # Required installs — both the GitHub App (for PR webhooks + repo
+  # access) and the Slack bot (for posting brief summaries).
+  - kind: install
+    installation_kind: integration/github
+    description: |
+      Install the ArchAstro GitHub App on every repo in
+      MONITORED_REPOS. Without this, scans can't read manifests and
+      auto-fix PRs can't open.
+
+  - kind: install
+    installation_kind: enablement/slack_bot
+    description: |
+      Add the ArchAstro Slack bot to your workspace and the channel
+      where weekly triage summaries should land.
+
+  # Optional: weekly summary email. Skip if you'd rather get
+  # summaries only via Slack.
+  - kind: env_var
+    key: SECURITY_TEAM_EMAIL
+    scope: org_env_var
+    required: false
+    description: |
+      Where to send weekly triage summaries. Leave blank to disable
+      the email digest (Slack-only).
+
+  # Optional: GCP log analysis. Skip both if you don't run on GCP or
+  # don't want the agent to query Cloud Logging.
+  - kind: env_var
+    key: GCLOUD_PROJECT_ID
+    scope: org_env_var
+    required: false
+    description: "GCP project id with Cloud Logging enabled."
+
+  - kind: env_var
+    key: GCLOUD_SA_KEY
+    scope: org_env_var
+    secret: true
+    required: false
+    description: |
+      Service account JSON with `logging.viewer` (read-only). Paste
+      the entire JSON — the agent reads it via
+      `query_gcloud_logs.aascript`.
+
+  # Custom verifier — confirms the bot actually has read access to
+  # every repo in MONITORED_REPOS. Catches the common "I made the
+  # bot but forgot to add it as a collaborator" failure mode.
+  - kind: custom
+    id: verify-monitored-repos-access
+    title: "Verify the bot can read every monitored repo"
+    description: |
+      Iterates `MONITORED_REPOS` and hits each repo's
+      `/repos/{owner}/{name}` endpoint with `GITHUB_TOKEN` to
+      confirm access. Surfaces any repos the bot can't see.
+    verify:
+      script_ref: verify-monitored-repos-access
+    depends_on: [GITHUB_TOKEN, MONITORED_REPOS]
+
 metadata:
   category: security
   version: "1.0"

@@ -1,0 +1,39 @@
+// Verifier for the `verify-monitored-repos-access` setup action.
+// Iterates MONITORED_REPOS (comma-separated owner/repo) and pings each
+// /repos/{owner}/{name} endpoint with GITHUB_TOKEN. Returns the
+// platform's expected verifier shape: { ok: bool, message: string }.
+//
+// Invoked by the platform with input.params (the action's params map)
+// and input.agent_id (the agent the action is scoped to).
+
+let http = import("requests")
+
+let raw = if (env.MONITORED_REPOS != null) { env.MONITORED_REPOS } else { "" }
+let repos = raw |> split(",") |> map(fn(s) { trim(s) }) |> filter(fn(s) { s != "" })
+
+if (length(repos) == 0) {
+  { ok: false, message: "MONITORED_REPOS is empty — set the var first." }
+} else {
+  let failures = repos |> filter(fn(repo) {
+    let url = "https://api.github.com/repos/" + repo
+    let response = http.get(url, {
+      headers: {
+        "Authorization": "Bearer " + env.GITHUB_TOKEN,
+        "Accept": "application/vnd.github+json"
+      }
+    })
+    // unwrap is intentionally NOT used — a 404/403 is data, not an error
+    let status = if (response.ok) { response.value.status } else { 0 }
+    status != 200
+  })
+
+  if (length(failures) == 0) {
+    { ok: true, message: "Bot can read all " + str(length(repos)) + " monitored repos." }
+  } else {
+    {
+      ok: false,
+      message: "Bot can't read: " + (failures |> join(", ")) +
+               ". Check GITHUB_TOKEN scope or add the bot as a collaborator."
+    }
+  }
+}
