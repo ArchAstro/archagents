@@ -1,5 +1,5 @@
 schema_version: 2
-version: v0.2.1
+version: v0.2.2
 name: "Cross-Org Collaboration Agent"
 tagline: "A code-aware engineering agent that participates in cross-org threads with field guards enforced."
 min_cli_version: "0.28.0"
