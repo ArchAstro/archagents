@@ -297,6 +297,194 @@ class ValidateStepsTest(unittest.TestCase):
         self._run(yaml)
 
 
+class ValidateSetupRequirementsTest(unittest.TestCase):
+    """
+    `setup_requirements:` lives in agent.yaml and is parsed when
+    validate_steps walks the deploy_agent step. These tests build a
+    minimal sample dir with a custom agent.yaml + scripts dir to
+    exercise the full path including script_ref cross-referencing.
+    """
+
+    def _make_dir_with_agent_yaml(self, agent_body: str, scripts: list[str] = None):
+        scripts = scripts or []
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "scripts").mkdir()
+        for name in scripts:
+            (tmp / "scripts" / name).write_text("// stub\n")
+        (tmp / "agent.yaml").write_text(agent_body)
+        (tmp / "sample.yaml").write_text(
+            textwrap.dedent("""\
+                schema_version: 2
+                version: v0.2.0
+                name: Setup Sample
+                tagline: tests setup_requirements
+                min_cli_version: "0.28.0"
+                steps:
+                  - type: upload_scripts
+                    source_dir: scripts
+                  - type: deploy_agent
+                    template_file: agent.yaml
+            """)
+        )
+        return tmp
+
+    def _validate(self, sample_dir: Path):
+        gen.validate_sample(
+            "setup-sample", _parsed(sample_dir), sample_dir / "sample.yaml"
+        )
+
+    def test_no_setup_requirements_block_is_fine(self):
+        # Optional field — agent.yaml without `setup_requirements:` validates
+        sample_dir = self._make_dir_with_agent_yaml("kind: AgentTemplate\nname: X\n")
+        self._validate(sample_dir)
+
+    def test_empty_setup_requirements_list_is_fine(self):
+        sample_dir = self._make_dir_with_agent_yaml(
+            "kind: AgentTemplate\nname: X\nsetup_requirements: []\n"
+        )
+        self._validate(sample_dir)
+
+    def test_minimal_env_var_passes(self):
+        sample_dir = self._make_dir_with_agent_yaml(textwrap.dedent("""\
+            kind: AgentTemplate
+            name: X
+            setup_requirements:
+              - kind: env_var
+                key: GITHUB_TOKEN
+                scope: org_env_var
+                description: PAT with repo scope
+        """))
+        self._validate(sample_dir)
+
+    def test_lowercase_env_var_key_rejected(self):
+        sample_dir = self._make_dir_with_agent_yaml(textwrap.dedent("""\
+            kind: AgentTemplate
+            name: X
+            setup_requirements:
+              - kind: env_var
+                key: github_token
+                scope: org_env_var
+                description: bad
+        """))
+        with self.assertRaisesRegex(gen.SampleError, "SCREAMING_SNAKE_CASE"):
+            self._validate(sample_dir)
+
+    def test_unknown_scope_rejected(self):
+        sample_dir = self._make_dir_with_agent_yaml(textwrap.dedent("""\
+            kind: AgentTemplate
+            name: X
+            setup_requirements:
+              - kind: env_var
+                key: K
+                scope: weird_scope
+                description: bad
+        """))
+        with self.assertRaisesRegex(gen.SampleError, "is not a valid scope"):
+            self._validate(sample_dir)
+
+    def test_unknown_kind_rejected(self):
+        sample_dir = self._make_dir_with_agent_yaml(textwrap.dedent("""\
+            kind: AgentTemplate
+            name: X
+            setup_requirements:
+              - kind: nonsense
+                description: bad
+        """))
+        with self.assertRaisesRegex(gen.SampleError, "is not a known kind"):
+            self._validate(sample_dir)
+
+    def test_install_requires_installation_kind(self):
+        sample_dir = self._make_dir_with_agent_yaml(textwrap.dedent("""\
+            kind: AgentTemplate
+            name: X
+            setup_requirements:
+              - kind: install
+                description: missing the kind field
+        """))
+        with self.assertRaisesRegex(gen.SampleError, "missing required fields.*installation_kind"):
+            self._validate(sample_dir)
+
+    def test_custom_with_existing_script_ref_passes(self):
+        sample_dir = self._make_dir_with_agent_yaml(
+            textwrap.dedent("""\
+                kind: AgentTemplate
+                name: X
+                setup_requirements:
+                  - kind: custom
+                    id: verify-x
+                    title: Verify X
+                    description: Custom check
+                    verify:
+                      script_ref: verify-x
+            """),
+            scripts=["verify-x.aascript"],
+        )
+        self._validate(sample_dir)
+
+    def test_custom_with_dangling_script_ref_rejected(self):
+        sample_dir = self._make_dir_with_agent_yaml(
+            textwrap.dedent("""\
+                kind: AgentTemplate
+                name: X
+                setup_requirements:
+                  - kind: custom
+                    id: verify-x
+                    title: Verify X
+                    description: Custom check
+                    verify:
+                      script_ref: ghost-script-not-shipped
+            """),
+            scripts=["verify-x.aascript"],
+        )
+        with self.assertRaisesRegex(gen.SampleError, "doesn't match any script"):
+            self._validate(sample_dir)
+
+    def test_duplicate_identifier_rejected(self):
+        sample_dir = self._make_dir_with_agent_yaml(textwrap.dedent("""\
+            kind: AgentTemplate
+            name: X
+            setup_requirements:
+              - kind: env_var
+                key: GITHUB_TOKEN
+                scope: org_env_var
+                description: First
+              - kind: env_var
+                key: GITHUB_TOKEN
+                scope: agent_env_var
+                description: Duplicate
+        """))
+        with self.assertRaisesRegex(gen.SampleError, "duplicate identifier 'GITHUB_TOKEN'"):
+            self._validate(sample_dir)
+
+    def test_unknown_field_rejected(self):
+        sample_dir = self._make_dir_with_agent_yaml(textwrap.dedent("""\
+            kind: AgentTemplate
+            name: X
+            setup_requirements:
+              - kind: env_var
+                key: K
+                scope: org_env_var
+                description: ok
+                bogus_field: foo
+        """))
+        with self.assertRaisesRegex(gen.SampleError, "has unknown fields.*bogus_field"):
+            self._validate(sample_dir)
+
+    def test_depends_on_must_be_list_of_strings(self):
+        sample_dir = self._make_dir_with_agent_yaml(textwrap.dedent("""\
+            kind: AgentTemplate
+            name: X
+            setup_requirements:
+              - kind: env_var
+                key: K
+                scope: org_env_var
+                description: ok
+                depends_on: [123, "FOO"]
+        """))
+        with self.assertRaisesRegex(gen.SampleError, "depends_on must be a list of strings"):
+            self._validate(sample_dir)
+
+
 class RenderAaignoreTest(unittest.TestCase):
 
     def test_lists_every_top_level_entry_with_dir_slash(self):
