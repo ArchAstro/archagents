@@ -36,7 +36,7 @@ with full triage reasoning.
   - **C. Needs human attention** → file a GitHub issue with full reasoning
 
 ### 2. PR security review
-- Polls open PRs every 15 minutes for security-relevant changes
+- Reacts to GitHub PR webhooks for security-relevant changes
 - Reads the diff and flags concerns inline
 
 ### 3. Hourly log analysis
@@ -166,7 +166,7 @@ Opus. Cheaper models will produce more false positives.
 
 ## What this demonstrates
 
-- **Cron-driven routines** — daily scan, hourly logs, 15-min PR poll
+- **Mixed-trigger routines** — daily dependency scan (cron), hourly log analysis (cron), PR review (GitHub webhook)
 - **Knowledge sources** — internal policies as searchable context
 - **Long-term memory** — past triage decisions persist across scans
 - **Custom scripts** — wraps OSV, GitHub Advisories, GCP Logging APIs

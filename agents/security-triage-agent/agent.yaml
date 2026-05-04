@@ -284,12 +284,14 @@ routines:
       Filter out routine noise. Only alert on real signals.
     status: active
 
-  - name: pr-review-poll
-    description: Poll for new/updated PRs and flag security concerns
+  - name: pr-review
+    description: Triggered by GitHub PR webhooks; flag security concerns on opened/updated PRs
     handler_type: preset
     preset_name: do_task
-    event_type: schedule.cron
-    schedule: "*/15 * * * *"
+    event_type: webhook.github_app.pull_request
+    event_config:
+      webhook.github_app.pull_request:
+        filters: {}
     status: active
 
   - name: Auto-capture memories
