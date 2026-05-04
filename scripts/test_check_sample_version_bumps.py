@@ -159,6 +159,56 @@ class FindUnbumpedSlugsTest(unittest.TestCase):
 
         self.assertEqual(mod.find_unbumped_slugs("HEAD~1", repo), [("beta", "v0.2.0")])
 
+    def test_nested_file_change_without_bump_is_flagged(self) -> None:
+        # Real samples ship subdirectories (scripts/, schemas/, examples/).
+        # Editing a nested file is the most common change shape and must
+        # require a bump.
+        repo = _init_repo()
+        _write_sample(repo, "alpha", "v0.1.0")
+        nested = repo / "agents" / "alpha" / "scripts"
+        nested.mkdir()
+        (nested / "tool.aascript").write_text('def main(): "hi"\n')
+        _commit(repo, "initial with nested")
+        (nested / "tool.aascript").write_text('def main(): "edited"\n')
+        _commit(repo, "edit nested without bump")
+
+        self.assertEqual(mod.find_unbumped_slugs("HEAD~1", repo), [("alpha", "v0.1.0")])
+
+    def test_unparseable_sample_yaml_at_head_is_silently_skipped(self) -> None:
+        # check-sample-artifacts.yml owns parse-validation; this check
+        # must not double-report. An unparseable sample.yaml at HEAD
+        # should produce zero findings here.
+        repo = _init_repo()
+        _write_sample(repo, "alpha", "v0.1.0")
+        _commit(repo, "initial")
+        (repo / "agents" / "alpha" / "sample.yaml").write_text("{[unclosed\n")
+        _commit(repo, "broken yaml")
+
+        self.assertEqual(mod.find_unbumped_slugs("HEAD~1", repo), [])
+
+
+class VerifyRefTest(unittest.TestCase):
+    def test_accepts_valid_ref(self) -> None:
+        repo = _init_repo()
+        _write_sample(repo, "alpha", "v0.1.0")
+        _commit(repo, "initial")
+        # Does not raise.
+        mod._verify_ref("HEAD", repo)
+
+    def test_rejects_flag_shaped_ref(self) -> None:
+        repo = _init_repo()
+        _write_sample(repo, "alpha", "v0.1.0")
+        _commit(repo, "initial")
+        with self.assertRaises(ValueError):
+            mod._verify_ref("--exec=evil", repo)
+
+    def test_rejects_unknown_ref(self) -> None:
+        repo = _init_repo()
+        _write_sample(repo, "alpha", "v0.1.0")
+        _commit(repo, "initial")
+        with self.assertRaises(ValueError):
+            mod._verify_ref("origin/no-such-branch", repo)
+
 
 if __name__ == "__main__":
     unittest.main()

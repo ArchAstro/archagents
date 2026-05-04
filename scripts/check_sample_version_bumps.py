@@ -40,6 +40,30 @@ AGENTS_DIR_NAME = "agents"
 SAMPLE_FILENAME = "sample.yaml"
 
 
+def _verify_ref(ref: str, repo_root: pathlib.Path = REPO_ROOT) -> None:
+    """
+    Confirm `ref` resolves to a commit. Raises ValueError on unknown,
+    malformed, or flag-shaped values. Prevents the user-supplied ref
+    from being interpreted as a `git diff` flag (e.g. "--exec=...").
+    """
+    if ref.startswith("-"):
+        raise ValueError(
+            f"Refusing to use ref {ref!r}: looks like a flag, not a revision."
+        )
+    try:
+        subprocess.check_output(
+            ["git", "rev-parse", "--verify", f"{ref}^{{commit}}"],
+            cwd=repo_root,
+            stderr=subprocess.DEVNULL,
+        )
+    except subprocess.CalledProcessError:
+        raise ValueError(
+            f"Could not resolve {ref!r} to a commit. "
+            f"In CI this is typically `origin/${{{{ github.base_ref }}}}` — "
+            f"ensure `actions/checkout` ran with `fetch-depth: 0`."
+        )
+
+
 def changed_agent_paths(base_ref: str, repo_root: pathlib.Path = REPO_ROOT) -> list[str]:
     """Paths under agents/ that differ between base_ref and HEAD."""
     out = subprocess.check_output(
@@ -74,6 +98,9 @@ def version_at(
     try:
         data = yaml.safe_load(text) or {}
     except yaml.YAMLError:
+        # check-sample-artifacts.yml owns sample.yaml parse-validation;
+        # silently skip here so a YAML syntax error doesn't surface as
+        # two confusingly-different CI failures on the same PR.
         return None
     version = data.get("version")
     return version if isinstance(version, str) else None
@@ -99,6 +126,12 @@ def find_unbumped_slugs(
 
 def main() -> int:
     base_ref = sys.argv[1] if len(sys.argv) > 1 else "origin/main"
+
+    try:
+        _verify_ref(base_ref)
+    except ValueError as e:
+        print(f"check_sample_version_bumps: {e}", file=sys.stderr)
+        return 2
 
     unbumped = find_unbumped_slugs(base_ref)
 
