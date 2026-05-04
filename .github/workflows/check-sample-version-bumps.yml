@@ -54,4 +54,11 @@ jobs:
         run: pip install pyyaml==6.0.2
 
       - name: Check version bumps for changed samples
-        run: python3 scripts/check_sample_version_bumps.py "origin/${{ github.base_ref }}"
+        # Route github.base_ref through env: rather than interpolating
+        # directly into the run: body. Inside double-quotes, bash still
+        # expands $(...) and backticks, so a context value spliced into
+        # the script line could execute on the runner. Routing through
+        # env: makes the value visible to the shell as data, not code.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 scripts/check_sample_version_bumps.py "origin/${BASE_REF}"
