@@ -322,11 +322,14 @@ installations:
 # Verifiers re-run on a daily sweep so a deleted secret or revoked
 # install transitions back to :degraded.
 setup_requirements:
-  # Required env vars — all stored as org-scoped secrets so every
-  # agent install in the org reads from the same source of truth.
+  # Required env vars — all stored on this specific agent. Per-agent
+  # scope is the only one bundle authors can declare: the user who
+  # installed the agent always has write access to its env vars,
+  # whereas org/app secret stores typically require admin permissions
+  # most installers don't have.
   - kind: env_var
     key: GITHUB_TOKEN
-    scope: org_env_var
+    scope: agent_env_var
     secret: true
     description: |
       GitHub PAT with `repo` scope. Auto-fix PRs and escalation
@@ -336,24 +339,24 @@ setup_requirements:
 
   - kind: env_var
     key: DEFAULT_REPO_OWNER
-    scope: org_env_var
+    scope: agent_env_var
     description: "Org/user that owns the default repo for ad-hoc scans."
 
   - kind: env_var
     key: DEFAULT_REPO_NAME
-    scope: org_env_var
+    scope: agent_env_var
     description: "Repo name to use when no override is provided."
 
   - kind: env_var
     key: DEFAULT_ECOSYSTEM
-    scope: org_env_var
+    scope: agent_env_var
     description: |
       Default package ecosystem (e.g. `hex`, `npm`, `pip`). Used by
       `query_github_advisories` when no override is provided.
 
   - kind: env_var
     key: MONITORED_REPOS
-    scope: org_env_var
+    scope: agent_env_var
     description: |
       Comma-separated `owner/repo` list to scan daily.
       Example: `acme/api,acme/web,acme/infra`.
@@ -377,7 +380,7 @@ setup_requirements:
   # summaries only via Slack.
   - kind: env_var
     key: SECURITY_TEAM_EMAIL
-    scope: org_env_var
+    scope: agent_env_var
     required: false
     description: |
       Where to send weekly triage summaries. Leave blank to disable
@@ -387,13 +390,13 @@ setup_requirements:
   # don't want the agent to query Cloud Logging.
   - kind: env_var
     key: GCLOUD_PROJECT_ID
-    scope: org_env_var
+    scope: agent_env_var
     required: false
     description: "GCP project id with Cloud Logging enabled."
 
   - kind: env_var
     key: GCLOUD_SA_KEY
-    scope: org_env_var
+    scope: agent_env_var
     secret: true
     required: false
     description: |
