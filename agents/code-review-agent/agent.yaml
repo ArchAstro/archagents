@@ -236,6 +236,60 @@ installations:
   - kind: integration/github
     config: {}
 
+# Post-install checklist. The platform materializes one
+# agent_health_actions row per entry on install; users see a
+# "Finish setup" panel that burns down as they resolve each item.
+# Verifiers re-run on a daily sweep so a deleted secret or revoked
+# install transitions back to :degraded.
+setup_requirements:
+  # Required env vars — all stored on this specific agent. Per-agent
+  # scope is the only one bundle authors can declare: the user who
+  # installed the agent always has write access to its env vars,
+  # whereas org/app secret stores typically require admin permissions
+  # most installers don't have.
+  - kind: env_var
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    description: |
+      GitHub PAT with `repo` scope. Inline review comments post as
+      this account. For a clean audit trail, create a dedicated bot
+      user (e.g. `acme-review-bot`).
+    example: "ghp_xxxxxxxxxxxx"
+
+  # Optional — used by `resolve_review_threads` to identify which
+  # threads belong to the bot. Skip to disable thread resolution.
+  - kind: env_var
+    key: BOT_LOGIN
+    scope: agent_env_var
+    required: false
+    description: |
+      The bot's GitHub username. Used by `resolve_review_threads` to
+      identify which threads belong to the bot. Leave blank to disable
+      thread resolution.
+
+  # Required install — the GitHub App (for PR webhooks + repo access).
+  # The agent reacts to webhook.github_app.pull_request events and
+  # cannot review without the App installed on the watched repo(s).
+  - kind: install
+    installation_kind: integration/github
+    description: |
+      Install the ArchAstro GitHub App on every repo whose PRs you
+      want reviewed. Without this, the agent receives no pull_request
+      webhooks and can't post inline comments.
+
+  # Custom verifier — confirms the PAT is valid and the bot identity
+  # is reachable. Catches the common "expired/revoked PAT" failure.
+  - kind: custom
+    id: verify-github-token
+    title: "Verify GITHUB_TOKEN is valid"
+    description: |
+      Hits `/user` with `GITHUB_TOKEN` to confirm the PAT is valid
+      and reports the authenticated login.
+    verify:
+      script_ref: verify-github-token
+    depends_on: [GITHUB_TOKEN]
+
 metadata:
   category: engineering
   version: "1.0"

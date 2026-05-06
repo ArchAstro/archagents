@@ -7,17 +7,14 @@ Paste this into Claude Code, Codex, or any AI coding assistant:
 ```
 Deploy the Platform Health Agent from this repo.
 
-1) Read agents/platform-health-agent/agent.yaml and agents/platform-health-agent/env.example
-2) Ask me for: GITHUB_TOKEN (PAT with repo scope), MONITORED_REPO (owner/name),
-   SLACK_OUTPUT_CHANNEL (e.g. #platform-health), GCLOUD_PROJECT_ID,
-   LOG_NAMESPACE, GCLOUD_SA_CLIENT_EMAIL, GCLOUD_SA_PRIVATE_KEY
-3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
-4) Run: archagent auth login <my-email> && archagent init
-5) Set org env vars: archagent create orgenvvar --key NAME --value VAL (one per env var)
-6) Deploy: archagent install agentsample platform-health-agent
-7) Install the GitHub App and Slack bot on the agent's installations
-8) Test it: create an agent session and ask "What's the state of the queue?"
-9) Show me the result
+1) Read agents/platform-health-agent/agent.yaml — the `setup_requirements:` block lists everything you'll need (8 env vars, the GitHub App, Slack bot, and a verifier).
+2) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
+3) Run: archagent auth login <my-email> && archagent init
+4) Deploy: archagent install agentsample platform-health-agent
+5) Open the agent in the developer portal. Its "Finish setup" panel lists every required env var, integration install, and verifier.
+6) Walk me through each action: ask for the values it needs, install the GitHub App on MONITORED_REPO, invite the Slack bot to SLACK_OUTPUT_CHANNEL, and confirm each verifier turns green.
+7) Test it: create an agent session and ask "What's the state of the queue?"
+8) Show me the result.
 ```
 
 > 🩺 **A scheduled monitoring agent that runs your daily standup, alerts on
@@ -52,19 +49,23 @@ The sample makes trust assumptions you should verify before deploying:
 ## Setup
 
 ```bash
-# 1. Set each required env var on your ArchAstro org. The agent's scripts
-#    read these at runtime — env.example lists what's needed.
-for var in $(grep -oE '^[A-Z_]+' env.example); do
-  read -rsp "$var: " value; echo
-  archagent create orgenvvar --key "$var" --value "$value"
-done
-
-# 2. Deploy
 archagent install agentsample platform-health-agent
-
-# 3. Install the GitHub App on the monitored repo and the Slack bot on the
-#    output channel. Both are agent installations — see "Post-deploy steps".
 ```
+
+After install, open the agent in the developer portal. The "Finish
+setup" panel — populated from `setup_requirements:` in `agent.yaml` —
+drives the rest:
+
+- **Env vars** are stored per-agent (`scope: agent_env_var`), so the
+  installer always has write access without needing org admin rights.
+  `LOG_CONTAINERS` is the only optional one; the four `GCLOUD_*` vars
+  are required together (gates the 5xx digest).
+- **Integration installs** — the GitHub App on `MONITORED_REPO` and
+  the Slack bot in `SLACK_OUTPUT_CHANNEL`. The panel links out to the
+  install URLs.
+- **Custom verifier** — confirms the bot can read `MONITORED_REPO`.
+  Re-runs on a daily sweep, so a deleted secret or revoked App
+  install transitions back to `:degraded` until you fix it.
 
 ## Required env vars
 
@@ -78,28 +79,6 @@ archagent install agentsample platform-health-agent
 | `LOG_CONTAINERS` | (Optional) Comma-separated container names to scope the 5xx digest to (e.g. `app,admin-app`). Without this, sidecars at ERROR severity (Browserless, log agents) often drown out real platform exceptions. |
 | `GCLOUD_SA_CLIENT_EMAIL` | Service account email. SA needs `roles/logging.viewer`. |
 | `GCLOUD_SA_PRIVATE_KEY` | Service account private key (PEM). Escape newlines as `\n`. |
-
-## Post-deploy steps
-
-The agent template declares two integrations — the platform creates
-empty installation rows on deploy, but you connect each one yourself.
-
-### 1. GitHub App
-
-Find the agent's `enablement/github_app` installation and install the
-ArchAstro GitHub App on the monitored repo. Without this, the GitHub
-Event Alert routine has nothing to react to AND the agent can't post
-resolution comments (the App's installation token is the auth path).
-
-```bash
-archagent describe agent platform-health-agent
-# Locate the enablement/github_app installation, follow its install URL
-```
-
-### 2. Slack bot
-
-Same process for `enablement/slack_bot` — link a Slack workspace and
-invite the bot to the output channel.
 
 ## Sample output
 

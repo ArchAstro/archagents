@@ -168,6 +168,42 @@ installations:
   - kind: enablement/slack_bot
     config: {}
 
+# Post-install checklist. The platform materializes one
+# agent_health_actions row per entry on install; users see a
+# "Finish setup" panel that burns down as they resolve each item.
+# All entries here are optional — the concierge works out of the box
+# without escalation configured.
+setup_requirements:
+  # Optional — Slack channel the `escalate` concierge tool posts to
+  # when handing off to humans. Leave blank to disable Slack
+  # escalation (email-only or no-op).
+  - kind: env_var
+    key: CONCIERGE_ESCALATION_CHANNEL
+    scope: agent_env_var
+    required: false
+    description: |
+      Slack channel where the `escalate` tool posts when handing off
+      to humans (e.g. `#archastro-escalations`). Leave blank to
+      disable Slack escalation.
+
+  # Optional — email address the `escalate` concierge tool notifies.
+  - kind: env_var
+    key: CONCIERGE_ESCALATION_EMAIL
+    scope: agent_env_var
+    required: false
+    description: |
+      Email address that receives escalation notifications. Leave
+      blank to disable email escalation.
+
+  # Optional — required only if you set CONCIERGE_ESCALATION_CHANNEL.
+  - kind: install
+    installation_kind: enablement/slack_bot
+    required: false
+    description: |
+      Add the ArchAstro Slack bot to your workspace and invite it to
+      `CONCIERGE_ESCALATION_CHANNEL`. Skip if you don't use Slack
+      escalation.
+
 metadata:
   category: default
   version: "1.0"

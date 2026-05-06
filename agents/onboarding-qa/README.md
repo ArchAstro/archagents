@@ -7,13 +7,14 @@ Paste this into Claude Code, Codex, or any AI coding assistant:
 ```
 Deploy the Onboarding Q&A Agent from this repo.
 
-1) Read agents/onboarding-qa/agent.yaml and agents/onboarding-qa/env.example
-2) No env vars required — this agent works out of the box
-3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
-4) Run: archagent auth login <my-email> && archagent init
-5) Deploy: archagent install agentsample onboarding-qa
-6) Test it: upload the bundled sample FAQ, create an agent session, and ask "What's the PTO policy?"
-7) Show me the result
+1) Read agents/onboarding-qa/agent.yaml — the `setup_requirements:` block lists everything you'll need (just `COMPANY_NAME`).
+2) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
+3) Run: archagent auth login <my-email> && archagent init
+4) Deploy: archagent install agentsample onboarding-qa
+5) Open the agent in the developer portal. Its "Finish setup" panel asks for `COMPANY_NAME`.
+6) Walk me through resolving it.
+7) Test it: upload the bundled sample FAQ, create an agent session, and ask "What's the PTO policy?"
+8) Show me the result.
 ```
 
 > 🎓 **The new-hire question answerer that doesn't get tired.**
@@ -47,16 +48,14 @@ Onboarding Q&A Agent solves this by being:
 ## Setup
 
 ```bash
-# 1. Set each required env var on your ArchAstro org. The agent's
-#    scripts read these at runtime — env.example lists what's needed.
-for var in $(grep -oE '^[A-Z_]+' env.example); do
-  read -rsp "$var: " value; echo
-  archagent create orgenvvar --key "$var" --value "$value"
-done
-
-# 2. Deploy
 archagent install agentsample onboarding-qa
 ```
+
+After install, open the agent in the developer portal. The "Finish
+setup" panel — populated from `setup_requirements:` in `agent.yaml` —
+asks for `COMPANY_NAME` (used in the bot's voice). Env vars are stored
+per-agent (`scope: agent_env_var`), so the installer always has write
+access without needing org admin rights.
 
 The sample ships with a short seed FAQ (`knowledge/sample-faq.md`) that
 gets uploaded automatically as part of the install so the agent has

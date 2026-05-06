@@ -173,6 +173,123 @@ installations:
   - kind: enablement/slack_bot
     config: {}
 
+# Post-install checklist. The platform materializes one
+# agent_health_actions row per entry on install; users see a
+# "Finish setup" panel that burns down as they resolve each item.
+# Verifiers re-run on a daily sweep so a deleted secret or revoked
+# install transitions back to :degraded.
+setup_requirements:
+  # Required env vars — all stored on this specific agent. Per-agent
+  # scope is the only one bundle authors can declare: the user who
+  # installed the agent always has write access to its env vars,
+  # whereas org/app secret stores typically require admin permissions
+  # most installers don't have.
+  - kind: env_var
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    description: |
+      PAT used to read issues, PRs, and PR comments. The sample does
+      not write to GitHub — for strict minimum privilege, prefer a
+      fine-grained PAT (`github_pat_*`) with read-only access to
+      Issues, Pull requests, and Metadata. A classic `repo`-scoped
+      PAT (`ghp_*`) also works.
+    example: "ghp_xxxxxxxxxxxx"
+
+  - kind: env_var
+    key: MONITORED_REPO
+    scope: agent_env_var
+    description: |
+      The repo to monitor in `owner/name` format. The agent only acts
+      on events from this repo; other repos receiving events from the
+      same GitHub App install are silently ignored.
+
+  - kind: env_var
+    key: SLACK_OUTPUT_CHANNEL
+    scope: agent_env_var
+    description: |
+      Slack channel that receives the daily report, GitHub event
+      alerts, and the 5xx digest. Include the leading `#` (e.g.
+      `#platform-health`).
+
+  # --- Cloud Logging (gates the 5xx daily digest) ---
+  # All four of these are required together. Skipping any of them
+  # disables the 5xx digest routine while leaving the daily report
+  # and GitHub event alerts working.
+  - kind: env_var
+    key: GCLOUD_PROJECT_ID
+    scope: agent_env_var
+    description: |
+      GCP project ID hosting the namespace whose logs the digest
+      should scan. Required for the 5xx digest.
+
+  - kind: env_var
+    key: LOG_NAMESPACE
+    scope: agent_env_var
+    description: |
+      Kubernetes namespace whose ERROR-severity logs the digest
+      scans. Required for the 5xx digest.
+
+  - kind: env_var
+    key: GCLOUD_SA_CLIENT_EMAIL
+    scope: agent_env_var
+    description: |
+      Service account `client_email` from the SA JSON key. Used to
+      mint a Cloud Logging access token via JWT-bearer grant on every
+      run. Required for the 5xx digest.
+
+  - kind: env_var
+    key: GCLOUD_SA_PRIVATE_KEY
+    scope: agent_env_var
+    secret: true
+    description: |
+      Service account `private_key` (PEM) from the SA JSON key. Escape
+      newlines as literal `\n`. Required for the 5xx digest. SA needs
+      `logging.viewer` (read-only) on `GCLOUD_PROJECT_ID`.
+
+  # Optional — narrows the 5xx digest to specific containers. Without
+  # this, the digest catches ALL ERROR-severity logs in the namespace
+  # (sidecars, log agents, etc.) which often dominates volume and
+  # drowns out real platform exceptions.
+  - kind: env_var
+    key: LOG_CONTAINERS
+    scope: agent_env_var
+    required: false
+    description: |
+      Comma-separated K8s container names to scope the 5xx digest to
+      (e.g. `app,admin-app`). Empty/unset = no container filter.
+      Strongly recommended for production namespaces.
+
+  # Required installs — GitHub App receives PR/issue webhooks and
+  # exposes the App-installation token for posting resolution
+  # comments; Slack bot posts the daily report and event alerts.
+  - kind: install
+    installation_kind: enablement/github_app
+    description: |
+      Install the ArchAstro GitHub App on the `MONITORED_REPO`.
+      Without this, the agent receives no GitHub events and can't
+      post resolution comments.
+
+  - kind: install
+    installation_kind: enablement/slack_bot
+    description: |
+      Add the ArchAstro Slack bot to your workspace and invite it to
+      `SLACK_OUTPUT_CHANNEL`. Without this, no daily report, event
+      alerts, or 5xx digest will be posted.
+
+  # Custom verifier — confirms the bot can actually read MONITORED_REPO.
+  # Catches the common "PAT token mismatch with the repo's visibility
+  # or org SSO" failure mode before the agent silently no-ops.
+  - kind: custom
+    id: verify-monitored-repo-access
+    title: "Verify the bot can read the monitored repo"
+    description: |
+      Hits `/repos/{MONITORED_REPO}` with `GITHUB_TOKEN` to confirm
+      the bot has read access. Surfaces the exact HTTP status if not.
+    verify:
+      script_ref: verify-monitored-repo-access
+    depends_on: [GITHUB_TOKEN, MONITORED_REPO]
+
 metadata:
   category: devops
   version: "1.0"

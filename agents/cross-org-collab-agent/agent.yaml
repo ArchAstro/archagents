@@ -191,6 +191,71 @@ installations:
   - kind: integration/github
     config: {}
 
+# Post-install checklist. The platform materializes one
+# agent_health_actions row per entry on install; users see a
+# "Finish setup" panel that burns down as they resolve each item.
+# Verifiers re-run on a daily sweep so a deleted secret or revoked
+# install transitions back to :degraded.
+setup_requirements:
+  # Required env vars — all stored on this specific agent. Per-agent
+  # scope is the only one bundle authors can declare: the user who
+  # installed the agent always has write access to its env vars,
+  # whereas org/app secret stores typically require admin permissions
+  # most installers don't have.
+  - kind: env_var
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    description: |
+      GitHub PAT with `repo` scope on your private repo. The agent
+      uses this to read code privately (in its reasoning context, not
+      the chat) and to open PRs with implementation. Field guards keep
+      the source out of any cross-org messages.
+    example: "ghp_xxxxxxxxxxxx"
+
+  - kind: env_var
+    key: REPO_OWNER
+    scope: agent_env_var
+    description: "GitHub org/user that owns the private repo the agent reads/writes."
+
+  - kind: env_var
+    key: REPO_NAME
+    scope: agent_env_var
+    description: "Private repo name the agent reads from and opens PRs against."
+
+  - kind: env_var
+    key: STACK_DESCRIPTION
+    scope: agent_env_var
+    description: |
+      One-line description of your stack. Injected into the agent's
+      identity prompt so it can reason about your code without needing
+      to mention it in cross-org messages.
+      Example: `Python/Django backend, React frontend, AWS infra`.
+
+  # Required install — GitHub App / PAT-backed install for code reads
+  # and PR creation. The privacy story breaks if the agent can't
+  # actually read the source.
+  - kind: install
+    installation_kind: integration/github
+    description: |
+      Install the ArchAstro GitHub App on `REPO_OWNER/REPO_NAME`.
+      Without this, the agent can't read the source it's supposed to
+      collaborate on or open PRs with implementation.
+
+  # Custom verifier — confirms the bot can read the configured private
+  # repo. Catches "wrong repo name" and "PAT lacks access to private
+  # repo" before the first cross-org session.
+  - kind: custom
+    id: verify-source-repo-access
+    title: "Verify the bot can read the source repo"
+    description: |
+      Hits `/repos/{REPO_OWNER}/{REPO_NAME}` with `GITHUB_TOKEN` to
+      confirm the bot has access to the private repo it'll reason
+      about during cross-org collaboration.
+    verify:
+      script_ref: verify-source-repo-access
+    depends_on: [GITHUB_TOKEN, REPO_OWNER, REPO_NAME]
+
 metadata:
   category: engineering
   version: "1.0"

@@ -7,14 +7,14 @@ Paste this into Claude Code, Codex, or any AI coding assistant:
 ```
 Deploy the Release Notes Bot from this repo.
 
-1) Read agents/release-notes-bot/agent.yaml and agents/release-notes-bot/env.example
-2) Ask me for: GITHUB_TOKEN (a PAT with repo scope), REPO_OWNER, REPO_NAME
-3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
-4) Run: archagent auth login <my-email> && archagent init
-5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
-6) Deploy: archagent install agentsample release-notes-bot
-7) Test it: create an agent session and ask it to draft release notes for the last week
-8) Show me the result
+1) Read agents/release-notes-bot/agent.yaml — the `setup_requirements:` block lists everything you'll need.
+2) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
+3) Run: archagent auth login <my-email> && archagent init
+4) Deploy: archagent install agentsample release-notes-bot
+5) Open the agent in the developer portal. Its "Finish setup" panel lists every required env var, install, and verifier.
+6) Walk me through each action: ask for the values it needs, install integrations on prompt, and confirm each verifier turns green.
+7) Test it: create an agent session and ask it to draft release notes for the last week.
+8) Show me the result.
 ```
 
 > 📝 **Drafts your weekly changelog from the merged PRs.**
@@ -54,16 +54,20 @@ Every Monday at 10:00 UTC:
 ## Setup
 
 ```bash
-# 1. Set each required env var on your ArchAstro org. The agent's
-#    scripts read these at runtime — env.example lists what's needed.
-for var in $(grep -oE '^[A-Z_]+' env.example); do
-  read -rsp "$var: " value; echo
-  archagent create orgenvvar --key "$var" --value "$value"
-done
-
-# 2. Deploy
 archagent install agentsample release-notes-bot
 ```
+
+After install, open the agent in the developer portal. The "Finish
+setup" panel — populated from `setup_requirements:` in `agent.yaml` —
+drives the rest:
+
+- **Env vars** are stored per-agent (`scope: agent_env_var`), so the
+  installer always has write access without needing org admin rights.
+- **Integration installs** (the GitHub App) link out to the right
+  install URL.
+- **Custom verifiers** (e.g. confirming the bot can list merged PRs
+  on `RELEASE_BRANCH`) re-run on a daily sweep, so a deleted secret
+  or revoked install transitions back to `:degraded` until you fix it.
 
 ## Required env vars
 
