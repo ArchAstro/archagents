@@ -1,0 +1,152 @@
+name: validate-sample-scripts
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "agents/**"
+      - "install.sh"
+      - "scripts/validate_sample_scripts.py"
+      - "scripts/test_validate_sample_scripts.py"
+      - ".github/workflows/validate-sample-scripts.yml"
+  pull_request_target:
+    branches: [main]
+    paths:
+      - "agents/**"
+      - "install.sh"
+      - "scripts/validate_sample_scripts.py"
+      - "scripts/test_validate_sample_scripts.py"
+      - ".github/workflows/validate-sample-scripts.yml"
+  push:
+    branches: [main]
+    paths:
+      - "agents/**"
+      - "install.sh"
+      - "scripts/validate_sample_scripts.py"
+      - "scripts/test_validate_sample_scripts.py"
+      - ".github/workflows/validate-sample-scripts.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request_target'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pyyaml==6.0.2
+
+      - name: Run validator unit tests
+        run: python3 scripts/test_validate_sample_scripts.py
+
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name != 'pull_request'
+    env:
+      # Required secrets: ARCHASTRO_CI_ACCESS_TOKEN, ARCHASTRO_CI_APP_ID.
+      # Optional var: ARCHASTRO_CI_APP_NAME.
+      ARCHASTRO_DEV_API_URL: https://platform.archastro.ai
+    steps:
+      - name: Checkout trusted validation source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.base.sha || github.sha }}
+          path: trusted-source
+          persist-credentials: false
+
+      - name: Checkout sample source
+        if: github.event_name != 'pull_request_target'
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: sample-source
+          persist-credentials: false
+
+      - name: Checkout pull request sample source
+        if: github.event_name == 'pull_request_target'
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: sample-source
+          persist-credentials: false
+
+      - name: Check required CI secrets
+        env:
+          ARCHASTRO_CI_ACCESS_TOKEN: ${{ secrets.ARCHASTRO_CI_ACCESS_TOKEN }}
+          ARCHASTRO_CI_APP_ID: ${{ secrets.ARCHASTRO_CI_APP_ID }}
+        run: |
+          set -euo pipefail
+
+          missing=0
+          for name in ARCHASTRO_CI_ACCESS_TOKEN ARCHASTRO_CI_APP_ID; do
+            if [[ -z "${!name}" ]]; then
+              echo "${name} secret is required." >&2
+              missing=1
+            fi
+          done
+          if [[ "$missing" -ne 0 ]]; then
+            exit 1
+          fi
+          echo "::add-mask::${ARCHASTRO_CI_ACCESS_TOKEN}"
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install pyyaml==6.0.2
+
+      - name: Run trusted validator unit tests
+        run: python3 trusted-source/scripts/test_validate_sample_scripts.py
+
+      - name: Install ArchAgents CLI from public release
+        env:
+          ARCHAGENT_INSTALL_DIR: ${{ runner.temp }}/bin
+          ARCHAGENT_RELEASE_BASE_URL: https://github.com/ArchAstro/archagents/releases/latest/download
+          ARCHAGENT_INSTALL_SKIP_COMPLETIONS: "true"
+          ARCHAGENT_INSTALL_SKIP_PATH_UPDATE: "true"
+        run: |
+          set -euo pipefail
+
+          bash trusted-source/install.sh
+          echo "${ARCHAGENT_INSTALL_DIR}" >> "$GITHUB_PATH"
+          "${ARCHAGENT_INSTALL_DIR}/archagent" --version
+
+      - name: Configure CLI credentials
+        env:
+          ARCHASTRO_CI_ACCESS_TOKEN: ${{ secrets.ARCHASTRO_CI_ACCESS_TOKEN }}
+          ARCHASTRO_CI_APP_ID: ${{ secrets.ARCHASTRO_CI_APP_ID }}
+          ARCHASTRO_CI_APP_NAME: ${{ vars.ARCHASTRO_CI_APP_NAME || 'ArchAgents CI Validator' }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${ARCHASTRO_CI_ACCESS_TOKEN}" ]]; then
+            echo "ARCHASTRO_CI_ACCESS_TOKEN secret is required." >&2
+            exit 1
+          fi
+          if [[ -z "${ARCHASTRO_CI_APP_ID}" ]]; then
+            echo "ARCHASTRO_CI_APP_ID secret is required." >&2
+            exit 1
+          fi
+
+          archagent auth set-credentials \
+            --access-token "${ARCHASTRO_CI_ACCESS_TOKEN}" \
+            --app-id "${ARCHASTRO_CI_APP_ID}" \
+            --app-name "${ARCHASTRO_CI_APP_NAME}" \
+            --server "${ARCHASTRO_DEV_API_URL}"
+
+      - name: Validate sample scripts against production
+        run: python3 trusted-source/scripts/validate_sample_scripts.py --repo-root sample-source --cli archagent
