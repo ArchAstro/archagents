@@ -588,11 +588,11 @@ class SlashCommandRefsTest(unittest.TestCase):
 
     def test_multiple_commands_all_valid(self):
         self._write_marketplace()
-        for cmd in ("install", "auth", "impersonate"):
+        for cmd in ("install", "auth", "embed"):
             self._add_command(cmd)
         f = self._write_content(
             "multi.md",
-            "`/archagents:install`\n`/archagents:auth`\n`/archagents:impersonate`\n",
+            "`/archagents:install`\n`/archagents:auth`\n`/archagents:embed`\n",
         )
         self.assertEqual(self._check(f), [])
 

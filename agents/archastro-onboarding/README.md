@@ -9,7 +9,7 @@ agent as a member, and stores `thread_id` in metadata.
 
 This sample also owns the ArchAgents onboarding support bundle: docs fetching,
 concept explanations, integration patterns, CLI setup/auth/config workflows,
-script/workflow/skill authoring, deploy guidance, chat testing, impersonation,
+script/workflow/skill authoring, deploy guidance, chat testing, embed,
 and troubleshooting.
 
 ## Agent Contract
@@ -54,7 +54,7 @@ The onboarding agent ships these skills:
 - `archagent-build-skill`
 - `archagent-deploy-agent`
 - `archagent-chat`
-- `archagent-impersonate`
+- `archagent-embed`
 
 It also ships `fetch_archagents_docs`, backed by
 `scripts/archastro-fetch-archagents-docs.aascript`.

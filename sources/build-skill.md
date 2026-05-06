@@ -139,11 +139,11 @@ Walk through the authoring flow step by step.
 Skills can be installed locally for use in Claude Code, Codex, or OpenCode:
 
 ```
-archagent impersonate start <agent-id>
-archagent impersonate list skills
-archagent impersonate install skill <skill-config-id> --harness claude
-archagent impersonate install skill <skill-config-id> --harness codex --install-scope project
-archagent impersonate install skill <skill-config-id> --harness opencode
+archagent embed start <agent-id>
+archagent embed list skills
+archagent embed install skill <skill-config-id> --harness claude
+archagent embed install skill <skill-config-id> --harness codex --install-scope project
+archagent embed install skill <skill-config-id> --harness opencode
 ```
 
 After installation, the skill appears in the local `.claude/skills/`, `.codex/skills/`, or `.opencode/skills/` directory.
