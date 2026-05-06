@@ -16,6 +16,12 @@ The ArchAgents onboarding and setup skill bundle lives in
 archagent install agentsample archastro
 ```
 
+The agent works out of the box. If you want the `escalate` tool to
+post to Slack or email, open the agent in the developer portal and
+resolve the optional entries in its "Finish setup" panel
+(`CONCIERGE_ESCALATION_CHANNEL`, `CONCIERGE_ESCALATION_EMAIL`, and the
+Slack bot install).
+
 ## Identity
 
 ```text

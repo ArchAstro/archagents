@@ -1,0 +1,41 @@
+// Verifier for the `verify-source-repo-access` setup action.
+// Pings /repos/{REPO_OWNER}/{REPO_NAME} with GITHUB_TOKEN to confirm
+// the bot can actually read the private repo it'll reason about
+// during cross-org collaboration. Returns the platform's expected
+// verifier shape: { ok: bool, message: string }.
+//
+// Invoked by the platform with input.params (the action's params map)
+// and input.agent_id (the agent the action is scoped to).
+
+let str = import("string")
+
+let owner = if (env.REPO_OWNER != null) { env.REPO_OWNER } else { "" }
+let repo = if (env.REPO_NAME != null) { env.REPO_NAME } else { "" }
+
+if (owner == "" || repo == "") {
+  { ok: false, message: "REPO_OWNER and REPO_NAME must be set." }
+} else {
+  let url = "https://api.github.com/repos/" + owner + "/" + repo
+  let resp = import("requests").get(url, {
+    headers: {
+      "Authorization": "Bearer " + env.GITHUB_TOKEN,
+      "Accept": "application/vnd.github+json"
+    }
+  })
+  let body = unwrap(resp, null)
+  if (body == null) {
+    { ok: false, message: "Request to GitHub failed — check GITHUB_TOKEN." }
+  } else {
+    let status = if (body.status != null) { body.status } else { 0 }
+    if (status == 200) {
+      { ok: true, message: "Bot can read " + owner + "/" + repo + "." }
+    } else {
+      {
+        ok: false,
+        message: "GitHub returned status " + str.toString(status) +
+                 " for " + owner + "/" + repo +
+                 ". Check REPO_OWNER, REPO_NAME, and that GITHUB_TOKEN has `repo` scope on the private repo."
+      }
+    }
+  }
+}

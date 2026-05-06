@@ -124,6 +124,66 @@ installations:
   - kind: integration/github
     config: {}
 
+# Post-install checklist. The platform materializes one
+# agent_health_actions row per entry on install; users see a
+# "Finish setup" panel that burns down as they resolve each item.
+# Verifiers re-run on a daily sweep so a deleted secret or revoked
+# install transitions back to :degraded.
+setup_requirements:
+  # Required env vars — all stored on this specific agent. Per-agent
+  # scope is the only one bundle authors can declare: the user who
+  # installed the agent always has write access to its env vars,
+  # whereas org/app secret stores typically require admin permissions
+  # most installers don't have.
+  - kind: env_var
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    description: |
+      GitHub PAT with `repo` scope. Draft release-notes issues post as
+      this account. For a clean audit trail, create a dedicated bot
+      user (e.g. `acme-release-bot`).
+    example: "ghp_xxxxxxxxxxxx"
+
+  - kind: env_var
+    key: REPO_OWNER
+    scope: agent_env_var
+    description: "GitHub org/user that owns the repo to draft notes for."
+
+  - kind: env_var
+    key: REPO_NAME
+    scope: agent_env_var
+    description: "Repo name to scan for merged PRs and to file the draft issue in."
+
+  - kind: env_var
+    key: RELEASE_BRANCH
+    scope: agent_env_var
+    description: |
+      Branch to track for "merged" PRs. Defaults to `main` if unset.
+
+  # Required install — the GitHub App / PAT-backed install used to
+  # read merged PRs and file draft issues.
+  - kind: install
+    installation_kind: integration/github
+    description: |
+      Install the ArchAstro GitHub App on `REPO_OWNER/REPO_NAME`.
+      Without this, the bot can't read merged PRs and can't file the
+      draft issue.
+
+  # Custom verifier — confirms the bot can list closed PRs against
+  # the configured release branch. Catches the common "wrong repo
+  # name" and "PAT scope too narrow" failure modes.
+  - kind: custom
+    id: verify-merged-prs-readable
+    title: "Verify the bot can read merged PRs"
+    description: |
+      Hits `/repos/{REPO_OWNER}/{REPO_NAME}/pulls?state=closed&base={RELEASE_BRANCH}`
+      with `GITHUB_TOKEN` to confirm the bot can list merged PRs on
+      the configured branch.
+    verify:
+      script_ref: verify-merged-prs-readable
+    depends_on: [GITHUB_TOKEN, REPO_OWNER, REPO_NAME]
+
 metadata:
   category: engineering
   version: "1.0"

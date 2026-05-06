@@ -78,6 +78,24 @@ installations:
   - kind: archastro/files
     config: {}
 
+# Post-install checklist. The platform materializes one
+# agent_health_actions row per entry on install; users see a
+# "Finish setup" panel that burns down as they resolve each item.
+# Verifiers re-run on a daily sweep so a deleted secret or revoked
+# install transitions back to :degraded.
+setup_requirements:
+  # Required env var — stored on this specific agent. Per-agent scope
+  # is the only one bundle authors can declare: the user who installed
+  # the agent always has write access to its env vars, whereas org/app
+  # secret stores typically require admin permissions most installers
+  # don't have.
+  - kind: env_var
+    key: COMPANY_NAME
+    scope: agent_env_var
+    description: |
+      The name your bot uses when greeting new hires and when citing
+      sources back to them. Example: `Acme Corp`.
+
 metadata:
   category: hr
   version: "1.0"

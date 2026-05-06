@@ -7,14 +7,14 @@ Paste this into Claude Code, Codex, or any AI coding assistant:
 ```
 Deploy the Security Triage Agent from this repo.
 
-1) Read agents/security-triage-agent/agent.yaml and agents/security-triage-agent/env.example
-2) Ask me for: GITHUB_TOKEN (a PAT with repo scope), DEFAULT_REPO_OWNER, DEFAULT_REPO_NAME
-3) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
-4) Run: archagent auth login <my-email> && archagent init
-5) Set org env vars: archagent create orgenvvar --key GITHUB_TOKEN --value <token>
-6) Deploy: archagent install agentsample security-triage-agent
-7) Test it: create an agent session and ask it to scan a small repo for vulnerabilities
-8) Show me the result
+1) Read agents/security-triage-agent/agent.yaml — the `setup_requirements:` block lists everything you'll need.
+2) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
+3) Run: archagent auth login <my-email> && archagent init
+4) Deploy: archagent install agentsample security-triage-agent
+5) Open the agent in the developer portal. Its "Finish setup" panel lists every required env var, install, and verifier.
+6) Walk me through each action: ask for the values it needs, install integrations on prompt, and confirm each verifier turns green.
+7) Test it: create an agent session and ask it to scan a small repo for vulnerabilities.
+8) Show me the result.
 ```
 
 > 🛡️ **A senior security engineer that triages vulnerabilities, fixes what it can, and escalates the rest.**
@@ -65,16 +65,21 @@ same CVE — so it doesn't re-file the same finding every day.
 ## Setup
 
 ```bash
-# 1. Set each required env var on your ArchAstro org. The agent's
-#    scripts read these at runtime — env.example lists what's needed.
-for var in $(grep -oE '^[A-Z_]+' env.example); do
-  read -rsp "$var: " value; echo
-  archagent create orgenvvar --key "$var" --value "$value"
-done
-
-# 2. Deploy
 archagent install agentsample security-triage-agent
 ```
+
+After install, open the agent in the developer portal. The "Finish
+setup" panel — populated from `setup_requirements:` in `agent.yaml` —
+drives the rest:
+
+- **Env vars** are stored per-agent (`scope: agent_env_var`), so the
+  installer always has write access without needing org admin rights.
+- **Integration installs** (GitHub App, Slack bot) link out to the
+  right install URLs.
+- **Custom verifiers** (e.g. confirming the bot can read every
+  `MONITORED_REPOS` entry) re-run on a daily sweep, so a deleted
+  secret or revoked install transitions back to `:degraded` until
+  you fix it.
 
 Then upload your security policy documents (see "Knowledge base setup" below).
 
