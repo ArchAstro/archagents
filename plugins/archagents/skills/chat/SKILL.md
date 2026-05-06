@@ -8,19 +8,17 @@ allowed-tools: ["Bash(archagent:*)"]
 
 Send messages to agents and view their responses.
 
-This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login` if not authenticated.
+This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login <email>` if not authenticated.
 
 ## Quick Reference
 
 | Task | Command |
 |------|---------|
 | Ask agent a question | `archagent create agentsession --agent <id> --instructions "..." --wait` |
-| Create a thread | `archagent create thread --title "..." --owner-type agent --owner-id <agent-id> --json` |
-| Create a test user | `archagent create user --system-user --name "..." --json` |
-| Add member to thread | `archagent create threadmember --thread <id> --user-id <id> --json` |
-| Add agent to thread | `archagent create threadmember --thread <id> --agent-id <id> --json` |
-| Send message (wait for reply) | `archagent create threadmessage --thread <id> --user-id <id> -c "..." --wait --json` |
-| View conversation | `archagent list threadmessages --thread <id> --full` |
+| Send follow-up to a session | `archagent exec agentsession <session-id> -m "..." --wait` |
+| View a session | `archagent describe agentsession <session-id>` |
+| Create a shared thread | `archagent create thread --title "..." --owner-type agent --owner-id <agent-id> --json` |
+| Start a session in a thread | `archagent create agentsession --agent <id> --thread <thread-id> --instructions "..." --wait` |
 | List agent sessions | `archagent list agentsessions --agent <id> --json` |
 
 Use `--help` on any command for full options.
@@ -85,27 +83,32 @@ archagent describe agentsession <session-id> --follow
 ```
 Use `describe --follow` to stream updates on a session created without `--wait`.
 
-### User wants to send a thread message
+### User wants to use a thread
 
-1. **Determine the sender ID**: Get the user's ID from `archagent auth status`.
+Use a thread when the user explicitly needs shared context or multiple
+participants. Start agent work with an agent session attached to the
+thread instead of sending a raw thread message.
 
-2. **Send the message and wait for the response**:
+1. **Create or identify the thread**.
+
+2. **Start an agent session in that thread**:
    ```
-   archagent create threadmessage --thread <thread-id> --user-id <user-id> --content "..." \
-     --wait --wait-timeout 300
+   archagent create agentsession --agent <agent-id> --thread <thread-id> \
+     --instructions "..." --wait --timeout 300
    ```
 
-3. **When the response arrives**, read the full content:
+3. **Send follow-ups through the session**:
    ```
-   archagent list threadmessages --thread <thread-id> --full
+   archagent exec agentsession <session-id> -m "..." --wait --timeout 300
    ```
 
 ### User wants to view a conversation
 
 ```
-archagent list threadmessages --thread <thread-id> --full
+archagent describe agentsession <session-id>
 ```
-Always use `--full` — the default table view truncates content.
+Use `archagent list agentsessions --agent <agent-id> --json` if you
+need to find the session first.
 
 ### User needs a new thread
 
@@ -122,14 +125,15 @@ Always use `--full` — the default table view truncates content.
    archagent create threadmember --thread <thread-id> --user-id <user-id> --json
    ```
 
-3. Send a message and wait for the agent to respond:
+3. Start a session in the thread and wait for the agent to respond:
    ```
-   archagent create threadmessage --thread <thread-id> --user-id <user-id> -c "Hello" --wait --json
+   archagent create agentsession --agent <agent-id> --thread <thread-id> \
+     --instructions "Hello" --wait --timeout 300
    ```
 
-4. View the conversation:
+4. View the session:
    ```
-   archagent list threadmessages --thread <thread-id> --full
+   archagent describe agentsession <session-id>
    ```
 
 **User-owned thread** (when a user starts the conversation):
@@ -148,7 +152,7 @@ Always use `--full` — the default table view truncates content.
 
 - Do not inspect or edit credential files directly — use the CLI only.
 - Do not ask the user to pick a subcommand — infer the action from their message.
-- If the CLI reports an auth or app error, run `archagent auth login` or suggest `--app <id>`.
+- If the CLI reports an auth or app error, run `archagent auth login <email>` or suggest `--app <id>`.
 - Keep responses concise — state the outcome, not the process.
 - **Prefer agent sessions over threads** for simple question/answer interactions.
 - **Always use `--wait`** when the user expects to see the agent's response.

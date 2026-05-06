@@ -8,7 +8,7 @@ allowed-tools: ["Bash(archagent:*)"]
 
 Manage ArchAgent embed sessions through the ArchAgent CLI and keep the Codex session aligned with the active identity file.
 
-This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login` if not authenticated.
+This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login <email>` if not authenticated.
 
 ## Always Start with State
 
@@ -158,5 +158,5 @@ After `stop`, fully drop the persona and return to your normal behavior.
 - Do not inspect or edit credential files directly — use the CLI only.
 - Do not ask the user to pick a subcommand — infer the action from their message and the current state.
 - **Do not tell the user to run CLI commands themselves.** Every `archagent …` command in this skill is something *you* run via your shell tool. If you need information (available agents, skills, tools), fetch it yourself and present the options — do not instruct the user to go discover it.
-- If the CLI reports an auth or app error, run `archagent auth login` or suggest `--app <id>`.
+- If the CLI reports an auth or app error, run `archagent auth login <email>` or suggest `--app <id>`.
 - Keep responses concise — state the outcome, not the process.

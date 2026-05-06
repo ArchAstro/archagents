@@ -16,7 +16,7 @@ archagent --version
 ```
 
 Common findings:
-- `Status: Expired` → `archagent auth login`
+- `Status: Expired` → `archagent auth login <email>`
 - CLI errors about version skew → reinstall via the `archagent-install` skill.
 - Wrong app selected → `archagent auth app list` and
   `archagent auth app set <id>`.

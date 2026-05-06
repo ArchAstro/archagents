@@ -24,7 +24,7 @@ Authenticate the user with the ArchAstro developer platform via browser-based lo
 
 3. **Start the login flow**:
    ```
-   archagent auth login
+   archagent auth login <email>
    ```
    Keep the session responsive while the browser-based auth flow runs.
 
@@ -40,4 +40,4 @@ Authenticate the user with the ArchAstro developer platform via browser-based lo
 7. **On failure**, show the error and suggest:
    - Check their internet connection.
    - Try `archagent settings reset` if URLs look wrong.
-   - Try again with `archagent auth login`.
+   - Try again with `archagent auth login <email>`.

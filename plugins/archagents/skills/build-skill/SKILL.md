@@ -8,7 +8,7 @@ allowed-tools: ["Bash(archagent:*)"]
 
 Create, edit, and publish skills — reusable instruction packages that agents invoke at runtime.
 
-This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login` if not authenticated.
+This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login <email>` if not authenticated.
 
 ## What is a Skill?
 

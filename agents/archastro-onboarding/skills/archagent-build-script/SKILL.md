@@ -8,7 +8,7 @@ allowed-tools: ["Bash(archagent:*)"]
 
 Write, test, and deploy scripts — custom logic that powers agent tools, workflow nodes, and routines.
 
-This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login` if not authenticated.
+This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login <email>` if not authenticated.
 
 ## What is a Script?
 
