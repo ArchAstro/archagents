@@ -73,7 +73,7 @@ drives the rest:
 
 | Variable | What it is |
 |---|---|
-| `GITHUB_TOKEN` | PAT with `repo` scope |
+| `GITHUB_TOKEN` | GitHub token used by the sample's custom scripts to list merged PRs and create draft issues. Prefer a fine-grained PAT with Pull requests: read, Issues: read/write, and Metadata: read. A classic `repo` token also works but is broader. |
 | `REPO_OWNER` | GitHub org |
 | `REPO_NAME` | Repo to watch |
 | `RELEASE_BRANCH` | Branch to track (usually `main`) |

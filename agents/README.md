@@ -40,8 +40,24 @@ parses its `sample.yaml`'s `steps:` block, and runs every step
 one pass. Nothing lands on your disk — the sample deploys straight
 to your app.
 
-Most samples have a few env vars to set first (GitHub PAT, webhook
-secret, etc.). Each agent's README covers the specifics.
+Most samples have a few setup actions to finish after install
+(agent-scoped env vars, GitHub App installs, Slack bot installs,
+verifiers, etc.). The developer portal reads each sample's
+`setup_requirements:` block and shows those actions in the agent's
+"Finish setup" panel.
+
+### GitHub authentication in samples
+
+Several samples currently use `GITHUB_TOKEN` from their custom scripts
+because they call GitHub REST endpoints directly. For those samples,
+use a fine-grained PAT whenever possible and grant only the permissions
+the sample README lists. A classic `repo` token still works, but is
+broader than most samples need.
+
+GitHub App installation is separate: it delivers `webhook.github_app.*`
+events to routines, and some samples use App-backed integration tools
+for writes. If a sample still lists `GITHUB_TOKEN`, the token is still
+required for that sample's script-level GitHub API calls.
 
 ## Structure
 
@@ -52,8 +68,8 @@ agent-name/
   README.md        — what it does, how to configure it
   agent.yaml       — the AgentTemplate (identity, tools, routines, installations)
   sample.yaml      — catalog metadata + the `steps:` block that drives deploy
-  env.example      — required environment variables for the agent's tools
-  scripts/         — custom ArchAstro scripts (PAT-based GitHub tools, etc.)
+  env.example      — local reference for required agent environment variables
+  scripts/         — custom ArchAstro scripts, including GitHub API calls
   skills/          — (some samples) markdown skills the agent loads on demand
   schemas/         — (some samples) message-schema configs referenced by agent.yaml
   rules/           — (compliance-reviewer) markdown rules uploaded as knowledge

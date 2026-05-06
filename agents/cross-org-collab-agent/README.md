@@ -141,7 +141,7 @@ drives the rest:
 
 | Variable | What it is |
 |---|---|
-| `GITHUB_TOKEN` | PAT with `repo` scope. Used for code reading and PR creation. |
+| `GITHUB_TOKEN` | GitHub token used by the sample's custom scripts for code reads, branches, commits, and PR creation. Prefer a fine-grained PAT with Contents: read/write, Pull requests: read/write, and Metadata: read. A classic `repo` token also works but is broader. |
 | `REPO_OWNER` | Your GitHub org (the repo with code the agent will read) |
 | `REPO_NAME` | The repo |
 | `STACK_DESCRIPTION` | Architecture description for the agent's identity prompt |

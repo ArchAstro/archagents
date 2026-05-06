@@ -140,9 +140,10 @@ setup_requirements:
     scope: agent_env_var
     secret: true
     description: |
-      GitHub PAT with `repo` scope. Draft release-notes issues post as
-      this account. For a clean audit trail, create a dedicated bot
-      user (e.g. `acme-release-bot`).
+      GitHub token used by this sample's custom scripts to list merged
+      PRs and create draft issues. Prefer a fine-grained PAT with Pull
+      requests: read, Issues: read/write, and Metadata: read. A
+      classic `repo` token also works but is broader.
     example: "ghp_xxxxxxxxxxxx"
 
   - kind: env_var
@@ -161,14 +162,15 @@ setup_requirements:
     description: |
       Branch to track for "merged" PRs. Defaults to `main` if unset.
 
-  # Required install — the GitHub App / PAT-backed install used to
-  # read merged PRs and file draft issues.
+  # Required install — the GitHub App installation used for repo
+  # enablement. The sample's custom scripts still use GITHUB_TOKEN
+  # for GitHub REST calls.
   - kind: install
     installation_kind: integration/github
     description: |
       Install the ArchAstro GitHub App on `REPO_OWNER/REPO_NAME`.
-      Without this, the bot can't read merged PRs and can't file the
-      draft issue.
+      Without this, the repo is not enabled for ArchAgents GitHub
+      integration events and tools.
 
   # Custom verifier — confirms the bot can list closed PRs against
   # the configured release branch. Catches the common "wrong repo

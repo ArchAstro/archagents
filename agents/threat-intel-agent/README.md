@@ -79,7 +79,7 @@ drives the rest:
 
 | Variable | What it is |
 |---|---|
-| `GITHUB_TOKEN` | PAT with `repo` scope. Issues will post as this account. |
+| `GITHUB_TOKEN` | GitHub token used by the sample's custom scripts. Issues post as this account. Prefer a fine-grained PAT with Contents: read, Issues: read/write, and Metadata: read. A classic `repo` token also works but is broader. |
 | `MONITORED_REPOS` | Comma-separated `owner/repo` list to check for exposure |
 | `STACK_DESCRIPTION` | One-line description of your stack (e.g. `"Elixir/Phoenix backend, Next.js frontend, GCP infra, Stripe billing"`). Helps the agent decide what's relevant. |
 | `BRIEF_REPO` | Where to file the daily brief issue (e.g. `your-org/your-repo`) |
