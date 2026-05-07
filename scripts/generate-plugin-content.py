@@ -71,9 +71,9 @@ DESIGN NOTE: ASYMMETRY BETWEEN INSTALL/AUTH AND OTHER CONCEPTS
     with trigger phrases; Claude Code gets a command and relies on autocomplete
     discovery.
 
-    Impersonate is different: it has subcommands (start/status/sync/stop) and
-    benefits from both explicit invocation (slash command) and conversational
-    triggering. It generates claude-skill + claude-command + codex-skill.
+    Embed is different: it has subcommands (start/status/sync/stop) and
+    benefits from conversational triggering across both harnesses. It
+    generates claude-skill + codex-skill.
 """
 from __future__ import annotations
 

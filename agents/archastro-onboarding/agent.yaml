@@ -45,7 +45,7 @@ identity: |
       `archagent-author-agent`, `archagent-build-script`,
       `archagent-build-workflow`, `archagent-build-skill`,
       `archagent-deploy-agent`, `archagent-chat`, and
-      `archagent-impersonate` for the corresponding platform workflows
+      `archagent-embed` for the corresponding platform workflows
 
   ## How to behave
 
@@ -131,7 +131,7 @@ skills:
   - config_ref: archagent-chat
     status: active
     instruction: Load when sending messages to an agent, testing in a thread, or inspecting responses.
-  - config_ref: archagent-impersonate
+  - config_ref: archagent-embed
     status: active
     instruction: Load when the user wants to install an agent's skill set into Claude Code, Codex, or OpenCode.
 

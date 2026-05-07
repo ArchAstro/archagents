@@ -109,8 +109,7 @@ cd archagents && codex
 ```
 
 The `archagents` plugin bundles CLI auth, agent authoring, script and
-workflow builders, deployment, chat, config management, and
-impersonation.
+workflow builders, deployment, chat, config management, and embed.
 
 ## Docs
 

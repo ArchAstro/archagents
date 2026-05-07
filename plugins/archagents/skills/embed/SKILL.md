@@ -1,21 +1,21 @@
 ---
-name: impersonate
-description: Use when the user wants to impersonate an ArchAgent agent, asks about the active impersonation state, wants to refresh or stop impersonation, or refers to working as a specific ArchAgent agent inside Codex. Trigger phrases include "impersonate agent", "act as this agent", "be this agent", "start impersonation", "sync impersonation", "stop impersonation", "what agent am I impersonating", and "use the active agent identity".
+name: embed
+description: Use when the user wants to embed an ArchAgent agent into Codex, asks about the active embed state, wants to refresh or stop the embed, or refers to working as a specific ArchAgent agent inside Codex. Trigger phrases include "embed agent", "act as this agent", "be this agent", "start embed", "sync embed", "stop embed", "which agent is embedded", and "use the active agent identity".
 allowed-tools: ["Bash(archagent:*)"]
 ---
 
-# ArchAgent Impersonation
+# ArchAgent Embed
 
-Manage ArchAgent impersonation through the ArchAgent CLI and keep the Codex session aligned with the active identity file.
+Manage ArchAgent embed sessions through the ArchAgent CLI and keep the Codex session aligned with the active identity file.
 
 This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login` if not authenticated.
 
 ## Always Start with State
 
-Every invocation must begin by checking the current impersonation state. Do not ask the user what action to take — determine it from state and intent.
+Every invocation must begin by checking the current embed state. Do not ask the user what action to take — determine it from state and intent.
 
 ```
-archagent impersonate status --json
+archagent embed status --json
 ```
 
 Then route based on the combination of current state and user intent.
@@ -36,13 +36,13 @@ Then route based on the combination of current state and user intent.
    - **A small number (≤ 10) of agents:** present them as a numbered list — `name`, `lookup_key`, `id`, and one-line `metadata.description` if present. Ask the user to pick by number, name, or id.
    - **More than 10:** ask for a search term (e.g. "which agent?") and filter the list locally by `name` / `lookup_key` / `metadata.description` (case-insensitive substring). If the filter still returns more than 10, show the top 10 and ask them to narrow further.
    - **Zero agents:** tell the user no agents are deployed in the current app, and suggest deploying one via the `deploy-agent` skill, or passing `--app <id>` if they meant a different app.
-3. Start impersonation:
+3. Start the embed:
    ```
-   archagent impersonate start <agent-or-flags>
+   archagent embed start <agent-or-flags>
    ```
 4. Fetch the resolved state:
    ```
-   archagent impersonate status --json
+   archagent embed status --json
    ```
 
 Read the `identity_file` path from the returned state. Open and read that file. Adopt the identity for the current Codex session while retaining your normal capabilities.
@@ -50,7 +50,7 @@ Read the `identity_file` path from the returned state. Open and read that file. 
 After adoption, check `state.skills`. If the agent has linked skills, tell the user what's available and offer to install them:
 
 ```
-archagent impersonate list skills --json
+archagent embed list skills --json
 ```
 
 ### Active + user asks about status (or no specific intent)
@@ -68,13 +68,13 @@ If the identity file has not been read in this session yet, read it and adopt th
 ### Active + user wants to sync/refresh
 
 ```
-archagent impersonate sync
+archagent embed sync
 ```
 
 Then:
 
 ```
-archagent impersonate status --json
+archagent embed status --json
 ```
 
 Re-read the `identity_file` and re-adopt the refreshed identity. Report what changed (new/removed tools or skills).
@@ -82,23 +82,23 @@ Re-read the `identity_file` and re-adopt the refreshed identity. Report what cha
 ### Active + user wants to stop
 
 ```
-archagent impersonate stop
+archagent embed stop
 ```
 
-Drop the impersonated identity from the current session. Confirm that local state was removed.
+Drop the embedded identity from the current session. Confirm that local state was removed.
 
 ### Active + user asks about tools
 
-List the impersonated agent's tools:
+List the embedded agent's tools:
 
 ```
-archagent impersonate list tools --json
+archagent embed list tools --json
 ```
 
 To execute a tool directly:
 
 ```
-archagent impersonate run tool <tool-name> --input '<json>' --json
+archagent embed run tool <tool-name> --input '<json>' --json
 ```
 
 ### Active + user asks about skills
@@ -106,7 +106,7 @@ archagent impersonate run tool <tool-name> --input '<json>' --json
 List available skills:
 
 ```
-archagent impersonate list skills --json
+archagent embed list skills --json
 ```
 
 Show what's available vs what's already installed (from `state.loaded_skills`).
@@ -114,7 +114,7 @@ Show what's available vs what's already installed (from `state.loaded_skills`).
 To install a skill:
 
 ```
-archagent impersonate install skill <skill-id-or-slug>
+archagent embed install skill <skill-id-or-slug>
 ```
 
 After install, report the invocation command (e.g., `/<skill-name>`) so the user knows how to use it.
@@ -122,12 +122,12 @@ After install, report the invocation command (e.g., `/<skill-name>`) so the user
 For Codex or OpenCode targets:
 
 ```
-archagent impersonate install skill <id> --harness codex --install-scope project
+archagent embed install skill <id> --harness codex --install-scope project
 ```
 
 ### Inactive + user asks about status
 
-Report that no impersonation is active and offer to start one.
+Report that no embed is active and offer to start one.
 
 ## Adopting the Identity
 
@@ -136,15 +136,15 @@ When you read the identity file, you must **become that agent** for the rest of 
 - **Personality and tone.** If the identity describes a communication style, temperament, or way of talking, use it. Match the agent's voice — formal, casual, terse, friendly, technical — whatever the identity defines.
 - **Background and expertise.** If the identity describes a role, domain knowledge, or professional background, let that shape your reasoning. Approach problems the way this agent would, prioritize what it would prioritize, and flag what it would flag.
 - **Scope and boundaries.** If the identity defines what the agent handles vs what it doesn't, respect those boundaries. When asked about something outside the agent's domain, say so in character rather than reverting to generic assistant behavior.
-- **Stay in character across turns.** Do not drop the persona between messages. Do not preface responses with disclaimers like "As the impersonated agent..." — just be the agent.
+- **Stay in character across turns.** Do not drop the persona between messages. Do not preface responses with disclaimers like "As the embedded agent..." — just be the agent.
 - **Keep your capabilities.** You still have full tool access (file read/write, bash, search, etc.). The identity shapes how and when you use them, not whether you can.
 
 After `stop`, fully drop the persona and return to your normal behavior.
 
 ## Limitations
 
-- **Integration tools do not resolve during impersonation.** Tools backed by server-side integrations (GitHub, Slack, Gmail, etc.) require OAuth credentials that cannot be exported locally. Only builtin tools and custom script tools are available.
-- For agents that rely primarily on integrations, use agent sessions (`archagent create agentsession --agent <id> --wait`) instead of impersonation.
+- **Integration tools do not resolve while embedded.** Tools backed by server-side integrations (GitHub, Slack, Gmail, etc.) require OAuth credentials that cannot be exported locally. Only builtin tools and custom script tools are available.
+- For agents that rely primarily on integrations, use agent sessions (`archagent create agentsession --agent <id> --wait`) instead of embed.
 
 ## Session Integration
 

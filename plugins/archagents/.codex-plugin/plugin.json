@@ -1,7 +1,7 @@
 {
   "name": "archagents",
-  "version": "0.7.8",
-  "description": "Author, deploy, manage, chat with, and impersonate ArchAgents from Codex through the ArchAgent CLI.",
+  "version": "0.7.9",
+  "description": "Author, deploy, manage, chat with, and embed ArchAgents from Codex through the ArchAgent CLI.",
   "author": {
     "name": "ArchAstro",
     "email": "dev@archastro.com",
@@ -15,15 +15,15 @@
     "cli",
     "agent-authoring",
     "deployment",
-    "impersonation",
+    "embed",
     "developer-platform",
     "codex"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "ArchAgents",
-    "shortDescription": "Complete ArchAgent workflows for Codex: authoring, deployment, chat, configs, and impersonation.",
-    "longDescription": "Use the public ArchAgent CLI from Codex to author agent configs, manage local config files, build scripts, skills, and workflows, deploy agents, chat with running agents, and impersonate deployed ArchAgents from the current session.",
+    "shortDescription": "Complete ArchAgent workflows for Codex: authoring, deployment, chat, configs, and embed.",
+    "longDescription": "Use the public ArchAgent CLI from Codex to author agent configs, manage local config files, build scripts, skills, and workflows, deploy agents, chat with running agents, and embed deployed ArchAgents into the current session.",
     "developerName": "ArchAstro",
     "category": "Development",
     "capabilities": [
@@ -36,7 +36,7 @@
       "Author a config-driven ArchAgent.",
       "Set up local configs for this repo.",
       "Chat with a deployed ArchAgent.",
-      "Start impersonating an ArchAgent."
+      "Embed an ArchAgent into this session."
     ],
     "brandColor": "#0F766E"
   }
