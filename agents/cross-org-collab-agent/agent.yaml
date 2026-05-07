@@ -207,10 +207,11 @@ setup_requirements:
     scope: agent_env_var
     secret: true
     description: |
-      GitHub PAT with `repo` scope on your private repo. The agent
-      uses this to read code privately (in its reasoning context, not
-      the chat) and to open PRs with implementation. Field guards keep
-      the source out of any cross-org messages.
+      GitHub token used by this sample's custom scripts to read code,
+      create branches, commit files, and open PRs. Prefer a
+      fine-grained PAT with Contents: read/write, Pull requests:
+      read/write, and Metadata: read. A classic `repo` token also
+      works but is broader.
     example: "ghp_xxxxxxxxxxxx"
 
   - kind: env_var
@@ -232,9 +233,9 @@ setup_requirements:
       to mention it in cross-org messages.
       Example: `Python/Django backend, React frontend, AWS infra`.
 
-  # Required install — GitHub App / PAT-backed install for code reads
-  # and PR creation. The privacy story breaks if the agent can't
-  # actually read the source.
+  # Required install — GitHub App installation for repo enablement.
+  # The sample's custom scripts still use GITHUB_TOKEN for private code
+  # reads, branch creation, commits, and PR creation.
   - kind: install
     installation_kind: integration/github
     description: |

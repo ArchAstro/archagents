@@ -100,7 +100,7 @@ archagent create agentinstallationsources \
 
 | Variable | What it is |
 |---|---|
-| `GITHUB_TOKEN` | PAT with `repo` scope |
+| `GITHUB_TOKEN` | GitHub token used by the sample's custom scripts. Inline comments post as this account. Prefer a fine-grained PAT with Contents: read, Pull requests: read/write, and Metadata: read. A classic `repo` token also works but is broader. |
 | `BOT_LOGIN` | The PAT account's GitHub username (for dedup) |
 
 ## Compliance rules format

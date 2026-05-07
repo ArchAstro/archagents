@@ -68,7 +68,7 @@ drives the rest:
 
 | Variable | What it is |
 |---|---|
-| `GITHUB_TOKEN` | Personal access token with `repo` scope. Reviews will post as this account. |
+| `GITHUB_TOKEN` | GitHub token used by the sample's custom scripts. Reviews post as this account. Prefer a fine-grained PAT with Contents: read, Pull requests: read/write, and Metadata: read. A classic `repo` token also works but is broader. |
 | `REPO_OWNER` | GitHub org/user the agent reviews PRs for (e.g., `your-org`) |
 | `REPO_NAME` | Repository name (e.g., `your-repo`) |
 

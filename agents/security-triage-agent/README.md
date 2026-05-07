@@ -87,7 +87,7 @@ Then upload your security policy documents (see "Knowledge base setup" below).
 
 | Variable | What it is |
 |---|---|
-| `GITHUB_TOKEN` | PAT with `repo` scope. PRs and issues post as this account. |
+| `GITHUB_TOKEN` | GitHub token used by the sample's custom scripts. PRs and issues post as this account. Prefer a fine-grained PAT with Contents: read/write, Pull requests: read/write, Issues: read/write, and Metadata: read. A classic `repo` token also works but is broader. |
 | `DEFAULT_REPO_OWNER` | GitHub org for default scanning |
 | `DEFAULT_REPO_NAME` | Default repo to scan |
 | `DEFAULT_ECOSYSTEM` | `hex` for Elixir, `npm` for Node, `pip` for Python, etc. |

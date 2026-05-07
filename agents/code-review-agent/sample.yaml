@@ -18,7 +18,7 @@ schema_version: 2
 # Bump this to cut a new per-sample release. CI creates GitHub Release
 # "<slug>-<version>" with a tarball of this directory on every merge to
 # main where the version tag does not yet exist.
-version: v0.3.1
+version: v0.3.2
 
 name: "Code Review Agent"
 tagline: "A senior engineer that reviews every PR like it's going into production at 3am."

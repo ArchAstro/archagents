@@ -190,9 +190,11 @@ setup_requirements:
     scope: agent_env_var
     secret: true
     description: |
-      GitHub PAT with `repo` scope. Inline compliance comments post
-      as this account. For a clean audit trail, create a dedicated
-      bot user (e.g. `acme-compliance-bot`).
+      GitHub token used by this sample's custom scripts. Inline
+      compliance comments post as this account. Prefer a fine-grained
+      PAT with Contents: read, Pull requests: read/write, and
+      Metadata: read. A classic `repo` token also works but is
+      broader.
     example: "ghp_xxxxxxxxxxxx"
 
   # Optional — used by `resolve_review_threads` to identify which

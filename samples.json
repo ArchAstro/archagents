@@ -19,21 +19,21 @@
       "slug": "code-review-agent",
       "name": "Code Review Agent",
       "tagline": "A senior engineer that reviews every PR like it's going into production at 3am.",
-      "current_version": "v0.3.1",
+      "current_version": "v0.3.2",
       "min_cli_version": "0.28.0"
     },
     {
       "slug": "compliance-reviewer",
       "name": "Compliance Reviewer",
       "tagline": "Reviews pull requests against compliance rules — does not review style or bugs.",
-      "current_version": "v0.3.1",
+      "current_version": "v0.3.2",
       "min_cli_version": "0.28.0"
     },
     {
       "slug": "cross-org-collab-agent",
       "name": "Cross-Org Collaboration Agent",
       "tagline": "A code-aware engineering agent that participates in cross-org threads with field guards enforced.",
-      "current_version": "v0.3.0",
+      "current_version": "v0.3.1",
       "min_cli_version": "0.28.0"
     },
     {
@@ -61,21 +61,21 @@
       "slug": "release-notes-bot",
       "name": "Release Notes Bot",
       "tagline": "Drafts the weekly changelog by scanning merged PRs on a schedule.",
-      "current_version": "v0.3.0",
+      "current_version": "v0.3.1",
       "min_cli_version": "0.28.0"
     },
     {
       "slug": "security-triage-agent",
       "name": "Security Triage Agent",
       "tagline": "A senior security engineer that triages vulnerabilities found by daily dependency scans.",
-      "current_version": "v0.3.4",
+      "current_version": "v0.3.5",
       "min_cli_version": "0.28.0"
     },
     {
       "slug": "threat-intel-agent",
       "name": "Threat Intelligence Agent",
       "tagline": "A security intelligence analyst that produces daily threat briefs from monitored feeds.",
-      "current_version": "v0.3.1",
+      "current_version": "v0.3.2",
       "min_cli_version": "0.28.0"
     }
   ]
