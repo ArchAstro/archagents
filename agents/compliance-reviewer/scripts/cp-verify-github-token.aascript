@@ -1,4 +1,4 @@
-// Verifier for the `verify-github-token` setup action.
+// Verifier for the `cp-verify-github-token` setup action.
 // Hits /user with GITHUB_TOKEN to confirm the PAT is valid and surfaces
 // the authenticated login. Returns the platform's expected verifier
 // shape: { ok: bool, message: string }.
