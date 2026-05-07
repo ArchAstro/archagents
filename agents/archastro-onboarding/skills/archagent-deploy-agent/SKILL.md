@@ -8,7 +8,7 @@ allowed-tools: ["Bash(archagent:*)"]
 
 Deploy an agent from a YAML template and get it running in a thread.
 
-This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login` if not authenticated.
+This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login <email>` if not authenticated.
 
 ## Always Start with State
 
@@ -108,5 +108,5 @@ Summarize what's deployed and offer to deploy a new one or add an existing one t
 
 - Do not inspect or edit credential files directly — use the CLI only.
 - Do not ask the user to pick a subcommand — infer the action from their message.
-- If the CLI reports an auth or app error, run `archagent auth login` or suggest `--app <id>`.
+- If the CLI reports an auth or app error, run `archagent auth login <email>` or suggest `--app <id>`.
 - Keep responses concise — state the outcome, not the process.

@@ -93,19 +93,16 @@ irm https://raw.githubusercontent.com/ArchAstro/archagents/main/install.ps1 | ie
 
 ## Plugins for AI coding assistants
 
-### Claude Code
+Install the local Claude Code and Codex plugins with the setup command:
 
-```text
-/plugin marketplace add archastro/archagents
-/plugin install archagents@archagents
+```bash
+archagent setup
 ```
 
-### Codex
+To install into the current project instead of your user-level config:
 
-```text
-git clone https://github.com/ArchAstro/archagents.git
-cd archagents && codex
-/plugins
+```bash
+archagent setup --scope project
 ```
 
 The `archagents` plugin bundles CLI auth, agent authoring, script and

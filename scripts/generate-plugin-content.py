@@ -41,8 +41,8 @@ SUBSTITUTIONS (resolved per target harness)
     {{INSTALL_ROUTE}}      "direct the user to `/archagents:install`" |
                            "instruct the user to install or upgrade `archagent`"
     {{AUTH_ROUTE}}         "direct the user to `/archagents:auth`" |
-                           "instruct the user to run `archagent auth login`"
-    {{AUTH_ROUTE_SHORT}}   "route to `/archagents:auth`" | "run `archagent auth login`"
+                           "instruct the user to run `archagent auth login <email>`"
+    {{AUTH_ROUTE_SHORT}}   "route to `/archagents:auth`" | "run `archagent auth login <email>`"
 
 CONDITIONAL BLOCKS (emit only for matching targets)
     {{#SKILL}} ... {{/SKILL}}                  any skill target (claude or codex)
@@ -117,11 +117,11 @@ SUBSTITUTIONS: dict[Harness, dict[str, str]] = {
         "{{SESSION}}": "Codex session",
         "{{ASSUME_INSTALLED}}": (
             "Install or upgrade `archagent` if missing, and run "
-            "`archagent auth login` if not authenticated."
+            "`archagent auth login <email>` if not authenticated."
         ),
         "{{INSTALL_ROUTE}}": "instruct the user to install or upgrade `archagent`",
-        "{{AUTH_ROUTE}}": "instruct the user to run `archagent auth login`",
-        "{{AUTH_ROUTE_SHORT}}": "run `archagent auth login`",
+        "{{AUTH_ROUTE}}": "instruct the user to run `archagent auth login <email>`",
+        "{{AUTH_ROUTE_SHORT}}": "run `archagent auth login <email>`",
     },
 }
 

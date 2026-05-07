@@ -8,7 +8,7 @@ allowed-tools: ["Bash(archagent:*)"]
 
 Create or update the config files for a config-driven ArchAstro agent before deployment.
 
-This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login` if not authenticated.
+This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login <email>` if not authenticated.
 
 ## Always Start with State
 

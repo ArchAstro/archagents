@@ -8,7 +8,7 @@ allowed-tools: ["Bash(archagent:*)"]
 
 Set up and manage a local `configs/` directory for editing agent configs as files, syncing with the server, and deploying changes.
 
-This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login` if not authenticated.
+This skill assumes the ArchAgent CLI is already installed and authenticated. Install or upgrade `archagent` if missing, and run `archagent auth login <email>` if not authenticated.
 
 ## What is Local Config Management?
 

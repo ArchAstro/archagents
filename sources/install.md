@@ -54,4 +54,4 @@ Install or upgrade the public `archagent` binary from Homebrew or GitHub Release
    - `command not found: archagent` after install usually means the install directory is not on `PATH`.
    - Release download failures usually mean the target release asset has not been published yet.
 
-6. **On success**, tell the user the CLI is ready and {{#CLAUDE_COMMAND}}suggest `/archagents:auth`{{/CLAUDE_COMMAND}}{{#SKILL}}suggest they run `archagent auth login` to authenticate{{/SKILL}}.
+6. **On success**, tell the user the CLI is ready and {{#CLAUDE_COMMAND}}suggest `/archagents:auth`{{/CLAUDE_COMMAND}}{{#SKILL}}suggest they run `archagent setup` to install the Claude Code/Codex plugins, then `archagent auth login <email>` to authenticate{{/SKILL}}.
