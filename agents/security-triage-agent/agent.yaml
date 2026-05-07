@@ -408,14 +408,14 @@ setup_requirements:
   # every repo in MONITORED_REPOS. Catches the common "I made the
   # bot but forgot to add it as a collaborator" failure mode.
   - kind: custom
-    id: verify-monitored-repos-access
+    id: st-verify-monitored-repos-access
     title: "Verify the bot can read every monitored repo"
     description: |
       Iterates `MONITORED_REPOS` and hits each repo's
       `/repos/{owner}/{name}` endpoint with `GITHUB_TOKEN` to
       confirm access. Surfaces any repos the bot can't see.
     verify:
-      script_ref: verify-monitored-repos-access
+      script_ref: st-verify-monitored-repos-access
     depends_on: [GITHUB_TOKEN, MONITORED_REPOS]
 
 metadata:

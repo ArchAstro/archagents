@@ -281,13 +281,13 @@ setup_requirements:
   # Custom verifier — confirms the PAT is valid and the bot identity
   # is reachable. Catches the common "expired/revoked PAT" failure.
   - kind: custom
-    id: verify-github-token
+    id: cr-verify-github-token
     title: "Verify GITHUB_TOKEN is valid"
     description: |
       Hits `/user` with `GITHUB_TOKEN` to confirm the PAT is valid
       and reports the authenticated login.
     verify:
-      script_ref: verify-github-token
+      script_ref: cr-verify-github-token
     depends_on: [GITHUB_TOKEN]
 
 metadata:

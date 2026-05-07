@@ -1,4 +1,4 @@
-// Verifier for the `verify-monitored-repos-access` setup action.
+// Verifier for the `ti-verify-monitored-repos-access` setup action.
 // Iterates MONITORED_REPOS (comma-separated owner/repo) and pings each
 // /repos/{owner}/{name} endpoint with GITHUB_TOKEN. Returns the
 // platform's expected verifier shape: { ok: bool, message: string }.
