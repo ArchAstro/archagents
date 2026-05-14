@@ -154,6 +154,16 @@ tools:
     status: active
 
 routines:
+  - name: Participate in conversations
+    description: Join threads when added so users can ask compliance questions ad hoc.
+    handler_type: preset
+    preset_name: participate
+    event_type: thread.session.join
+    event_config:
+      thread.session.join:
+        filters: {}
+    status: active
+
   - name: compliance-review-pr
     description: Triggered by GitHub PR webhooks; reviews against compliance rules
     handler_type: preset

@@ -218,6 +218,16 @@ tools:
     status: active
 
 routines:
+  - name: Participate in conversations
+    description: Join threads when added so users can ask review-related questions ad hoc.
+    handler_type: preset
+    preset_name: participate
+    event_type: thread.session.join
+    event_config:
+      thread.session.join:
+        filters: {}
+    status: active
+
   - name: auto-review-prs
     description: Triggered by GitHub PR webhooks; routes through dedup + review workflow
     handler_type: preset

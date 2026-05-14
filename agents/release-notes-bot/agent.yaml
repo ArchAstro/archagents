@@ -101,6 +101,16 @@ tools:
     status: active
 
 routines:
+  - name: Participate in conversations
+    description: Join threads when added so users can request ad hoc release notes.
+    handler_type: preset
+    preset_name: participate
+    event_type: thread.session.join
+    event_config:
+      thread.session.join:
+        filters: {}
+    status: active
+
   - name: weekly-release-notes
     description: Draft a weekly changelog from merged PRs
     handler_type: preset
