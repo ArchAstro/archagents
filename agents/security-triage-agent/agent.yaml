@@ -254,6 +254,16 @@ tools:
     status: active
 
 routines:
+  - name: Participate in conversations
+    description: Join threads when added so users can ask security questions ad hoc.
+    handler_type: preset
+    preset_name: participate
+    event_type: thread.session.join
+    event_config:
+      thread.session.join:
+        filters: {}
+    status: active
+
   - name: daily-dependency-scan
     description: Scan all monitored repos for vulnerable dependencies and triage
     handler_type: preset

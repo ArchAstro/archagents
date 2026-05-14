@@ -165,6 +165,16 @@ tools:
     status: active
 
 routines:
+  - name: Participate in conversations
+    description: Join threads when added so users can request ad hoc threat-intel lookups.
+    handler_type: preset
+    preset_name: participate
+    event_type: thread.session.join
+    event_config:
+      thread.session.join:
+        filters: {}
+    status: active
+
   - name: daily-threat-brief
     description: Daily threat intelligence brief at 07:00 UTC
     handler_type: preset
