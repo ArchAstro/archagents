@@ -1,0 +1,23 @@
+# Repo-root project file consumed by uv. The scripts under scripts/ are
+# the only Python in this repo — there is no package to install, just a
+# shared dependency set (pyyaml) and a pinned Python version. uv reads
+# this file + .python-version to materialize the venv that backs every
+# `uv run scripts/<name>.py` invocation.
+
+[project]
+name = "archagents-scripts"
+version = "0.0.0"
+description = "Tooling for ArchAgents samples — validator, packager, scaffolder, CI orchestration."
+requires-python = ">=3.12"
+dependencies = [
+    # Pinned to match the version every workflow used to install
+    # explicitly via `pip install pyyaml==6.0.2`. Bump deliberately;
+    # uv.lock locks the exact resolved version + hashes.
+    "pyyaml==6.0.2",
+]
+
+[tool.uv]
+# `package = false` tells uv this project is a script repo, not a
+# distributable package. uv won't try to build/install us as a wheel —
+# it just stands up a venv with the deps and runs scripts inside it.
+package = false

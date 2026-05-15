@@ -1,7 +1,7 @@
 # sample.yaml is the source of truth for this sample's catalog metadata
 # and deploy sequence. Edit it, then run:
 #
-#   python3 scripts/generate_sample_artifacts.py
+#   uv run scripts/sample_tool.py generate
 #
 # to regenerate committed artifacts. CI fails if this file changes
 # without the generated artifacts being regenerated in the same PR.

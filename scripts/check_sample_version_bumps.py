@@ -150,7 +150,7 @@ def main() -> int:
             f"  agents/{slug}: files changed but version: unchanged at {version}.\n"
             f"    Bump version: in agents/{slug}/sample.yaml so release-samples.yml\n"
             f"    cuts a new tarball with your changes (and remember to regenerate\n"
-            f"    samples.json via scripts/generate_sample_artifacts.py).",
+            f"    samples.json via `uv run scripts/sample_tool.py generate`).",
             file=sys.stderr,
         )
         print("", file=sys.stderr)

@@ -1,193 +1,34 @@
-#!/usr/bin/env python3
 """
-Generate per-sample artifacts + the top-level samples.json catalog from
-each sample's sample.yaml.
+Sample-YAML validation. Errors raise SampleError so the CLI wrapper
+prints them with a single ERROR: prefix and exits non-zero.
 
-For every agents/<slug>/ directory:
-
-  - Read sample.yaml (schema_version, version, name, tagline,
-    min_cli_version, steps) and validate the DSL shape.
-
-  - Always write .aaignore. Sample directories are deploy-atomic —
-    the whole thing gets installed by `archastro install agentsample
-    <slug>` via the DSL executor, so `archastro deploy configs`
-    shouldn't re-upload anything inside. We enumerate the top-level
-    contents (excluding .aaignore + sample.yaml themselves) so the
-    ignore list stays accurate as files are added.
-
-After all samples, write samples.json at the repo root — the catalog
-the CLI + portal read for `listSamples()`.
-
-NOTE: We no longer emit deploy.sh. The user-facing flow is now
-`archastro install agentsample <slug>`, which fetches the release
-tarball, parses this sample.yaml's `steps:` block, and runs the
-@archastro/samples-catalog DSL executor. Nothing lands on disk.
-Sample authors iterating on a local checkout can use
-`archastro install sample .` instead. The deprecated deploy.sh files
-(and per-sample upload-rules.sh / upload-knowledge.sh helpers) are
-deleted as part of the migration.
-
-USAGE
-    python3 scripts/generate_sample_artifacts.py           # write outputs
-    python3 scripts/generate_sample_artifacts.py --check   # exit 1 on drift
-
-CI runs --check on every PR. Regenerate locally and commit before pushing.
+`validate_sample` is the entry point: it sanity-checks the top-level
+fields (schema_version, version, name, tagline, min_cli_version) and
+then delegates to `validate_steps`, which in turn walks any
+`deploy_agent` template to validate its `setup_requirements:` block.
 """
 from __future__ import annotations
 
-import argparse
-import json
 import pathlib
-import re
-import sys
 from typing import Any
 
 import yaml
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-AGENTS_DIR = REPO_ROOT / "agents"
-MANIFEST_PATH = REPO_ROOT / "samples.json"
-MANIFEST_SCHEMA_VERSION = 1
-
-# Bump sample.yaml's schema_version to 2 to signal the DSL migration:
-# capabilities / deploy_mode are gone; a `steps:` block is now required.
-# Samples declaring schema_version: 1 in this repo would be an
-# un-migrated holdover — the validator rejects them to force the
-# author's attention.
-SAMPLE_SCHEMA_VERSION = 2
-
-# Always-excluded entries in .aaignore. The sample dir itself is
-# install-authoritative — every file inside is managed by the DSL
-# executor — so we just enumerate every top-level entry at generate
-# time. These two filenames stay out of the enumeration so the
-# generated file doesn't list itself.
-AAIGNORE_SKIP = frozenset({".aaignore"})
-
-# Semver-ish: `v<MAJOR>.<MINOR>.<PATCH>`. Prereleases deferred.
-VERSION_RE = re.compile(r"^v\d+\.\d+\.\d+$")
-
-# Loose semver match for min_cli_version. Keep in sync with the CLI's
-# update-check.ts compareSemver accepted shapes.
-CLI_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
-
-# DSL verb vocabulary. Mirrors @archastro/samples-catalog's schema.ts
-# (the source of truth in TS). Keep in sync with the samples-catalog
-# package; CI would fail to deploy a sample the CLI can't execute, so
-# drift here just becomes a clear validation error.
-STEP_VERBS = {
-    "upload_scripts": {
-        "required": {"source_dir"},
-        "optional": {"glob"},
-    },
-    "upload_skills": {
-        "required": {"source_dir"},
-        "optional": set(),
-    },
-    "upload_configs": {
-        "required": {"source_dir"},
-        "optional": {"glob"},
-    },
-    "deploy_agent": {
-        "required": {"template_file"},
-        "optional": set(),
-    },
-    "upload_files": {
-        "required": {"source_dir", "installation_kind", "source_type"},
-        "optional": {"glob", "content_type"},
-    },
-}
-
-# `setup_requirements:` entries in agent.yaml. Mirrors the discriminated
-# union in @archastro/samples-catalog's schema.ts. Each entry becomes
-# one row in the platform's `agent_health_actions` table at install
-# time (source: setup, status: pending). Validating shape at packaging
-# time catches mistakes before the sample ships.
-SETUP_REQUIREMENT_KINDS = {
-    "env_var": {
-        "required": {"key", "scope", "description"},
-        "optional": {
-            "secret",
-            "example",
-            "validate_regex",
-            "required",
-            "title",
-            "depends_on",
-        },
-    },
-    "install": {
-        "required": {"installation_kind", "description"},
-        "optional": {"required", "title", "depends_on"},
-    },
-    "custom": {
-        "required": {"id", "title", "description", "verify"},
-        "optional": {"required", "depends_on"},
-    },
-}
-
-ENV_VAR_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
-ENV_VAR_SCOPES = frozenset({"org_env_var", "agent_env_var"})
-
-SCRIPT_EXT = ".aascript"
+from .paths import (
+    CLI_VERSION_RE,
+    ENV_VAR_KEY_RE,
+    ENV_VAR_SCOPES,
+    SAMPLE_SCHEMA_VERSION,
+    SCRIPT_EXTENSIONS,
+    SETUP_REQUIREMENT_KINDS,
+    STEP_VERBS,
+    VERSION_RE,
+    display_path,
+)
 
 
 class SampleError(Exception):
     """Raised for any validation problem in a sample.yaml or its directory."""
-
-
-def _display_path(path: pathlib.Path) -> pathlib.Path:
-    """Render `path` relative to REPO_ROOT when possible (cleaner errors in CI)."""
-    try:
-        return path.relative_to(REPO_ROOT)
-    except ValueError:
-        return path
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help="Exit non-zero if committed artifacts differ from regeneration.",
-    )
-    args = parser.parse_args()
-
-    samples = load_all_samples()
-    samples.sort(key=lambda s: s["slug"])
-
-    planned: dict[pathlib.Path, str] = {}
-    for sample in samples:
-        sample_dir = AGENTS_DIR / sample["slug"]
-        planned[sample_dir / ".aaignore"] = render_aaignore(sample_dir)
-    planned[MANIFEST_PATH] = render_manifest(samples)
-
-    if args.check:
-        return check_drift(planned)
-
-    for path, body in planned.items():
-        write_if_changed(path, body)
-    return 0
-
-
-# --- loading + validation ---------------------------------------------------
-
-
-def load_all_samples() -> list[dict[str, Any]]:
-    samples: list[dict[str, Any]] = []
-    for sample_dir in sorted(AGENTS_DIR.iterdir()):
-        if not sample_dir.is_dir():
-            continue
-        yaml_path = sample_dir / "sample.yaml"
-        if not yaml_path.exists():
-            raise SampleError(
-                f"{sample_dir.relative_to(REPO_ROOT)}: missing sample.yaml. "
-                f"Every sample directory must declare its version + DSL steps."
-            )
-        raw = yaml.safe_load(yaml_path.read_text())
-        sample = validate_sample(sample_dir.name, raw, yaml_path)
-        samples.append(sample)
-    if not samples:
-        raise SampleError(f"No samples found under {AGENTS_DIR}")
-    return samples
 
 
 def validate_sample(slug: str, raw: Any, source: pathlib.Path) -> dict[str, Any]:
@@ -195,7 +36,7 @@ def validate_sample(slug: str, raw: Any, source: pathlib.Path) -> dict[str, Any]
     Validate a sample.yaml. Errors point at source path + the offending key
     so a CI failure tells the author exactly where to look.
     """
-    where = _display_path(source)
+    where = display_path(source)
     if not isinstance(raw, dict):
         raise SampleError(f"{where}: top-level must be a mapping, got {type(raw).__name__}")
 
@@ -274,7 +115,7 @@ def validate_steps(slug: str, steps: Any, source: pathlib.Path) -> None:
     step would produce. Catches "verify.script_ref points at a script
     you forgot to ship" before it becomes a runtime install error.
     """
-    where = _display_path(source)
+    where = display_path(source)
     if not isinstance(steps, list):
         raise SampleError(f"{where}: steps must be a list, got {type(steps).__name__}")
 
@@ -369,11 +210,14 @@ def _script_lookup_keys(sample_dir: pathlib.Path, step: dict[str, Any]) -> set[s
     source_dir = sample_dir / step["source_dir"]
     if not source_dir.is_dir():
         return set()
-    # samples-catalog defaults the glob to `*.aascript`; we only honor
-    # that case for now (no .aascript fanout via custom globs).
+    # Accept either accepted script extension (.aascript or .agentscript).
+    # The step's `glob:` (if any) decides what the executor actually
+    # uploads at install time — this discovery is just for resolving
+    # setup_requirements.verify.script_ref by file stem, so it's safe
+    # (and helpful) to be permissive.
     keys: set[str] = set()
     for child in source_dir.iterdir():
-        if child.is_file() and child.suffix == SCRIPT_EXT:
+        if child.is_file() and child.suffix in SCRIPT_EXTENSIONS:
             keys.add(child.stem)
     return keys
 
@@ -399,7 +243,7 @@ def validate_setup_requirements(
         raw = yaml.safe_load(agent_yaml_path.read_text())
     except yaml.YAMLError as exc:
         raise SampleError(
-            f"{_display_path(agent_yaml_path)}: invalid YAML — {exc}"
+            f"{display_path(agent_yaml_path)}: invalid YAML — {exc}"
         )
 
     if not isinstance(raw, dict):
@@ -411,7 +255,7 @@ def validate_setup_requirements(
     if requirements is None:
         return
 
-    where = _display_path(agent_yaml_path)
+    where = display_path(agent_yaml_path)
     if not isinstance(requirements, list):
         raise SampleError(
             f"{where}: setup_requirements must be a list, got "
@@ -532,91 +376,3 @@ def _check_setup_requirement_shape(
             f"{where}: setup_requirements[{idx}].id must be a non-empty string"
         )
     return identifier
-
-
-# --- rendering --------------------------------------------------------------
-
-
-def render_aaignore(sample_dir: pathlib.Path) -> str:
-    """
-    Produce the sample's .aaignore. Every top-level entry in the sample
-    dir is listed so `archastro deploy configs` treats the sample as
-    install-authoritative and skips it entirely — the DSL executor
-    handles every file inside.
-    """
-    entries: list[str] = []
-    for child in sorted(sample_dir.iterdir()):
-        if child.name in AAIGNORE_SKIP:
-            continue
-        entries.append(f"{child.name}/" if child.is_dir() else child.name)
-    header = (
-        "# Auto-generated by scripts/generate_sample_artifacts.py — do not edit.\n"
-        "#\n"
-        "# This sample is installed via `archastro install agentsample <slug>`,\n"
-        "# which reads sample.yaml's `steps:` block and runs the DSL executor.\n"
-        "# `archastro deploy configs` should skip every file inside this\n"
-        "# directory.\n"
-    )
-    return header + "\n".join(entries) + "\n"
-
-
-def render_manifest(samples: list[dict[str, Any]]) -> str:
-    """
-    Build samples.json. The CLI + portal read this file directly to
-    populate their sample-selection menus — one network round trip for
-    the whole catalog.
-
-    Deterministic: no `generated_at` timestamp so `--check` is stable.
-    Per-version release dates come from the GitHub Release timestamp.
-    """
-    manifest = {
-        "$schema_version": MANIFEST_SCHEMA_VERSION,
-        "samples": [
-            {
-                "slug": s["slug"],
-                "name": s["name"],
-                "tagline": s["tagline"],
-                "current_version": s["version"],
-                "min_cli_version": s["min_cli_version"],
-            }
-            for s in samples
-        ],
-    }
-    return json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
-
-
-# --- write / drift check ----------------------------------------------------
-
-
-def write_if_changed(path: pathlib.Path, body: str) -> None:
-    """Only write when the content would change — keeps mtimes stable for tar."""
-    if path.exists() and path.read_text() == body:
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(body)
-
-
-def check_drift(planned: dict[pathlib.Path, str]) -> int:
-    drifted: list[pathlib.Path] = []
-    for path, body in planned.items():
-        if not path.exists() or path.read_text() != body:
-            drifted.append(path)
-    if not drifted:
-        return 0
-    print(
-        "The following files are out of date. Run:\n"
-        "    python3 scripts/generate_sample_artifacts.py\n"
-        "and commit the result.\n",
-        file=sys.stderr,
-    )
-    for path in drifted:
-        print(f"  - {path.relative_to(REPO_ROOT)}", file=sys.stderr)
-    return 1
-
-
-if __name__ == "__main__":
-    try:
-        sys.exit(main())
-    except SampleError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        sys.exit(2)

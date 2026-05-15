@@ -6,24 +6,27 @@ on:
     paths:
       - "agents/**"
       - "install.sh"
-      - "scripts/validate_sample_scripts.py"
-      - "scripts/test_validate_sample_scripts.py"
+      - "scripts/sample_tool.py"
+      - "scripts/_sample_lib/**"
+      - "scripts/test_sample_tool.py"
       - ".github/workflows/validate-sample-scripts.yml"
   pull_request_target:
     branches: [main]
     paths:
       - "agents/**"
       - "install.sh"
-      - "scripts/validate_sample_scripts.py"
-      - "scripts/test_validate_sample_scripts.py"
+      - "scripts/sample_tool.py"
+      - "scripts/_sample_lib/**"
+      - "scripts/test_sample_tool.py"
       - ".github/workflows/validate-sample-scripts.yml"
   push:
     branches: [main]
     paths:
       - "agents/**"
       - "install.sh"
-      - "scripts/validate_sample_scripts.py"
-      - "scripts/test_validate_sample_scripts.py"
+      - "scripts/sample_tool.py"
+      - "scripts/_sample_lib/**"
+      - "scripts/test_sample_tool.py"
       - ".github/workflows/validate-sample-scripts.yml"
   workflow_dispatch:
 
@@ -39,21 +42,29 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install pyyaml==6.0.2
+          enable-cache: true
 
       - name: Run validator unit tests
-        run: python3 scripts/test_validate_sample_scripts.py
+        run: uv run scripts/test_sample_tool.py
 
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: github.event_name != 'pull_request'
+    needs: tests
+    # Gate on tests when the `tests` job actually ran (push, workflow_dispatch).
+    # On pull_request_target the `tests` job is skipped because checking out
+    # PR head into a privileged context would defeat the trusted/untrusted
+    # split — the validate job still runs its own inline tests step from
+    # trusted-source/ before shelling out to the CLI, so coverage is intact.
+    # `!cancelled()` lets us proceed when needs.tests.result is `skipped`,
+    # and the result != 'failure' check still blocks on a real failure.
+    if: |
+      !cancelled()
+      && needs.tests.result != 'failure'
+      && github.event_name != 'pull_request'
     env:
       # Required secrets: ARCHASTRO_CI_ACCESS_TOKEN, ARCHASTRO_CI_APP_ID.
       # Optional var: ARCHASTRO_CI_APP_NAME.
@@ -101,16 +112,18 @@ jobs:
           fi
           echo "::add-mask::${ARCHASTRO_CI_ACCESS_TOKEN}"
 
-      - name: Set up Python
-        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+      - name: Install uv
+        # `--project trusted-source` below points uv at the
+        # pyproject.toml + uv.lock that came with the trusted checkout,
+        # since this job has two separate checkouts (trusted-source/
+        # for validator code, sample-source/ for untrusted sample data)
+        # and the runner cwd isn't a project root.
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: "3.12"
-
-      - name: Install Python dependencies
-        run: pip install pyyaml==6.0.2
+          enable-cache: true
 
       - name: Run trusted validator unit tests
-        run: python3 trusted-source/scripts/test_validate_sample_scripts.py
+        run: uv run --project trusted-source trusted-source/scripts/test_sample_tool.py
 
       - name: Install ArchAgents CLI from public release
         env:
@@ -149,4 +162,4 @@ jobs:
             --server "${ARCHASTRO_DEV_API_URL}"
 
       - name: Validate sample scripts against production
-        run: python3 trusted-source/scripts/validate_sample_scripts.py --repo-root sample-source --cli archagent
+        run: uv run --project trusted-source trusted-source/scripts/sample_tool.py validate --repo-root sample-source --cli archagent

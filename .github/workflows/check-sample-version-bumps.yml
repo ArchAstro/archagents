@@ -24,17 +24,13 @@ jobs:
       # used by check-sample-artifacts.yml. Bump deliberately.
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Set up Python
-        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        # Pinned to match check-sample-artifacts.yml.
-        run: pip install pyyaml==6.0.2
+          enable-cache: true
 
       - name: Run unit tests
-        run: python3 scripts/test_check_sample_version_bumps.py
+        run: uv run scripts/test_check_sample_version_bumps.py
 
   check:
     runs-on: ubuntu-latest
@@ -45,13 +41,10 @@ jobs:
           # Need history to diff agents/ vs the base branch.
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install pyyaml==6.0.2
+          enable-cache: true
 
       - name: Check version bumps for changed samples
         # Route github.base_ref through env: rather than interpolating
@@ -61,4 +54,4 @@ jobs:
         # env: makes the value visible to the shell as data, not code.
         env:
           BASE_REF: ${{ github.base_ref }}
-        run: python3 scripts/check_sample_version_bumps.py "origin/${BASE_REF}"
+        run: uv run scripts/check_sample_version_bumps.py "origin/${BASE_REF}"

@@ -6,6 +6,10 @@ name: check-sample-artifacts
 #     artifact (.aaignore, samples.json) doesn't match what the generator
 #     would produce from the current sample.yaml files. Forces authors
 #     to regenerate locally before merging.
+#
+# Python/deps are managed by uv: pyproject.toml + uv.lock at the repo
+# root pin pyyaml==6.0.2 and .python-version pins CPython 3.12, so each
+# job just needs `setup-uv` and then `uv run`.
 
 on:
   push:
@@ -21,18 +25,13 @@ jobs:
       # used by check-plugin-content.yml. Bump deliberately.
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Set up Python
-        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        # Pinned to match the version used by the existing plugin generator
-        # (see .github/workflows/check-plugin-content.yml).
-        run: pip install pyyaml==6.0.2
+          enable-cache: true
 
       - name: Run unit tests
-        run: python3 scripts/test_generate_sample_artifacts.py
+        run: uv run scripts/test_sample_tool.py
 
   drift:
     runs-on: ubuntu-latest
@@ -40,13 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Set up Python
-        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install pyyaml==6.0.2
+          enable-cache: true
 
       - name: Check generated artifacts are up to date
-        run: python3 scripts/generate_sample_artifacts.py --check
+        run: uv run scripts/sample_tool.py generate --check
