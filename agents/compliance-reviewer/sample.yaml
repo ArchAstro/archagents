@@ -1,5 +1,5 @@
 schema_version: 2
-version: v0.3.3
+version: v0.3.4
 name: "Compliance Reviewer"
 tagline: "Reviews pull requests against compliance rules — does not review style or bugs."
 min_cli_version: "0.28.0"
