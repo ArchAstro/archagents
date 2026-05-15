@@ -155,6 +155,13 @@ to the authenticated user in org mode), `--since <message-id>`,
 `--echo`. Run `archagent watch thread --help` for the full list and the
 exact input/output shapes.
 
+**Foreground vs. background.** Short send-and-wait invocations (small
+`--idle-timeout`) should stay in the foreground — they're synchronous
+and the reply is what the user is waiting for. Long-running watches
+(`--idle-timeout 0` or multi-minute tails) should be backgrounded so
+you can keep working while messages stream in; check the watcher's
+output periodically to surface new messages.
+
 ### User wants to view a conversation
 
 For an agent session:
