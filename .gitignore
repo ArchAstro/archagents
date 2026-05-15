@@ -1,2 +1,12 @@
 .DS_Store
-scripts/__pycache__/
+
+# Python bytecode caches — match at any depth so `scripts/__pycache__/`
+# and `scripts/_sample_lib/__pycache__/` (etc.) are both covered.
+__pycache__/
+
+# uv-managed virtualenv. The lock file (uv.lock) is committed; the
+# resolved venv at .venv is not — `uv run` recreates it on demand.
+.venv/
+
+# Local review-tool scratch directory (filament). Not part of the repo.
+.filament/

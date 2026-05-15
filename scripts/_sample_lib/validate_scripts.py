@@ -1,15 +1,21 @@
-#!/usr/bin/env python3
 """
-Validate scripts shipped by agent samples through the ArchAstro CLI.
+Semantic validation of sample .aascript files via the archagent CLI.
 
-The CLI delegates semantic script validation to the production platform
-runtime, so this script is intentionally a thin orchestrator:
+The CLI delegates the actual parse/validate work to the production
+platform runtime, so this module is a thin orchestrator: discover
+every script referenced by every sample's `upload_scripts` steps,
+then shell out one `archagent validate script --file <path>` per
+script and aggregate results.
 
-    python3 scripts/validate_sample_scripts.py --cli archagent
+Lives in CI under .github/workflows/validate-sample-scripts.yml,
+which checks out the validator from a trusted ref and points it at
+an untrusted "sample-source" tree via `--repo-root`. The defensive
+symlink + parent-traversal checks below exist because the data
+that walks through this code is hostile by assumption — never
+follow a symlink, never resolve outside the sample directory.
 """
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import pathlib
@@ -22,8 +28,6 @@ from typing import Any
 
 import yaml
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
-AGENTS_DIR = REPO_ROOT / "agents"
 LITERAL_EXTENSION_GLOB_RE = re.compile(r"^\*(\.[A-Za-z0-9]+)$")
 DEFAULT_SCRIPT_TIMEOUT_SECONDS = 60
 
@@ -31,7 +35,10 @@ Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 
 class SampleScriptValidationError(RuntimeError):
-    pass
+    """Raised for any structural or filesystem problem encountered while
+    enumerating scripts to hand to the CLI. Kept separate from the
+    yaml-shape SampleError because the failure modes (timeouts,
+    subprocess returncodes, malicious symlinks) don't overlap."""
 
 
 def _load_yaml(path: pathlib.Path) -> Any:
@@ -131,7 +138,7 @@ def _safe_script_matches(
     return safe_matches
 
 
-def discover_sample_script_files(repo_root: pathlib.Path = REPO_ROOT) -> list[pathlib.Path]:
+def discover_sample_script_files(repo_root: pathlib.Path) -> list[pathlib.Path]:
     scripts: set[pathlib.Path] = set()
     for sample_yaml in _sample_yaml_paths(repo_root):
         sample = _load_yaml(sample_yaml)
@@ -196,7 +203,7 @@ def _validation_json_failed(stdout: str) -> bool:
 
 def validate_scripts(
     script_paths: Sequence[pathlib.Path],
-    repo_root: pathlib.Path = REPO_ROOT,
+    repo_root: pathlib.Path,
     cli: str = "archagent",
     runner: Runner = subprocess.run,
     timeout_seconds: int = DEFAULT_SCRIPT_TIMEOUT_SECONDS,
@@ -254,39 +261,18 @@ def validate_scripts(
     return 0
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--repo-root",
-        type=pathlib.Path,
-        default=REPO_ROOT,
-        help="Repository root containing agents/ (default: current repo)",
-    )
-    parser.add_argument(
-        "--cli",
-        default=os.environ.get("ARCHAGENTS_SCRIPT_VALIDATOR_CLI", "archagent"),
-        help="CLI executable to run (default: archagent)",
-    )
-    parser.add_argument(
-        "--timeout-seconds",
-        type=int,
-        default=DEFAULT_SCRIPT_TIMEOUT_SECONDS,
-        help=f"Per-script CLI timeout in seconds (default: {DEFAULT_SCRIPT_TIMEOUT_SECONDS})",
-    )
-    args = parser.parse_args(argv)
-    if args.timeout_seconds <= 0:
+def run_validate(
+    repo_root: pathlib.Path,
+    cli: str,
+    timeout_seconds: int,
+) -> int:
+    """CLI dispatch entrypoint used by sample_tool.py."""
+    if timeout_seconds <= 0:
         print("--timeout-seconds must be positive", file=sys.stderr)
         return 1
-
-    repo_root = args.repo_root.resolve()
     try:
-        scripts = discover_sample_script_files(repo_root)
+        scripts = discover_sample_script_files(repo_root.resolve())
     except SampleScriptValidationError as exc:
         print(str(exc), file=sys.stderr)
         return 1
-
-    return validate_scripts(scripts, repo_root, args.cli, timeout_seconds=args.timeout_seconds)
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+    return validate_scripts(scripts, repo_root.resolve(), cli, timeout_seconds=timeout_seconds)
