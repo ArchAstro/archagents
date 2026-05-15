@@ -16,7 +16,7 @@
 schema_version: 2
 
 # Bump this to cut a new per-sample release.
-version: v0.1.0
+version: v0.1.1
 
 name: "FDE Agent"
 tagline: "A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff."
