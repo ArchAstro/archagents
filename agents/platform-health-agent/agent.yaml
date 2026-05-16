@@ -30,22 +30,22 @@ identity: |
   - For unassigned issues, suggest who should own them with a brief rationale
 
 tools:
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: search
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: knowledge_search
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: long_term_memory
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: memory
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: artifacts
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: skills
     status: active
   # Required: the `integrations` builtin auto-exposes per-install agent
@@ -54,7 +54,7 @@ tools:
   # `github_create_pull_request_review_comment`, and the rest of the GitHub
   # tool surface used by Calvin and the daily-report commenting flow.
   # Without this, the agent has no callable surface for those integrations.
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: integrations
     status: active
 
@@ -155,9 +155,9 @@ routines:
     status: active
 
 installations:
-  - kind: memory/long-term
+  - install_type: memory/long-term
     config: {}
-  - kind: archastro/thread
+  - install_type: archastro/thread
     config: {}
   # GitHub App enablement: receives webhook.github_app.* events AND exposes
   # `github_create_issue_comment` etc. via the `integrations` builtin so
@@ -165,12 +165,12 @@ installations:
   # token (broad write capability) rather than the read-only PAT.
   # Same install kind calvin-bot-v3 uses for PR review commenting.
   # After deploy, install the ArchAstro GitHub App on `MONITORED_REPO`.
-  - kind: enablement/github_app
+  - install_type: enablement/github_app
     config: {}
   # Slack bot for posting messages. Required for the Slack Delivery routine.
   # `slack.send` is provided by the slack_bot install. Sister samples
   # (security-triage-agent, threat-intel-agent) use the same kind name.
-  - kind: enablement/slack_bot
+  - install_type: enablement/slack_bot
     config: {}
 
 # Post-install checklist. The platform materializes one
@@ -280,7 +280,7 @@ setup_requirements:
   # Custom verifier — confirms the bot can actually read MONITORED_REPO.
   # Catches the common "PAT token mismatch with the repo's visibility
   # or org SSO" failure mode before the agent silently no-ops.
-  - kind: custom
+  - tool_type: custom
     id: verify-monitored-repo-access
     title: "Verify the bot can read the monitored repo"
     description: |

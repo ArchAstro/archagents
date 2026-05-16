@@ -72,20 +72,20 @@ identity: |
   thread (the URL is fine, the code in the PR stays in your repo).
 
 tools:
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: knowledge_search
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: long_term_memory
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: memory
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: skills
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: get_repo_file
     description: Read a file from your private GitHub repository (internal use only — content goes into your reasoning context, not the chat)
     parameters:
@@ -100,7 +100,7 @@ tools:
     config_ref: cx-get-repo-file
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: create_branch
     description: Create a new branch in your repository
     parameters:
@@ -115,7 +115,7 @@ tools:
     config_ref: cx-create-branch
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: commit_file
     description: Create or update a file on a branch
     parameters:
@@ -132,7 +132,7 @@ tools:
     config_ref: cx-commit-file
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: create_pull_request
     description: Open a pull request from a branch
     parameters:
@@ -184,11 +184,11 @@ routines:
     status: active
 
 installations:
-  - kind: memory/long-term
+  - install_type: memory/long-term
     config: {}
-  - kind: archastro/thread
+  - install_type: archastro/thread
     config: {}
-  - kind: integration/github
+  - install_type: integration/github
     config: {}
 
 # Post-install checklist. The platform materializes one
@@ -246,7 +246,7 @@ setup_requirements:
   # Custom verifier — confirms the bot can read the configured private
   # repo. Catches "wrong repo name" and "PAT lacks access to private
   # repo" before the first cross-org session.
-  - kind: custom
+  - tool_type: custom
     id: verify-source-repo-access
     title: "Verify the bot can read the source repo"
     description: |

@@ -99,23 +99,23 @@ identity: |
   an issue, link it. When you cite a policy, name the policy.
 
 tools:
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: knowledge_search
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: long_term_memory
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: memory
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: skills
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: search
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: query_osv
     description: Query OSV.dev for known vulnerabilities by package name, version, and ecosystem
     parameters:
@@ -129,7 +129,7 @@ tools:
     config_ref: query-osv
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: query_github_advisories
     description: Query GitHub Advisory Database for vulnerabilities affecting a package
     parameters:
@@ -143,7 +143,7 @@ tools:
     config_ref: query-github-advisories
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: scan_dependencies
     description: Parse a project's lockfile and check every dependency against OSV
     parameters:
@@ -158,7 +158,7 @@ tools:
     config_ref: scan-dependencies
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: get_repo_file
     description: Read a file from a GitHub repository
     parameters:
@@ -173,7 +173,7 @@ tools:
     config_ref: st-get-repo-file
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: create_branch
     description: Create a new branch in a GitHub repository from a base ref
     parameters:
@@ -188,7 +188,7 @@ tools:
     config_ref: st-create-branch
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: commit_file
     description: Create or update a file on a branch via the GitHub API
     parameters:
@@ -205,7 +205,7 @@ tools:
     config_ref: st-commit-file
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: create_pull_request
     description: Open a pull request from a branch
     parameters:
@@ -222,7 +222,7 @@ tools:
     config_ref: st-create-pull-request
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: create_github_issue
     description: File a GitHub issue for a security finding that needs human attention
     parameters:
@@ -239,7 +239,7 @@ tools:
     config_ref: st-create-github-issue
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: query_gcloud_logs
     description: Query Google Cloud Logging for security-related events
     parameters:
@@ -315,15 +315,15 @@ routines:
     status: active
 
 installations:
-  - kind: memory/long-term
+  - install_type: memory/long-term
     config: {}
-  - kind: archastro/thread
+  - install_type: archastro/thread
     config: {}
-  - kind: archastro/files
+  - install_type: archastro/files
     config: {}
-  - kind: integration/github
+  - install_type: integration/github
     config: {}
-  - kind: enablement/slack_bot
+  - install_type: enablement/slack_bot
     config: {}
 
 # Post-install checklist. The platform materializes one
@@ -419,7 +419,7 @@ setup_requirements:
   # Custom verifier — confirms the bot actually has read access to
   # every repo in MONITORED_REPOS. Catches the common "I made the
   # bot but forgot to add it as a collaborator" failure mode.
-  - kind: custom
+  - tool_type: custom
     id: st-verify-monitored-repos-access
     title: "Verify the bot can read every monitored repo"
     description: |

@@ -71,20 +71,20 @@ identity: |
   - Cite the patch management standard for severity classifications
 
 tools:
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: knowledge_search
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: long_term_memory
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: memory
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: search
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: search_hn_security
     description: Search Hacker News for recent security stories via the HN Algolia API. Returns metadata only (title, URL, points, comments, dates) — does NOT scrape content.
     parameters:
@@ -110,7 +110,7 @@ tools:
     config_ref: search-hn-security
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: list_recent_advisories
     description: List recently published GitHub Security Advisories filtered by ecosystem and severity.
     parameters:
@@ -133,7 +133,7 @@ tools:
     config_ref: list-recent-advisories
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: get_repo_file
     description: Read a file from a GitHub repository (e.g. mix.exs, package.json, requirements.txt) to check if a vulnerable package is in use.
     parameters:
@@ -148,7 +148,7 @@ tools:
     config_ref: ti-get-repo-file
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: create_github_issue
     description: File a GitHub issue (used for both exposure issues and the daily brief itself)
     parameters:
@@ -207,13 +207,13 @@ routines:
     status: active
 
 installations:
-  - kind: memory/long-term
+  - install_type: memory/long-term
     config: {}
-  - kind: archastro/thread
+  - install_type: archastro/thread
     config: {}
-  - kind: integration/github
+  - install_type: integration/github
     config: {}
-  - kind: enablement/slack_bot
+  - install_type: enablement/slack_bot
     config: {}
 
 # Post-install checklist. The platform materializes one
@@ -286,7 +286,7 @@ setup_requirements:
   # Custom verifier — confirms the bot actually has read access to
   # every repo in MONITORED_REPOS. Catches the common "I made the
   # bot but forgot to add it as a collaborator" failure mode.
-  - kind: custom
+  - tool_type: custom
     id: ti-verify-monitored-repos-access
     title: "Verify the bot can read every monitored repo"
     description: |

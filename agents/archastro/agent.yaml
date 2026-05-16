@@ -34,23 +34,23 @@ identity: |
   and ask for missing details when needed.
 
 tools:
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: knowledge_search
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: long_term_memory
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: artifacts
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: task_list
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: skills
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: org_overview
     description: |
       Return a brief of all peer agents in this org: handle, name, and first
@@ -67,7 +67,7 @@ tools:
     config_ref: org-overview
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: describe_agent
     description: |
       Return a detailed profile of one peer agent by handle: identity, active
@@ -84,7 +84,7 @@ tools:
     config_ref: describe-agent
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: handoff
     description: |
       Hand the current conversation off to a specialist peer agent. Looks up
@@ -113,7 +113,7 @@ tools:
     config_ref: concierge-handoff
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: escalate
     description: |
       Escalate to a human when the concierge cannot help and no peer agent is a
@@ -159,13 +159,13 @@ routines:
     status: active
 
 installations:
-  - kind: memory/long-term
+  - install_type: memory/long-term
     config: {}
-  - kind: archastro/thread
+  - install_type: archastro/thread
     config: {}
-  - kind: archastro/files
+  - install_type: archastro/files
     config: {}
-  - kind: enablement/slack_bot
+  - install_type: enablement/slack_bot
     config: {}
 
 # Post-install checklist. The platform materializes one
