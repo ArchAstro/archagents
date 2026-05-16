@@ -58,23 +58,23 @@ identity: |
     new agent.
 
 tools:
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: skills
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: knowledge_search
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: long_term_memory
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: memory
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: search
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: fetch_archagents_docs
     description: Fetch a documentation page from docs.archagents.com as Markdown. Pass a path like "/docs/start-here/getting-started", a full URL, or the string "llms-full.txt" for the full machine-readable index.
     parameters:
@@ -158,11 +158,11 @@ routines:
     status: active
 
 installations:
-  - kind: memory/long-term
+  - install_type: memory/long-term
     config: {}
-  - kind: archastro/thread
+  - install_type: archastro/thread
     config: {}
-  - kind: archastro/files
+  - install_type: archastro/files
     config: {}
 
 metadata:

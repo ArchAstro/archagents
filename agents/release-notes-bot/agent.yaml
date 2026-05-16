@@ -61,14 +61,14 @@ identity: |
   run knows where to start. Use collection `"release_notes_runs"`.
 
 tools:
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: long_term_memory
     status: active
-  - kind: builtin
+  - tool_type: builtin
     builtin_tool_key: memory
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: list_merged_prs
     description: List PRs merged into a base branch in the last N days
     parameters:
@@ -84,7 +84,7 @@ tools:
     config_ref: list-merged-prs
     status: active
 
-  - kind: custom
+  - tool_type: custom
     name: create_github_issue
     description: File the changelog draft as a GitHub issue
     parameters:
@@ -127,11 +127,11 @@ routines:
     status: active
 
 installations:
-  - kind: memory/long-term
+  - install_type: memory/long-term
     config: {}
-  - kind: archastro/thread
+  - install_type: archastro/thread
     config: {}
-  - kind: integration/github
+  - install_type: integration/github
     config: {}
 
 # Post-install checklist. The platform materializes one
@@ -185,7 +185,7 @@ setup_requirements:
   # Custom verifier — confirms the bot can list closed PRs against
   # the configured release branch. Catches the common "wrong repo
   # name" and "PAT scope too narrow" failure modes.
-  - kind: custom
+  - tool_type: custom
     id: verify-merged-prs-readable
     title: "Verify the bot can read merged PRs"
     description: |

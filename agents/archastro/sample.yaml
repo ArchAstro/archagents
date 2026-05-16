@@ -16,7 +16,7 @@
 schema_version: 2
 
 # Bump this to cut a new per-sample release.
-version: v0.2.1
+version: v0.2.2
 
 name: "ArchAstro"
 tagline: "The default ArchAstro project concierge."

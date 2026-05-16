@@ -1,5 +1,5 @@
 schema_version: 2
-version: v0.3.1
+version: v0.3.2
 name: "Onboarding Q&A"
 tagline: "Answers new-hire questions about how things work at the company."
 min_cli_version: "0.28.0"

@@ -16,7 +16,7 @@
 schema_version: 2
 
 # Bump this to cut a new per-sample release.
-version: v0.1.4
+version: v0.1.5
 
 name: "ArchAstro Onboarding"
 tagline: "Guides a new user through setting up their first agent in ArchAstro."
