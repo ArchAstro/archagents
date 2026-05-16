@@ -280,7 +280,7 @@ setup_requirements:
   # Custom verifier — confirms the bot can actually read MONITORED_REPO.
   # Catches the common "PAT token mismatch with the repo's visibility
   # or org SSO" failure mode before the agent silently no-ops.
-  - tool_type: custom
+  - kind: custom
     id: verify-monitored-repo-access
     title: "Verify the bot can read the monitored repo"
     description: |

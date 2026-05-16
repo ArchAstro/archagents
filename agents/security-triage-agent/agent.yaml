@@ -419,7 +419,7 @@ setup_requirements:
   # Custom verifier — confirms the bot actually has read access to
   # every repo in MONITORED_REPOS. Catches the common "I made the
   # bot but forgot to add it as a collaborator" failure mode.
-  - tool_type: custom
+  - kind: custom
     id: st-verify-monitored-repos-access
     title: "Verify the bot can read every monitored repo"
     description: |

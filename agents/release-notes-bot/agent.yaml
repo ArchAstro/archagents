@@ -185,7 +185,7 @@ setup_requirements:
   # Custom verifier — confirms the bot can list closed PRs against
   # the configured release branch. Catches the common "wrong repo
   # name" and "PAT scope too narrow" failure modes.
-  - tool_type: custom
+  - kind: custom
     id: verify-merged-prs-readable
     title: "Verify the bot can read merged PRs"
     description: |

@@ -246,7 +246,7 @@ setup_requirements:
   # Custom verifier — confirms the bot can read the configured private
   # repo. Catches "wrong repo name" and "PAT lacks access to private
   # repo" before the first cross-org session.
-  - tool_type: custom
+  - kind: custom
     id: verify-source-repo-access
     title: "Verify the bot can read the source repo"
     description: |
