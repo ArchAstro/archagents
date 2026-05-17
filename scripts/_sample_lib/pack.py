@@ -13,7 +13,7 @@ from typing import Any
 
 import yaml
 
-from .paths import REPO_ROOT
+from .paths import AGENTS_DIR, REPO_ROOT
 from .validation import SampleError, validate_sample
 
 
@@ -21,14 +21,27 @@ def _resolve_sample_dir(slug_or_path: str) -> tuple[str, pathlib.Path]:
     """
     Map the positional arg to (slug, sample_dir).
 
-    Always cwd-relative — the tool doesn't know which catalog the user
-    cares about. A bare `my-sample` resolves to `./my-sample`, exactly
-    like every other shell command. From the archagents repo root,
-    `pack agents/code-review-agent` is the catalog form; from anywhere
-    else, just point at the directory directly. Slug for tarball
-    naming is the directory's basename.
+    Paths are cwd-relative or absolute and always win. A bare
+    `my-sample` first resolves like `./my-sample`; if that path does
+    not exist and `agents/my-sample` does, use the catalog sample.
+    Slug for tarball naming is the directory's basename.
     """
-    expanded = pathlib.Path(slug_or_path).expanduser().resolve()
+    expanded = pathlib.Path(slug_or_path).expanduser()
+    cwd_candidate = expanded.resolve()
+    if (
+        cwd_candidate.exists()
+        or expanded.is_absolute()
+        or "/" in slug_or_path
+        or "\\" in slug_or_path
+        or slug_or_path.startswith(".")
+    ):
+        return cwd_candidate.name, cwd_candidate
+
+    catalog_candidate = (AGENTS_DIR / slug_or_path).resolve()
+    if catalog_candidate.exists():
+        return catalog_candidate.name, catalog_candidate
+
+    expanded = cwd_candidate
     return expanded.name, expanded
 
 

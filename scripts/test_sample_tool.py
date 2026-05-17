@@ -108,8 +108,9 @@ class _TmpAgentsRoot:
         self._patch(gen_mod, "REPO_ROOT", self.tmp)
         self._patch(scaffold_mod, "AGENTS_DIR", self.agents_dir)
         # pack only uses REPO_ROOT (for tarball path display). It
-        # resolves the sample dir from the cwd-relative positional arg,
-        # so it doesn't import AGENTS_DIR.
+        # resolves bare slugs against AGENTS_DIR and uses REPO_ROOT for
+        # tarball path display.
+        self._patch(pack_mod, "AGENTS_DIR", self.agents_dir)
         self._patch(pack_mod, "REPO_ROOT", self.tmp)
         return self
 
@@ -326,8 +327,149 @@ class ValidateStepsTest(unittest.TestCase):
               - type: deploy_agent
                 template_file: agent.yaml
         """)
-        with self.assertRaisesRegex(SampleError, "exactly one deploy_agent"):
+        with self.assertRaisesRegex(SampleError, "exactly one"):
             self._run(yaml)
+
+    def test_deploy_agent_and_deploy_solution_together_rejected(self):
+        sample_dir = _make_sample_dir(
+            sample_yaml=textwrap.dedent("""\
+                schema_version: 2
+                version: v0.2.0
+                name: X
+                tagline: X
+                min_cli_version: "0.28.0"
+                steps:
+                  - type: deploy_agent
+                    template_file: agent.yaml
+                  - type: deploy_solution
+                    solution_file: solution.yaml
+            """)
+        )
+        (sample_dir / "solution.yaml").write_text(
+            textwrap.dedent("""\
+                kind: Solution
+                lookup_key: x-solution
+                solution_id: 7a1c4f10-1e2b-4d6f-9a8d-2b71f2c6a103
+                solution_version: v0.1.0
+                name: X
+                template:
+                  template_path: agents/x.yaml
+            """)
+        )
+        with self.assertRaisesRegex(SampleError, "exactly one"):
+            validate_sample("x", _parsed(sample_dir), sample_dir / "sample.yaml")
+
+    def test_deploy_solution_step_passes_when_solution_file_exists(self):
+        sample_dir = _make_sample_dir(
+            sample_yaml=textwrap.dedent("""\
+                schema_version: 2
+                version: v0.2.0
+                name: X
+                tagline: X
+                min_cli_version: "0.28.0"
+                steps:
+                  - type: upload_scripts
+                    source_dir: scripts
+                  - type: deploy_solution
+                    solution_file: solution.yaml
+            """)
+        )
+        (sample_dir / "solution.yaml").write_text(
+            textwrap.dedent("""\
+                kind: Solution
+                lookup_key: x-solution
+                solution_id: 7a1c4f10-1e2b-4d6f-9a8d-2b71f2c6a103
+                solution_version: v0.1.0
+                name: X
+                template:
+                  template_path: agents/x.yaml
+            """)
+        )
+        (sample_dir / "agents").mkdir()
+        (sample_dir / "agents" / "x.yaml").write_text("kind: AgentTemplate\nname: X\n")
+        validate_sample("x", _parsed(sample_dir), sample_dir / "sample.yaml")
+
+    def test_deploy_solution_absolute_template_path_is_rejected_by_solution_gate(self):
+        sample_dir = _make_sample_dir(
+            sample_yaml=textwrap.dedent("""\
+                schema_version: 2
+                version: v0.2.0
+                name: X
+                tagline: X
+                min_cli_version: "0.28.0"
+                steps:
+                  - type: deploy_solution
+                    solution_file: solution.yaml
+            """)
+        )
+        outside = sample_dir.parent / "outside-template.yaml"
+        outside.write_text(textwrap.dedent("""\
+            kind: AgentTemplate
+            name: Outside
+            setup_requirements:
+              - kind: not-a-real-kind
+        """))
+        (sample_dir / "solution.yaml").write_text(
+            textwrap.dedent(f"""\
+                kind: Solution
+                lookup_key: x-solution
+                solution_id: 7a1c4f10-1e2b-4d6f-9a8d-2b71f2c6a103
+                solution_version: v0.1.0
+                name: X
+                template:
+                  template_path: {outside}
+            """)
+        )
+        with self.assertRaisesRegex(SampleError, "template_path.*relative path"):
+            validate_sample("x", _parsed(sample_dir), sample_dir / "sample.yaml")
+
+    def test_deploy_solution_with_missing_solution_file_rejected(self):
+        yaml = textwrap.dedent("""\
+            schema_version: 2
+            version: v0.2.0
+            name: X
+            tagline: X
+            min_cli_version: "0.28.0"
+            steps:
+              - type: deploy_solution
+                solution_file: missing.yaml
+        """)
+        with self.assertRaisesRegex(SampleError, "missing.yaml"):
+            self._run(yaml)
+
+    def test_upload_files_alongside_deploy_solution_rejected(self):
+        sample_dir = _make_sample_dir(
+            sample_yaml=textwrap.dedent("""\
+                schema_version: 2
+                version: v0.2.0
+                name: X
+                tagline: X
+                min_cli_version: "0.28.0"
+                steps:
+                  - type: deploy_solution
+                    solution_file: solution.yaml
+                  - type: upload_files
+                    source_dir: docs
+                    installation_kind: archastro/files
+                    source_type: file/document
+            """)
+        )
+        (sample_dir / "docs").mkdir()
+        (sample_dir / "solution.yaml").write_text(
+            textwrap.dedent("""\
+                kind: Solution
+                lookup_key: x-solution
+                solution_id: 7a1c4f10-1e2b-4d6f-9a8d-2b71f2c6a103
+                solution_version: v0.1.0
+                name: X
+                template:
+                  template_path: agents/x.yaml
+            """)
+        )
+        with self.assertRaisesRegex(
+            SampleError, "upload_files is not supported alongside deploy_solution"
+        ):
+            validate_sample("x", _parsed(sample_dir), sample_dir / "sample.yaml")
 
     def test_upload_files_with_all_fields_passes(self):
         yaml = textwrap.dedent("""\
@@ -556,6 +698,682 @@ class ValidateSetupRequirementsTest(unittest.TestCase):
             self._validate(sample_dir)
 
 
+# --- solution.yaml validation --------------------------------------------
+
+
+class ValidateSolutionYamlTest(unittest.TestCase):
+    """
+    solution.yaml is optional; when present, template_path / asset_path
+    values are local file paths and template_ref / asset_ref values are
+    lookup-key refs. Local markdown image/link references (inline readme
+    + any .md file under the sample dir) must also resolve to real files.
+
+    Path fields are the default scaffold shape and may point at any
+    local file inside the sample dir. Ref fields are still supported:
+    template_ref resolves to a local wrapped-template file by lookup_key,
+    and asset_ref resolves to a unique local asset file by lookup_key.
+    """
+
+    _MINIMAL_SOLUTION_HEADER = textwrap.dedent("""\
+        kind: Solution
+        lookup_key: x-solution
+        solution_id: 7a1c4f10-1e2b-4d6f-9a8d-2b71f2c6a103
+        solution_version: v0.1.0
+        name: X
+        description: X
+    """)
+
+    _WRAPPED_PATH = "agents/x.yaml"
+    _WRAPPED_DEFAULT_BODY = "kind: AgentTemplate\nname: X\n"
+
+    def _make_solution_sample_dir(self, slug: str = "x") -> Path:
+        """
+        Build a minimal sample at `<tmp>/agents/<slug>/`. The root
+        agent.yaml is only for the deploy_agent step in sample.yaml; the
+        solution wrapper helper uses the scaffold default agents/x.yaml
+        via template_path, but individual tests can place files elsewhere.
+        """
+        tmp = Path(tempfile.mkdtemp())
+        sample_dir = tmp / "agents" / slug
+        sample_dir.mkdir(parents=True)
+        (sample_dir / "scripts").mkdir()
+        (sample_dir / "agent.yaml").write_text(self._WRAPPED_DEFAULT_BODY)
+        (sample_dir / "sample.yaml").write_text(textwrap.dedent(f"""\
+            schema_version: 2
+            version: v0.1.0
+            name: X
+            tagline: An X sample.
+            min_cli_version: "0.28.0"
+            steps:
+              - type: upload_scripts
+                source_dir: scripts
+              - type: deploy_agent
+                template_file: agent.yaml
+        """))
+        return sample_dir
+
+    def _validate(self, sample_dir: Path) -> None:
+        validate_sample("x", _parsed(sample_dir), sample_dir / "sample.yaml")
+
+    def _write_solution(self, sample_dir: Path, body: str) -> None:
+        (sample_dir / "solution.yaml").write_text(body)
+
+    def _write_path_template(
+        self, sample_dir: Path, body: str = _WRAPPED_DEFAULT_BODY
+    ) -> Path:
+        target = sample_dir / self._WRAPPED_PATH
+        target.parent.mkdir(exist_ok=True)
+        target.write_text(body)
+        return target
+
+    def _solution_with_template_path(self, extra: str = "") -> str:
+        return (
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent(f"""\
+                template:
+                  template_path: {self._WRAPPED_PATH}
+            """)
+            + extra
+        )
+
+    def test_no_solution_yaml_is_fine(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._validate(sample_dir)  # should not raise
+
+    def test_missing_lookup_key_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            textwrap.dedent("""\
+                kind: Solution
+                solution_id: 7a1c4f10-1e2b-4d6f-9a8d-2b71f2c6a103
+                solution_version: v0.1.0
+                name: X
+                description: X
+                template:
+                  template_path: agents/x.yaml
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "lookup_key"):
+            self._validate(sample_dir)
+
+    def test_missing_solution_id_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            textwrap.dedent("""\
+                kind: Solution
+                lookup_key: x-solution
+                solution_version: v0.1.0
+                name: X
+                description: X
+                template:
+                  template_path: agents/x.yaml
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "solution_id"):
+            self._validate(sample_dir)
+
+    def test_non_uuid_solution_id_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            textwrap.dedent("""\
+                kind: Solution
+                lookup_key: x-solution
+                solution_id: not-a-uuid
+                solution_version: v0.1.0
+                name: X
+                description: X
+                template:
+                  template_path: agents/x.yaml
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "solution_id"):
+            self._validate(sample_dir)
+
+    def test_missing_solution_version_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            textwrap.dedent("""\
+                kind: Solution
+                lookup_key: x-solution
+                solution_id: 7a1c4f10-1e2b-4d6f-9a8d-2b71f2c6a103
+                name: X
+                description: X
+                template:
+                  template_path: agents/x.yaml
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "solution_version"):
+            self._validate(sample_dir)
+
+    def test_non_semver_solution_version_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            textwrap.dedent("""\
+                kind: Solution
+                lookup_key: x-solution
+                solution_id: 7a1c4f10-1e2b-4d6f-9a8d-2b71f2c6a103
+                solution_version: "0.1"
+                name: X
+                description: X
+                template:
+                  template_path: agents/x.yaml
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "solution_version"):
+            self._validate(sample_dir)
+
+    def test_missing_name_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            textwrap.dedent("""\
+                kind: Solution
+                lookup_key: x-solution
+                solution_id: 7a1c4f10-1e2b-4d6f-9a8d-2b71f2c6a103
+                solution_version: v0.1.0
+                description: X
+                template:
+                  template_path: agents/x.yaml
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "name"):
+            self._validate(sample_dir)
+
+    def test_missing_template_block_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(sample_dir, self._MINIMAL_SOLUTION_HEADER)
+        with self.assertRaisesRegex(SampleError, "template"):
+            self._validate(sample_dir)
+
+    def test_inline_template_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                template:
+                  kind: AgentTemplate
+                  name: Inline
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "template_path"):
+            self._validate(sample_dir)
+
+    def test_template_ref_resolves_wrapped_template_file_by_lookup_key(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                template:
+                  template_ref: x
+            """),
+        )
+        self._validate(sample_dir)
+
+    def test_template_ref_missing_lookup_key_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                template:
+                  template_ref: missing-template
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "template_ref.*missing-template.*lookup_key"):
+            self._validate(sample_dir)
+
+    def test_template_ref_ambiguous_lookup_key_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        nested = sample_dir / "agents" / "nested"
+        nested.mkdir()
+        (nested / "x.yaml").write_text(self._WRAPPED_DEFAULT_BODY)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                template:
+                  template_ref: x
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "template_ref.*ambiguous"):
+            self._validate(sample_dir)
+
+    def test_path_style_template_ref_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                template:
+                  template_ref: agents/x.yaml
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "template_ref.*lookup_key.*template_path"):
+            self._validate(sample_dir)
+
+    def test_valid_template_path_and_asset_path_passes(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "diagrams").mkdir()
+        (sample_dir / "diagrams" / "architecture.svg").write_text("<svg/>")
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                assets:
+                  - asset_path: diagrams/architecture.svg
+                """)
+            ),
+        )
+        self._validate(sample_dir)
+
+    def test_nonstandard_template_path_asset_path_and_markdown_refs_pass(self):
+        sample_dir = self._make_solution_sample_dir()
+        template_path = sample_dir / "templates" / "wrapped" / "primary.yaml"
+        template_path.parent.mkdir(parents=True)
+        template_path.write_text(self._WRAPPED_DEFAULT_BODY)
+
+        asset_path = sample_dir / "public" / "catalog" / "images" / "hero.svg"
+        asset_path.parent.mkdir(parents=True)
+        asset_path.write_text("<svg/>")
+
+        docs_path = sample_dir / "docs" / "guides" / "overview.md"
+        docs_path.parent.mkdir(parents=True)
+        docs_path.write_text(
+            "# Overview\n\n![Hero](../../public/catalog/images/hero.svg)\n"
+        )
+
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                template:
+                  template_path: templates/wrapped/primary.yaml
+                assets:
+                  - asset_path: public/catalog/images/hero.svg
+                  - asset_path: docs/guides/overview.md
+                readme: |
+                  # X
+
+                  ![Hero](public/catalog/images/hero.svg)
+                  [Overview](docs/guides/overview.md)
+            """),
+        )
+        self._validate(sample_dir)
+
+    def test_lookup_refs_resolve_nested_nonstandard_files(self):
+        sample_dir = self._make_solution_sample_dir()
+        template_path = sample_dir / "agents" / "library" / "deep-template.yaml"
+        template_path.parent.mkdir(parents=True)
+        template_path.write_text(self._WRAPPED_DEFAULT_BODY)
+
+        asset_path = sample_dir / "media" / "catalog" / "cards" / "hero-card.svg"
+        asset_path.parent.mkdir(parents=True)
+        asset_path.write_text("<svg/>")
+
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                template:
+                  template_ref: deep-template
+                assets:
+                  - asset_ref: hero-card
+            """),
+        )
+        self._validate(sample_dir)
+
+    def test_asset_ref_resolves_local_file_by_lookup_key(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "diagrams").mkdir()
+        (sample_dir / "diagrams" / "architecture.svg").write_text("<svg/>")
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                assets:
+                  - asset_ref: architecture
+                """)
+            ),
+        )
+        self._validate(sample_dir)
+
+    def test_asset_ref_missing_lookup_key_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                assets:
+                  - asset_ref: missing-asset
+                """)
+            ),
+        )
+        with self.assertRaisesRegex(SampleError, "asset_ref.*missing-asset.*lookup_key"):
+            self._validate(sample_dir)
+
+    def test_asset_ref_ambiguous_lookup_key_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "diagrams").mkdir()
+        (sample_dir / "docs").mkdir()
+        (sample_dir / "diagrams" / "architecture.svg").write_text("<svg/>")
+        (sample_dir / "docs" / "architecture.md").write_text("# Architecture\n")
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                assets:
+                  - asset_ref: architecture
+                """)
+            ),
+        )
+        with self.assertRaisesRegex(SampleError, "asset_ref.*ambiguous"):
+            self._validate(sample_dir)
+
+    def test_path_style_asset_ref_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "diagrams").mkdir()
+        (sample_dir / "diagrams" / "architecture.svg").write_text("<svg/>")
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                assets:
+                  - asset_ref: diagrams/architecture.svg
+                """)
+            ),
+        )
+        with self.assertRaisesRegex(SampleError, "asset_ref.*lookup_key.*asset_path"):
+            self._validate(sample_dir)
+
+    def test_template_path_accepts_nested_nonstandard_local_file(self):
+        sample_dir = self._make_solution_sample_dir()
+        template_path = sample_dir / "templates" / "wrapped" / "x.yaml"
+        template_path.parent.mkdir(parents=True)
+        template_path.write_text(self._WRAPPED_DEFAULT_BODY)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + "template:\n  template_path: templates/wrapped/x.yaml\n",
+        )
+        self._validate(sample_dir)
+
+    def test_template_path_missing_file_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + "template:\n  template_path: agents/not-here.yaml\n",
+        )
+        with self.assertRaisesRegex(SampleError, "template_path.*not-here.yaml"):
+            self._validate(sample_dir)
+
+    def test_asset_path_missing_file_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                assets:
+                  - asset_path: diagrams/nope.svg
+                """)
+            ),
+        )
+        with self.assertRaisesRegex(SampleError, "asset_path.*nope.svg"):
+            self._validate(sample_dir)
+
+    def test_template_path_accepts_root_local_file(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + "template:\n  template_path: agent.yaml\n",
+        )
+        self._validate(sample_dir)
+
+    def test_absolute_template_path_is_rejected_via_relative_path_gate(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + "template:\n  template_path: /etc/passwd\n",
+        )
+        with self.assertRaisesRegex(SampleError, "template_path.*relative path"):
+            self._validate(sample_dir)
+
+    def test_escaping_template_path_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + "template:\n  template_path: ../escape.yaml\n",
+        )
+        with self.assertRaisesRegex(SampleError, "template_path.*escapes"):
+            self._validate(sample_dir)
+
+    def test_wrapped_template_that_isnt_a_mapping_is_rejected(self):
+        # Parseability check: a list-at-root template body would slip
+        # past validate today but blow up at platform-import time.
+        # Catch it here, with a hint about what shape is expected.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir, "- not\n- a\n- mapping\n")
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(),
+        )
+        with self.assertRaisesRegex(SampleError, "must be a YAML mapping"):
+            self._validate(sample_dir)
+
+    def test_non_list_assets_is_rejected(self):
+        # Author wrote `assets:` as a single mapping (a common mistake)
+        # instead of a list. Would silently drop and fail at import
+        # time; catch up-front.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "diagrams").mkdir()
+        (sample_dir / "diagrams" / "a.svg").write_text("<svg/>")
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                assets:
+                  asset_ref: diagrams/a.svg
+                """)
+            ),
+        )
+        with self.assertRaisesRegex(SampleError, "`assets:` must be a list"):
+            self._validate(sample_dir)
+
+    def test_asset_entry_without_path_or_ref_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                assets:
+                  - name: missing-ref
+                """)
+            ),
+        )
+        with self.assertRaisesRegex(SampleError, "assets\\[0\\].*asset_path"):
+            self._validate(sample_dir)
+
+    def test_non_mapping_asset_entry_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                assets:
+                  - diagrams/a.svg
+                """)
+            ),
+        )
+        with self.assertRaisesRegex(SampleError, "assets\\[0\\]"):
+            self._validate(sample_dir)
+
+    def test_wrapped_template_with_agent_key_is_rejected(self):
+        # agent_key is a deploy_agent-only field. A Solution import
+        # publishes a library row and never provisions an agent, so
+        # carrying agent_key in the wrapped template would silently
+        # mislead later readers. Mirrors the TS samples-catalog
+        # parseSolutionFile check.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(
+            sample_dir, "kind: AgentTemplate\nagent_key: alpha\nname: X\n"
+        )
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(),
+        )
+        with self.assertRaisesRegex(SampleError, "agent_key"):
+            self._validate(sample_dir)
+
+    def test_wrapped_template_without_agent_key_passes(self):
+        # Sanity: the validator only objects to `agent_key:`, not to
+        # any other template body content.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(
+            sample_dir, "kind: AgentTemplate\nname: X\nidentity: |\n  You are X.\n"
+        )
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(),
+        )
+        self._validate(sample_dir)
+
+    def test_inline_readme_with_missing_image_ref_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                readme: |
+                  # X
+
+                  ![missing](diagrams/missing.svg)
+                """)
+            ),
+        )
+        with self.assertRaisesRegex(SampleError, "diagrams/missing.svg"):
+            self._validate(sample_dir)
+
+    def test_inline_readme_with_valid_image_ref_passes(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "diagrams").mkdir()
+        (sample_dir / "diagrams" / "architecture.svg").write_text("<svg/>")
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                readme: |
+                  # X
+
+                  ![Arch](diagrams/architecture.svg)
+                """)
+            ),
+        )
+        self._validate(sample_dir)
+
+    def test_inline_readme_external_url_is_skipped(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                readme: |
+                  # X
+
+                  ![Hosted](https://example.com/diagram.svg)
+                  [Docs](https://example.com/docs)
+                  [Section](#anchor)
+                """)
+            ),
+        )
+        self._validate(sample_dir)
+
+    def test_inline_readme_link_with_title_is_validated(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                readme: |
+                  # X
+
+                  [Diagram](diagrams/missing.svg "Architecture diagram")
+                """)
+            ),
+        )
+        with self.assertRaisesRegex(SampleError, "diagrams/missing.svg"):
+            self._validate(sample_dir)
+
+    def test_on_disk_readme_with_missing_ref_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(),
+        )
+        (sample_dir / "README.md").write_text(
+            "# Title\n\n![diagram](diagrams/missing.svg)\n"
+        )
+        with self.assertRaisesRegex(SampleError, "diagrams/missing.svg"):
+            self._validate(sample_dir)
+
+    def test_markdown_ref_with_fragment_is_stripped(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "diagrams").mkdir()
+        (sample_dir / "diagrams" / "architecture.svg").write_text("<svg/>")
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(
+                textwrap.dedent("""\
+                readme: |
+                  ![Arch](diagrams/architecture.svg#zoomed)
+                """)
+            ),
+        )
+        self._validate(sample_dir)
+
+    def test_scaffolded_with_solution_passes_validation(self):
+        # End-to-end: --solution scaffold should produce a sample that
+        # passes the solution.yaml validator out of the box. Catches the
+        # case where the scaffold drifts from the validator's contract.
+        with _TmpAgentsRoot() as root, _RedirectStderr():
+            scaffold_mod.run_new(
+                "hello-world",
+                name=None,
+                tagline=None,
+                target_dir=root.agents_dir,
+                with_solution=True,
+            )
+            sample_dir = root.agents_dir / "hello-world"
+            self._validate(sample_dir)
+
+
 # --- rendering ------------------------------------------------------------
 
 
@@ -735,6 +1553,110 @@ class NewSampleTest(unittest.TestCase):
                     target_dir=root.tmp / "does-not-exist",
                 )
 
+    def test_new_default_omits_solution_files(self):
+        # Without --solution, the scaffold stays minimal — no solution.yaml,
+        # no diagrams/.
+        with _TmpAgentsRoot() as root, self._redirect_stderr():
+            scaffold_mod.run_new(
+                "hello-world", name=None, tagline=None, target_dir=root.agents_dir
+            )
+            sample_dir = root.agents_dir / "hello-world"
+            self.assertFalse((sample_dir / "solution.yaml").exists())
+            self.assertFalse((sample_dir / "diagrams").exists())
+
+    def test_new_with_solution_scaffolds_solution_and_diagrams(self):
+        with _TmpAgentsRoot() as root, self._redirect_stderr():
+            scaffold_mod.run_new(
+                "hello-world",
+                name=None,
+                tagline=None,
+                target_dir=root.agents_dir,
+                with_solution=True,
+            )
+            sample_dir = root.agents_dir / "hello-world"
+            self.assertTrue((sample_dir / "solution.yaml").is_file())
+            self.assertTrue((sample_dir / "agents" / "hello-world.yaml").is_file())
+            self.assertTrue((sample_dir / "diagrams").is_dir())
+            self.assertTrue((sample_dir / "diagrams" / "architecture.svg").is_file())
+            # solution.yaml refs the SVG directly via asset_path — no
+            # wrapper yaml file in the diagrams/ directory.
+            self.assertFalse(
+                (sample_dir / "diagrams" / "architecture.image.yaml").exists()
+            )
+            # README should reference the placeholder diagram so the
+            # scaffold renders on GitHub out of the box.
+            readme = (sample_dir / "README.md").read_text()
+            self.assertIn("diagrams/architecture.svg", readme)
+            # sample.yaml should drive the solution import flow — no
+            # deploy_agent step in solution-mode scaffolds.
+            sample_yaml_text = (sample_dir / "sample.yaml").read_text()
+            self.assertIn("type: deploy_solution", sample_yaml_text)
+            self.assertIn("solution_file: solution.yaml", sample_yaml_text)
+            self.assertNotIn("type: deploy_agent", sample_yaml_text)
+
+    def test_new_with_solution_generates_valid_solution_yaml(self):
+        # The scaffolded solution.yaml should have a UUID solution_id, a
+        # semver solution_version matching the sample.yaml default, and
+        # template_path / asset_path entries pointing at the wrapped
+        # template + placeholder SVG.
+        import yaml as pyyaml
+
+        with _TmpAgentsRoot() as root, self._redirect_stderr():
+            scaffold_mod.run_new(
+                "hello-world",
+                name=None,
+                tagline=None,
+                target_dir=root.agents_dir,
+                with_solution=True,
+            )
+            sample_dir = root.agents_dir / "hello-world"
+            solution = pyyaml.safe_load((sample_dir / "solution.yaml").read_text())
+
+            self.assertEqual(solution["kind"], "Solution")
+            self.assertEqual(solution["lookup_key"], "hello-world-solution")
+            self.assertRegex(
+                solution["solution_id"],
+                r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            )
+            self.assertRegex(solution["solution_version"], r"^v\d+\.\d+\.\d+$")
+            # template_path / asset_path are resolved relative to the
+            # bundle root and match the platform path-mode Solution
+            # designators.
+            self.assertEqual(
+                solution["template"],
+                {"template_path": "agents/hello-world.yaml"},
+            )
+            self.assertEqual(
+                solution["assets"],
+                [{"asset_path": "diagrams/architecture.svg"}],
+            )
+
+    def test_new_with_solution_mints_a_fresh_uuid_per_scaffold(self):
+        import yaml as pyyaml
+
+        with _TmpAgentsRoot() as root, self._redirect_stderr():
+            scaffold_mod.run_new(
+                "alpha",
+                name=None,
+                tagline=None,
+                target_dir=root.agents_dir,
+                with_solution=True,
+            )
+            scaffold_mod.run_new(
+                "beta",
+                name=None,
+                tagline=None,
+                target_dir=root.agents_dir,
+                with_solution=True,
+            )
+            a = pyyaml.safe_load(
+                (root.agents_dir / "alpha" / "solution.yaml").read_text()
+            )
+            b = pyyaml.safe_load(
+                (root.agents_dir / "beta" / "solution.yaml").read_text()
+            )
+            self.assertNotEqual(a["solution_id"], b["solution_id"])
+
 
 # --- `pack` --------------------------------------------------------------
 
@@ -788,6 +1710,28 @@ class PackSampleTest(unittest.TestCase):
             with self.assertRaisesRegex(SampleError, "does not exist"):
                 pack_mod.run_pack(str(root.tmp / "never-scaffolded"), root.tmp / "dist")
 
+    def test_pack_includes_solution_yaml_and_diagrams_when_present(self):
+        # When `new --solution` was used, the resulting tarball must
+        # carry solution.yaml + every file under diagrams/ — those are
+        # the catalog-facing artifacts the installer needs.
+        with _TmpAgentsRoot() as root, _RedirectStderr():
+            scaffold_mod.run_new(
+                "hello-world",
+                name=None,
+                tagline=None,
+                target_dir=root.agents_dir,
+                with_solution=True,
+            )
+            output_dir = root.tmp / "dist"
+            pack_mod.run_pack(str(root.agents_dir / "hello-world"), output_dir)
+
+            tarball = output_dir / "hello-world-v0.1.0.tar.gz"
+            with tarfile.open(tarball, "r:gz") as tar:
+                names = set(tar.getnames())
+
+            self.assertIn("hello-world/solution.yaml", names)
+            self.assertIn("hello-world/diagrams/architecture.svg", names)
+
     def test_pack_accepts_path_to_sample_directory(self):
         # `pack ./some-sample` (or any path with a separator / leading
         # dot) treats the arg as a directory and derives the tarball
@@ -809,6 +1753,22 @@ class PackSampleTest(unittest.TestCase):
                 names = tar.getnames()
             self.assertIn("external-sample/sample.yaml", names)
             self.assertIn("external-sample/agent.yaml", names)
+
+    def test_pack_accepts_catalog_bare_slug(self):
+        # The public usage examples advertise `pack code-review-agent`.
+        # Preserve path-first behavior, but let a bare slug resolve
+        # through agents/<slug> when present.
+        with _TmpAgentsRoot() as root, _RedirectStderr():
+            self._scaffold(root)
+            output_dir = root.tmp / "dist"
+            pack_mod.run_pack("hello-world", output_dir)
+
+            tarball = output_dir / "hello-world-v0.1.0.tar.gz"
+            self.assertTrue(tarball.is_file())
+            with tarfile.open(tarball, "r:gz") as tar:
+                names = tar.getnames()
+            self.assertIn("hello-world/sample.yaml", names)
+            self.assertIn("hello-world/agent.yaml", names)
 
 
 # --- `validate` (script semantic validation via the CLI) ----------------
