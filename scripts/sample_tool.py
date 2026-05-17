@@ -16,6 +16,13 @@ Subcommands:
                    `generate` afterward so .aaignore + samples.json
                    include the new entry.
 
+                   Pass --solution to additionally scaffold solution.yaml
+                   (catalog-facing wrapper) and a diagrams/ directory
+                   with a placeholder architecture diagram. The README
+                   references the diagram so the new sample renders
+                   correctly on GitHub and in the Solution catalog out
+                   of the box.
+
   pack <slug>      Validate one sample and build the release tarball
                    <slug>-<version>.tar.gz. Same archive shape CI uploads
                    on merge to main — use it locally for
@@ -62,9 +69,10 @@ from _sample_lib.validation import SampleError
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    description = (__doc__ or "").strip().splitlines()[0]
     parser = argparse.ArgumentParser(
         prog="sample_tool",
-        description=__doc__.strip().splitlines()[0],
+        description=description,
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -100,6 +108,15 @@ def _build_parser() -> argparse.ArgumentParser:
             "to the current working directory. Pass the archagents repo's "
             "agents/ to scaffold into the catalog — that path additionally "
             "refreshes .aaignore + samples.json."
+        ),
+    )
+    new.add_argument(
+        "--solution",
+        action="store_true",
+        help=(
+            "Also scaffold solution.yaml (catalog-facing Solution config) "
+            "and a diagrams/ directory with a placeholder architecture "
+            "diagram. Bumps the README to reference the diagram."
         ),
     )
 
@@ -159,7 +176,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "generate":
         return run_generate(check=args.check)
     if args.command == "new":
-        return run_new(args.slug, args.name, args.tagline, args.target_dir)
+        return run_new(
+            args.slug,
+            args.name,
+            args.tagline,
+            args.target_dir,
+            with_solution=args.solution,
+        )
     if args.command == "pack":
         return run_pack(args.slug, args.output_dir.resolve())
     if args.command == "validate":

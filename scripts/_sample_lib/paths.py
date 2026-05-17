@@ -70,6 +70,10 @@ STEP_VERBS = {
         "required": {"template_file"},
         "optional": set(),
     },
+    "deploy_solution": {
+        "required": {"solution_file"},
+        "optional": set(),
+    },
     "upload_files": {
         "required": {"source_dir", "installation_kind", "source_type"},
         "optional": {"glob", "content_type"},
@@ -107,9 +111,9 @@ ENV_VAR_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 ENV_VAR_SCOPES = frozenset({"org_env_var", "agent_env_var"})
 
 
-def display_path(path: pathlib.Path) -> pathlib.Path:
+def display_path(path: pathlib.Path) -> str:
     """Render `path` relative to REPO_ROOT when possible (cleaner errors in CI)."""
     try:
-        return path.relative_to(REPO_ROOT)
+        return str(path.relative_to(REPO_ROOT))
     except ValueError:
-        return path
+        return str(path)
