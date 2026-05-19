@@ -242,65 +242,116 @@ def validate_steps(slug: str, steps: Any, source: pathlib.Path) -> None:
     # know the full set of script lookup_keys (the deploy step might
     # appear before the upload_scripts step it depends on). Both
     # deploy_agent (template_file → agent.yaml directly) and
-    # deploy_solution (solution_file → wrapped template via
-    # template_path) resolve to an author-edited agent template.
+    # deploy_solution (solution_file → bundled templates) resolve to
+    # author-edited agent template files. A solution bundle may carry
+    # multiple templates; each is walked independently.
     for idx, step in enumerate(steps):
         verb = step.get("type")
         if verb == "deploy_agent":
             template_path = sample_dir / step["template_file"]
             validate_setup_requirements(template_path, script_lookup_keys)
         elif verb == "deploy_solution":
-            template_path = _resolve_wrapped_template(sample_dir, step)
-            if template_path is not None:
+            for template_path in _resolve_wrapped_templates(sample_dir, step):
                 validate_setup_requirements(template_path, script_lookup_keys)
 
 
-def _resolve_wrapped_template(
+def _resolve_wrapped_templates(
     sample_dir: pathlib.Path, step: dict[str, Any]
-) -> pathlib.Path | None:
+) -> list[pathlib.Path]:
     """
-    Resolve `solution.yaml.template.template_path` to the on-disk
-    agent template so we can validate its setup_requirements. Returns
-    None if the solution file is missing or doesn't reference a local
-    template path (the dedicated solution validator surfaces those
-    errors separately — here we just skip the deeper walk).
+    Resolve every template entry in `solution.yaml`'s canonical
+    `templates:` list (singular `template:` is normalized to a
+    one-element list) to its on-disk agent template, so we can walk
+    each one's setup_requirements. Returns an empty list when the
+    solution file is missing or doesn't reference any local template —
+    the dedicated solution validator surfaces those errors separately;
+    here we just skip the deeper walk.
     """
     solution_path = sample_dir / step["solution_file"]
     if not solution_path.is_file():
-        return None
+        return []
     try:
         raw = yaml.safe_load(solution_path.read_text())
     except yaml.YAMLError:
-        return None
+        return []
     if not isinstance(raw, dict):
-        return None
-    template = raw.get("template")
-    if not isinstance(template, dict):
-        return None
-    path_ref = template.get("template_path")
-    if isinstance(path_ref, str) and path_ref.strip():
-        try:
-            return _require_local_file(
-                display_path(solution_path),
-                sample_dir,
-                sample_dir,
-                path_ref,
-                "template.template_path",
-            )
-        except SampleError:
-            return None
-    lookup_ref = template.get("template_ref")
-    if not isinstance(lookup_ref, str) or not lookup_ref.strip():
-        return None
+        return []
     try:
-        return _resolve_template_ref_file(
-            display_path(solution_path),
-            sample_dir,
-            lookup_ref,
-            "template.template_ref",
-        )
+        entries = _normalize_template_entries(display_path(solution_path), raw)
     except SampleError:
-        return None
+        return []
+    resolved: list[pathlib.Path] = []
+    where = display_path(solution_path)
+    for idx, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            continue
+        field_prefix = f"templates[{idx}]"
+        path_ref = entry.get("template_path")
+        if isinstance(path_ref, str) and path_ref.strip():
+            try:
+                resolved.append(
+                    _require_local_file(
+                        where,
+                        sample_dir,
+                        sample_dir,
+                        path_ref,
+                        f"{field_prefix}.template_path",
+                    )
+                )
+            except SampleError:
+                pass
+            continue
+        lookup_ref = entry.get("template_ref")
+        if isinstance(lookup_ref, str) and lookup_ref.strip():
+            try:
+                resolved.append(
+                    _resolve_template_ref_file(
+                        where,
+                        sample_dir,
+                        lookup_ref,
+                        f"{field_prefix}.template_ref",
+                    )
+                )
+            except SampleError:
+                pass
+    return resolved
+
+
+def _normalize_template_entries(where: str, raw: dict[str, Any]) -> list[Any]:
+    """
+    Pull the canonical templates list out of a solution.yaml mapping.
+
+    Accepts either the canonical `templates: [<entry>, …]` shape or the
+    legacy singular `template: <entry>` shape (normalized to a
+    one-element list — mirrors `SolutionBundle.cast` on the wire side).
+    Declaring both at once is rejected so authors don't end up with
+    two sources of truth.
+
+    Does not validate the entries themselves — that's the caller's
+    job (validate_solution_yaml does the full per-entry walk).
+    """
+    has_singular = "template" in raw
+    has_plural = "templates" in raw
+    if has_singular and has_plural:
+        raise SampleError(
+            f"{where}: declare either `template:` or `templates:`, not both. "
+            f"`templates:` is the canonical shape (a non-empty list); "
+            f"`template:` is the legacy singular form, normalized to a "
+            f"one-element list."
+        )
+    if has_plural:
+        templates = raw["templates"]
+        if not isinstance(templates, list) or not templates:
+            raise SampleError(
+                f"{where}: `templates:` must be a non-empty list of "
+                f"`{{ template_path: <path> }}` or "
+                f"`{{ template_ref: <lookup_key> }}` entries, "
+                f"got {type(templates).__name__ if templates is not None else 'null'}."
+            )
+        return templates
+    if has_singular:
+        return [raw["template"]]
+    return []
 
 
 def _script_lookup_keys(sample_dir: pathlib.Path, step: dict[str, Any]) -> set[str]:
@@ -503,13 +554,18 @@ def validate_solution_yaml(sample_dir: pathlib.Path) -> None:
     """
     Validate solution.yaml (if present) for a single sample dir.
 
-    Catalog-facing solutions reference bundled files either by path or
-    by lookup key. `template_path` / `asset_path` values are paths
-    relative to the bundle root and must resolve to real local files
-    inside the sample dir. `template_ref` / `asset_ref` values are
-    lookup-key refs and must resolve to real local files by basename
-    lookup_key; path-like values belong in the corresponding *_path
-    field.
+    Catalog-facing solutions bundle one or more templates under a
+    canonical `templates:` list. Each entry references the on-disk
+    template body either by `template_path` (relative file path) or
+    `template_ref` (lookup_key resolved to a local *.yaml). The legacy
+    singular `template:` shape is still accepted and normalized to a
+    one-element list — mirrors the backend's `SolutionBundle.cast`
+    behavior so local validation stays a superset of import.
+
+    `asset_path` / `asset_ref` follow the same path-vs-lookup_key
+    contract for any `assets:` entries. All `*_path` values must
+    resolve to real local files inside the sample dir; all `*_ref`
+    values must resolve to real local files by basename lookup_key.
     The same local-file rule applies to local image/link refs in the
     inline `readme:` markdown and in any `.md` files under the sample
     dir.
@@ -566,40 +622,69 @@ def validate_solution_yaml(sample_dir: pathlib.Path) -> None:
             f"declare a non-empty display name shown in the catalog."
         )
 
-    template = raw.get("template")
-    if not isinstance(template, dict):
+    entries = _normalize_template_entries(where, raw)
+    if not entries:
         raise SampleError(
-            f"{where}: missing or invalid `template:` block — samples-catalog "
-            f"requires `template_path:` or `template_ref:` for the wrapped "
-            f"template file."
+            f"{where}: missing `templates:` list — every Solution must "
+            f"bundle at least one template. Use `templates:` (canonical, "
+            f"a non-empty list) or the legacy singular `template:` "
+            f"(normalized to a one-element list at import time)."
         )
 
-    if "template_path" in template:
-        template_path_value = template["template_path"]
-        template_path = _require_local_file(
-            where,
-            sample_dir,
-            sample_dir,
-            template_path_value,
-            "template.template_path",
-        )
-        _reject_agent_key_in_wrapped_template_at_path(
-            where, template_path_value, template_path
-        )
-    elif "template_ref" in template:
-        template_ref = template["template_ref"]
-        template_path = _resolve_template_ref_file(
-            where, sample_dir, template_ref, "template.template_ref"
-        )
-        _reject_agent_key_in_wrapped_template_at_path(
-            where, template_ref, template_path
-        )
-    else:
-        raise SampleError(
-            f"{where}: `template:` must carry a non-empty `template_path:` "
-            f"or `template_ref:` string. Inline templates are not supported "
-            f"by samples-catalog."
-        )
+    seen_template_paths: set[pathlib.Path] = set()
+    for idx, entry in enumerate(entries):
+        field_prefix = f"templates[{idx}]"
+        if not isinstance(entry, dict):
+            raise SampleError(
+                f"{where}: {field_prefix} must be a mapping with "
+                f"`template_path:` or `template_ref:`, got "
+                f"{type(entry).__name__}."
+            )
+        has_path = "template_path" in entry
+        has_ref = "template_ref" in entry
+        if has_path and has_ref:
+            raise SampleError(
+                f"{where}: {field_prefix} must declare either "
+                f"`template_path:` or `template_ref:`, not both."
+            )
+        if has_path:
+            template_path_value = entry["template_path"]
+            template_path = _require_local_file(
+                where,
+                sample_dir,
+                sample_dir,
+                template_path_value,
+                f"{field_prefix}.template_path",
+            )
+            _reject_agent_key_in_wrapped_template_at_path(
+                where, template_path_value, template_path
+            )
+        elif has_ref:
+            template_ref = entry["template_ref"]
+            template_path = _resolve_template_ref_file(
+                where, sample_dir, template_ref, f"{field_prefix}.template_ref"
+            )
+            _reject_agent_key_in_wrapped_template_at_path(
+                where, template_ref, template_path
+            )
+        else:
+            raise SampleError(
+                f"{where}: {field_prefix} must carry a non-empty "
+                f"`template_path:` or `template_ref:` string. Inline "
+                f"templates are not supported by samples-catalog."
+            )
+        # Normalize via `.resolve()` so a path-mode and a ref-mode entry
+        # that point at the same on-disk file collide here even though
+        # they take different code paths above (one runs through
+        # `.resolve()`, the other returns raw from `rglob`).
+        resolved_template_path = template_path.resolve()
+        if resolved_template_path in seen_template_paths:
+            raise SampleError(
+                f"{where}: {field_prefix} resolves to "
+                f"{template_path.name!r}, already declared earlier in "
+                f"`templates:`. Each template must appear once."
+            )
+        seen_template_paths.add(resolved_template_path)
 
     # `assets:` is optional, but when present it must be a list. A
     # non-list value (e.g. a mapping the author wrote thinking they
