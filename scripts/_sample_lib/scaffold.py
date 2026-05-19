@@ -39,8 +39,8 @@ def _sample_yaml(slug: str, name: str, tagline: str, with_solution: bool = False
     # Solution-mode samples wrap the deploy as `deploy_solution` so the
     # samples-catalog executor imports the catalog wrapper instead of
     # provisioning a runtime agent. The wrapped template body lives at
-    # agents/<slug>.yaml so solution.yaml can use path-mode
-    # `template_path` by default.
+    # agents/<slug>.yaml so solution.yaml's `templates:` list can use
+    # path-mode `template_path` by default.
     if with_solution:
         deploy_block = (
             "  - type: deploy_solution\n"
@@ -281,8 +281,11 @@ def _solution_yaml(slug: str, name: str, tagline: str, solution_id: str) -> str:
         "assets:\n"
         '  - asset_path: diagrams/architecture.svg\n'
         "\n"
-        "template:\n"
-        f'  template_path: agents/{slug}.yaml\n'
+        "# `templates:` is the canonical shape — a non-empty list, even when\n"
+        "# the bundle ships a single template. Add more entries here to ship\n"
+        "# additional Agent*Template bodies alongside the deployable template.\n"
+        "templates:\n"
+        f'  - template_path: agents/{slug}.yaml\n'
         "\n"
         "metadata:\n"
         "  category: general\n"

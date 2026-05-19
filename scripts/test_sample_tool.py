@@ -1373,6 +1373,182 @@ class ValidateSolutionYamlTest(unittest.TestCase):
             sample_dir = root.agents_dir / "hello-world"
             self._validate(sample_dir)
 
+    # `templates:` is the canonical shape (a list, even with one entry).
+    # Singular `template:` is kept for backwards compatibility — it's
+    # normalized to a one-element list at import time on the wire side,
+    # so local validation mirrors that and accepts both shapes.
+
+    def test_templates_list_with_single_entry_passes(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+            """),
+        )
+        self._validate(sample_dir)
+
+    def test_templates_list_with_multiple_entries_passes(self):
+        # A multi-template bundle: the deployable template plus
+        # additional library-row templates. Each entry is independently
+        # walked for setup_requirements.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        sibling = sample_dir / "agents" / "sibling.yaml"
+        sibling.write_text(self._WRAPPED_DEFAULT_BODY)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: agents/sibling.yaml
+            """),
+        )
+        self._validate(sample_dir)
+
+    def test_templates_list_mixing_path_and_ref_passes(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        sibling = sample_dir / "agents" / "sibling.yaml"
+        sibling.write_text(self._WRAPPED_DEFAULT_BODY)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_ref: sibling
+            """),
+        )
+        self._validate(sample_dir)
+
+    def test_templates_with_duplicate_entry_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_ref: x
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "templates\\[1\\].*already declared"):
+            self._validate(sample_dir)
+
+    def test_templates_entry_with_both_path_and_ref_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                    template_ref: x
+            """),
+        )
+        with self.assertRaisesRegex(
+            SampleError, "templates\\[0\\].*either `template_path:` or `template_ref:`"
+        ):
+            self._validate(sample_dir)
+
+    def test_empty_templates_list_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER + "templates: []\n",
+        )
+        with self.assertRaisesRegex(SampleError, "`templates:` must be a non-empty list"):
+            self._validate(sample_dir)
+
+    def test_templates_as_mapping_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  template_path: agents/x.yaml
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "`templates:` must be a non-empty list"):
+            self._validate(sample_dir)
+
+    def test_declaring_both_template_and_templates_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                template:
+                  template_path: agents/x.yaml
+                templates:
+                  - template_path: agents/x.yaml
+            """),
+        )
+        with self.assertRaisesRegex(SampleError, "either `template:` or `templates:`"):
+            self._validate(sample_dir)
+
+    def test_templates_setup_requirements_walked_per_entry(self):
+        # Each template body's setup_requirements block is independently
+        # validated when the sample's deploy step is deploy_solution.
+        # Any custom verify.script_ref must resolve to a script in an
+        # upload_scripts source_dir — a dangling script_ref in the
+        # *second* template should still be caught.
+        sample_dir = self._make_solution_sample_dir()
+        # Swap deploy_agent for deploy_solution so validate_steps walks
+        # the bundle's templates list rather than the sample-root
+        # agent.yaml.
+        (sample_dir / "sample.yaml").write_text(textwrap.dedent("""\
+            schema_version: 2
+            version: v0.1.0
+            name: X
+            tagline: An X sample.
+            min_cli_version: "0.28.0"
+            steps:
+              - type: upload_scripts
+                source_dir: scripts
+              - type: deploy_solution
+                solution_file: solution.yaml
+        """))
+        self._write_path_template(sample_dir)
+        # Drop a real script so the cross-reference check actually runs
+        # (it's skipped when no upload_scripts source_dir yields any
+        # lookup_keys — see validation.py).
+        (sample_dir / "scripts" / "real-script.aascript").write_text("// stub\n")
+        sibling = sample_dir / "agents" / "sibling.yaml"
+        sibling.write_text(textwrap.dedent("""\
+            kind: AgentTemplate
+            name: Sibling
+            setup_requirements:
+              - kind: custom
+                id: sibling-check
+                title: Sibling check
+                description: verifies the sibling template
+                verify:
+                  script_ref: not-a-real-script
+        """))
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: agents/sibling.yaml
+            """),
+        )
+        with self.assertRaisesRegex(
+            SampleError, "script_ref 'not-a-real-script'"
+        ):
+            self._validate(sample_dir)
+
 
 # --- rendering ------------------------------------------------------------
 
@@ -1621,10 +1797,12 @@ class NewSampleTest(unittest.TestCase):
             self.assertRegex(solution["solution_version"], r"^v\d+\.\d+\.\d+$")
             # template_path / asset_path are resolved relative to the
             # bundle root and match the platform path-mode Solution
-            # designators.
+            # designators. `templates:` is the canonical shape — a list,
+            # even when only one template ships in the bundle.
+            self.assertNotIn("template", solution)
             self.assertEqual(
-                solution["template"],
-                {"template_path": "agents/hello-world.yaml"},
+                solution["templates"],
+                [{"template_path": "agents/hello-world.yaml"}],
             )
             self.assertEqual(
                 solution["assets"],
