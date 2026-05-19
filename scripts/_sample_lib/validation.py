@@ -254,6 +254,112 @@ def validate_steps(slug: str, steps: Any, source: pathlib.Path) -> None:
             for template_path in _resolve_wrapped_templates(sample_dir, step):
                 validate_setup_requirements(template_path, script_lookup_keys)
 
+    # Finally, dedupe lookup_keys across every artifact this bundle
+    # ships. The platform's per-(app, org, sandbox) config namespace is
+    # flat across kinds — a Script and an AgentToolTemplate sharing a
+    # lookup_key collide at import time with a 422, even though they
+    # resolve as separate config rows. Catch up front so a bundle that
+    # passes validate is also a bundle the import endpoint will accept.
+    _validate_bundle_lookup_key_uniqueness(steps, sample_dir, source)
+
+
+def _validate_bundle_lookup_key_uniqueness(
+    steps: list[dict[str, Any]],
+    sample_dir: pathlib.Path,
+    source: pathlib.Path,
+) -> None:
+    """
+    Reject any lookup_key reused across artifacts in this sample's
+    bundle.
+
+    Artifacts checked:
+      * Every `upload_scripts` source_dir entry (lookup_key = filename
+        stem, matching samples-catalog's `stripExtension` derivation).
+      * The `deploy_agent` template_file (lookup_key = body's
+        explicit `lookup_key:` field if present; otherwise skipped
+        because the derivation rule for an undeclared key isn't
+        observable from authoring side alone).
+      * Every template body in a `deploy_solution`'s
+        `solution.yaml.templates:` list (same explicit-only rule).
+
+    The "explicit-only" stance trades one class of false-negative (an
+    auto-derived AgentTemplate lookup_key colliding with a script
+    stem) for zero false-positives. Authors who hit the auto-derived
+    case can opt in by declaring `lookup_key:` in the body, at which
+    point the check picks it up.
+    """
+    where = display_path(source)
+    owners: dict[str, str] = {}
+
+    def register(key: str, owner: str) -> None:
+        existing = owners.get(key)
+        if existing is not None and existing != owner:
+            raise SampleError(
+                f"{where}: lookup_key {key!r} is used by two bundle "
+                f"artifacts: {existing} and {owner}. The platform's "
+                f"per-(app, org, sandbox) config namespace is flat "
+                f"across kinds, so both can't coexist at import time. "
+                f"Prefix one — e.g. `st-tool-{key}` on an "
+                f"AgentToolTemplate, `st-routine-{key}` on an "
+                f"AgentRoutineTemplate — so each ends up in its own "
+                f"final `sol-<uuid>-<key>` slot."
+            )
+        owners[key] = owner
+
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        verb = step.get("type")
+        if verb == "upload_scripts":
+            source_dir_rel = step.get("source_dir")
+            if not isinstance(source_dir_rel, str):
+                continue
+            source_dir_abs = sample_dir / source_dir_rel
+            if not source_dir_abs.is_dir():
+                continue
+            for child in sorted(source_dir_abs.iterdir()):
+                if child.is_file() and child.suffix in SCRIPT_EXTENSIONS:
+                    register(
+                        child.stem,
+                        f"Script {source_dir_rel}/{child.name}",
+                    )
+        elif verb == "deploy_agent":
+            template_file = step.get("template_file")
+            if isinstance(template_file, str):
+                _register_template_lookup_key(
+                    sample_dir / template_file, template_file, register
+                )
+        elif verb == "deploy_solution":
+            sample_root = sample_dir.resolve()
+            for template_path in _resolve_wrapped_templates(sample_dir, step):
+                # _require_local_file calls .resolve(); on macOS that
+                # rewrites /var/folders/... → /private/var/folders/...
+                # via the standard tempfile symlink. Resolve both sides
+                # so .relative_to() doesn't trip over that rewrite.
+                rel = template_path.resolve().relative_to(sample_root).as_posix()
+                _register_template_lookup_key(template_path, rel, register)
+
+
+def _register_template_lookup_key(
+    template_path: pathlib.Path,
+    rel: str,
+    register: Any,
+) -> None:
+    """Best-effort read of a template body's kind + lookup_key, then
+    register with the caller's collision-detecting closure. Silent on
+    parse failures — the other validation paths surface those."""
+    try:
+        raw = yaml.safe_load(template_path.read_text())
+    except (OSError, yaml.YAMLError):
+        return
+    if not isinstance(raw, dict):
+        return
+    key = raw.get("lookup_key")
+    if not isinstance(key, str) or not key.strip():
+        return
+    kind = raw.get("kind") if isinstance(raw.get("kind"), str) else "Template"
+    register(key, f"{kind} {rel}")
+
 
 def _resolve_wrapped_templates(
     sample_dir: pathlib.Path, step: dict[str, Any]

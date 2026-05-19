@@ -23,6 +23,28 @@ Subcommands:
                    correctly on GitHub and in the Solution catalog out
                    of the box.
 
+                   Solution-mode bundles are multi-template by design:
+                   solution.yaml's `templates:` is always a list, even
+                   for a single AgentTemplate. To add atomic
+                   AgentToolTemplate / AgentRoutineTemplate configs (so
+                   they can be installed standalone alongside the
+                   deployable agent), drop them under tools/ or
+                   routines/, add `- template_path:` entries to
+                   `templates:`, and reference them from the deployable
+                   AgentTemplate via the polymorphic inline shape:
+
+                       tools:
+                         - tool_type: builtin              # inline literal
+                           builtin_tool_key: knowledge_search
+                         - template_path: tools/query-osv.yaml
+                         - template_ref: query-osv         # by lookup_key
+                       routines:
+                         - template_path: routines/daily-scan.yaml
+
+                   Each atomic template owns its own `setup_requirements:`
+                   block so users installing just one tool/routine get
+                   the env vars + installs it depends on.
+
   pack <slug>      Validate one sample and build the release tarball
                    <slug>-<version>.tar.gz. Same archive shape CI uploads
                    on merge to main — use it locally for
@@ -115,8 +137,12 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Also scaffold solution.yaml (catalog-facing Solution config) "
-            "and a diagrams/ directory with a placeholder architecture "
-            "diagram. Bumps the README to reference the diagram."
+            "with a canonical `templates:` list (one entry by default; "
+            "add more atomic AgentToolTemplate / AgentRoutineTemplate "
+            "files under tools/ or routines/ to ship standalone-"
+            "installable tools/routines alongside the deployable agent). "
+            "Also scaffolds a diagrams/ directory with a placeholder "
+            "architecture diagram and bumps the README to reference it."
         ),
     )
 
