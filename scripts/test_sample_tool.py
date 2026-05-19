@@ -1550,6 +1550,211 @@ class ValidateSolutionYamlTest(unittest.TestCase):
             self._validate(sample_dir)
 
 
+# --- bundle lookup_key uniqueness ----------------------------------------
+
+
+class ValidateBundleLookupKeyUniquenessTest(unittest.TestCase):
+    """
+    The platform's per-(app, org, sandbox) config namespace is flat
+    across kinds — a Script and an AgentToolTemplate that both want
+    lookup_key 'foo' collide at import time with a 422. validate_steps
+    runs a final cross-artifact dedupe pass so a sample that passes
+    `validate` also passes `/api/solutions/import`.
+    """
+
+    _MINIMAL_SOLUTION_HEADER = textwrap.dedent("""\
+        kind: Solution
+        lookup_key: x-solution
+        solution_id: 7a1c4f10-1e2b-4d6f-9a8d-2b71f2c6a103
+        solution_version: v0.1.0
+        name: X
+        description: X
+    """)
+
+    def _make_solution_sample_dir(self) -> Path:
+        tmp = Path(tempfile.mkdtemp())
+        sample_dir = tmp / "agents" / "x"
+        sample_dir.mkdir(parents=True)
+        (sample_dir / "scripts").mkdir()
+        (sample_dir / "agents").mkdir()
+        (sample_dir / "agents" / "x.yaml").write_text(
+            "kind: AgentTemplate\nname: X\n"
+        )
+        (sample_dir / "sample.yaml").write_text(textwrap.dedent("""\
+            schema_version: 2
+            version: v0.1.0
+            name: X
+            tagline: A sample.
+            min_cli_version: "0.28.0"
+            steps:
+              - type: upload_scripts
+                source_dir: scripts
+              - type: deploy_solution
+                solution_file: solution.yaml
+        """))
+        return sample_dir
+
+    def _validate(self, sample_dir: Path) -> None:
+        validate_sample("x", _parsed(sample_dir), sample_dir / "sample.yaml")
+
+    def test_script_and_bundled_tool_template_with_same_lookup_key_rejected(self):
+        # The exact production case: scripts/query-osv.aascript derives
+        # lookup_key 'query-osv'; tools/query-osv.yaml's body declares
+        # `lookup_key: query-osv`. Same final sol-<uuid>-query-osv slot.
+        sample_dir = self._make_solution_sample_dir()
+        (sample_dir / "scripts" / "query-osv.aascript").write_text("// stub\n")
+        (sample_dir / "tools").mkdir()
+        (sample_dir / "tools" / "query-osv.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            lookup_key: query-osv
+            tool_type: custom
+            name: query_osv
+            description: stub
+            handler_type: script
+            config_ref: query-osv
+        """))
+        (sample_dir / "solution.yaml").write_text(
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: tools/query-osv.yaml
+            """)
+        )
+        with self.assertRaisesRegex(
+            SampleError,
+            r"lookup_key 'query-osv' is used by two bundle artifacts:.*"
+            r"Script scripts/query-osv\.aascript.*"
+            r"AgentToolTemplate tools/query-osv\.yaml",
+        ):
+            self._validate(sample_dir)
+
+    def test_two_bundled_templates_with_same_lookup_key_rejected(self):
+        # Two AgentToolTemplate files in the same bundle that both
+        # declare `lookup_key: foo` would collide at import — the
+        # second insert hits the unique constraint.
+        sample_dir = self._make_solution_sample_dir()
+        (sample_dir / "tools").mkdir()
+        (sample_dir / "tools" / "a.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            lookup_key: shared
+            tool_type: custom
+            name: a
+            description: stub
+            handler_type: script
+            config_ref: a
+        """))
+        (sample_dir / "tools" / "b.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            lookup_key: shared
+            tool_type: custom
+            name: b
+            description: stub
+            handler_type: script
+            config_ref: b
+        """))
+        (sample_dir / "solution.yaml").write_text(
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: tools/a.yaml
+                  - template_path: tools/b.yaml
+            """)
+        )
+        with self.assertRaisesRegex(
+            SampleError, r"lookup_key 'shared'.*tools/a\.yaml.*tools/b\.yaml"
+        ):
+            self._validate(sample_dir)
+
+    def test_script_collision_under_deploy_agent_flow_is_rejected(self):
+        # Same script-vs-template collision but exercised via the
+        # deploy_agent path (no solution.yaml). Here the AgentTemplate
+        # itself declares the colliding lookup_key.
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "scripts").mkdir()
+        (tmp / "scripts" / "shared.aascript").write_text("// stub\n")
+        (tmp / "agent.yaml").write_text(textwrap.dedent("""\
+            kind: AgentTemplate
+            lookup_key: shared
+            name: X
+        """))
+        (tmp / "sample.yaml").write_text(textwrap.dedent("""\
+            schema_version: 2
+            version: v0.1.0
+            name: X
+            tagline: A sample.
+            min_cli_version: "0.28.0"
+            steps:
+              - type: upload_scripts
+                source_dir: scripts
+              - type: deploy_agent
+                template_file: agent.yaml
+        """))
+        with self.assertRaisesRegex(
+            SampleError,
+            r"lookup_key 'shared'.*Script scripts/shared\.aascript.*"
+            r"AgentTemplate agent\.yaml",
+        ):
+            validate_sample("x", _parsed(tmp), tmp / "sample.yaml")
+
+    def test_prefixed_atomic_template_lookup_keys_pass(self):
+        # Happy path: prefixing the AgentToolTemplate's lookup_key
+        # breaks the collision and the bundle validates clean. Mirrors
+        # the production fix where tools/query-osv.yaml declares
+        # `lookup_key: st-tool-query-osv` alongside
+        # scripts/query-osv.aascript (`query-osv`).
+        sample_dir = self._make_solution_sample_dir()
+        (sample_dir / "scripts" / "query-osv.aascript").write_text("// stub\n")
+        (sample_dir / "tools").mkdir()
+        (sample_dir / "tools" / "query-osv.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            lookup_key: st-tool-query-osv
+            tool_type: custom
+            name: query_osv
+            description: stub
+            handler_type: script
+            config_ref: query-osv
+        """))
+        (sample_dir / "solution.yaml").write_text(
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: tools/query-osv.yaml
+            """)
+        )
+        self._validate(sample_dir)
+
+    def test_template_without_explicit_lookup_key_skipped(self):
+        # The check is explicit-only — a template body that doesn't
+        # declare `lookup_key:` is not registered. (The platform
+        # auto-derives a key, but that derivation rule isn't reliably
+        # observable from authoring side, so we don't speculate.)
+        sample_dir = self._make_solution_sample_dir()
+        (sample_dir / "scripts" / "shared.aascript").write_text("// stub\n")
+        (sample_dir / "tools").mkdir()
+        # No `lookup_key:` declared — collision-by-derivation possible
+        # but not registered, so validate passes.
+        (sample_dir / "tools" / "shared.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            tool_type: custom
+            name: shared
+            description: stub
+            handler_type: script
+            config_ref: shared
+        """))
+        (sample_dir / "solution.yaml").write_text(
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: tools/shared.yaml
+            """)
+        )
+        self._validate(sample_dir)
+
+
 # --- rendering ------------------------------------------------------------
 
 
