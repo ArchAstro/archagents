@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 
-from .paths import AGENTS_DIR, REPO_ROOT
+from .paths import REPO_ROOT, SAMPLE_ROOTS
 from .validation import SampleError, validate_sample
 
 
@@ -24,8 +24,9 @@ def _resolve_sample_dir(slug_or_path: str) -> tuple[str, pathlib.Path]:
 
     Paths are cwd-relative or absolute and always win. A bare
     `my-sample` first resolves like `./my-sample`; if that path does
-    not exist and `agents/my-sample` does, use the catalog sample.
-    Slug for tarball naming is the directory's basename.
+    not exist, fall back to looking for the slug under each
+    SAMPLE_ROOTS entry (agents/, solutions/). Slug for tarball naming
+    is the directory's basename.
     """
     expanded = pathlib.Path(slug_or_path).expanduser()
     cwd_candidate = expanded.resolve()
@@ -38,9 +39,10 @@ def _resolve_sample_dir(slug_or_path: str) -> tuple[str, pathlib.Path]:
     ):
         return cwd_candidate.name, cwd_candidate
 
-    catalog_candidate = (AGENTS_DIR / slug_or_path).resolve()
-    if catalog_candidate.exists():
-        return catalog_candidate.name, catalog_candidate
+    for root in SAMPLE_ROOTS:
+        catalog_candidate = (root / slug_or_path).resolve()
+        if catalog_candidate.exists():
+            return catalog_candidate.name, catalog_candidate
 
     expanded = cwd_candidate
     return expanded.name, expanded

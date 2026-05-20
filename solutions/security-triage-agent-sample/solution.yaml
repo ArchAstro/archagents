@@ -1,0 +1,151 @@
+# Solution config — catalog-facing wrapper around the Security Triage
+# Agent and its atomic tools / routines.
+#
+# `template_path` and `asset_path` are paths relative to the bundle
+# root. The CLI resolves them against the on-disk layout; the server
+# keeps them as path-mode Solution designators.
+#
+# `templates:` is multi-template: the deployable AgentTemplate plus
+# every atomic AgentToolTemplate / AgentRoutineTemplate this Solution
+# ships. Each entry imports as an independent library row — users can
+# install just `query-osv` or just `daily-dependency-scan` as
+# standalone configs without provisioning the agent. The deployable
+# template (the first entry) references the atomic ones inline via
+# `template_path:` in its `tools:` / `routines:` lists.
+
+kind: Solution
+lookup_key: security-triage-agent-sample-solution
+solution_id: 35d13405-c67e-4c4d-b192-e3c460b97097
+solution_version: v0.4.2
+name: Security Triage Agent Sample
+description: A senior security engineer that triages vulnerabilities, fixes what it can, and escalates the rest. Sample bundle — copy + tailor to your stack.
+
+# Catalog taxonomy. `category_keys` shelf the bundle in the Library
+# carousel; `tag_keys` feed the tag-filter picker. Both are stable
+# strings — the platform expects a matching SolutionCategory /
+# SolutionTag config to own the display metadata for each key.
+#
+# `sample` is a convention-level category every entry under solutions/
+# carries — lets Library viewers filter "show me reference samples"
+# from across capability shelves.
+category_keys:
+  - security
+  - sample
+tag_keys:
+  - vulnerability-management
+  - dependency-scanning
+  - github
+  - gcp-logging
+  - triage
+
+readme: |
+  # Security Triage Agent Sample
+
+  Runs daily dependency scans, classifies findings into three explicit
+  outcomes (mitigated, auto-fixable, needs human attention), opens fix
+  PRs for the easy ones, and files GitHub issues for everything else
+  with full triage reasoning.
+
+  ## Architecture
+
+  ![Architecture overview](diagrams/architecture.svg)
+
+  Monitored repos and vulnerability feeds (OSV.dev, GitHub Advisory DB)
+  fan into a single triage engine, cross-referenced against your internal
+  security policies via `knowledge_search`. Every finding leaves the
+  engine through exactly one of three durable outputs.
+
+  ## Triage flow
+
+  ![Triage decision flow](diagrams/triage-flow.svg)
+
+  The three outcomes force a decision per finding — no "I'll come back
+  to it later" in long-term memory where humans can't see it:
+
+  - **A. Noise** — already mitigated, vulnerable function unused, or
+    otherwise no exposure. Decision is stored in long-term memory so
+    future scans don't re-litigate it.
+  - **B. Auto-fix** — small targeted fix (typically a patch bump). The
+    agent creates a branch, commits the bump, and opens a PR.
+  - **C. File issue** — anything that needs human judgment: major
+    version bumps, multi-file changes, package replacements, or
+    ambiguous risk. The agent files a labeled GitHub issue with full
+    triage reasoning and the recommended action.
+
+  ## Atomic templates
+
+  This Solution bundles each custom tool and the substantive routines
+  as standalone library rows alongside the deployable agent — pick the
+  ones you want and reference them from your own AgentTemplate:
+
+  **Tools** (`kind: AgentToolTemplate`)
+  - `query-osv` · query OSV.dev for known CVEs (no auth)
+  - `query-github-advisories` · GitHub Advisory DB lookups
+  - `scan-dependencies` · parse a lockfile + check every dep against OSV
+  - `get-repo-file` · read a file from GitHub
+  - `create-branch` / `commit-file` / `create-pull-request` · open auto-fix PRs
+  - `create-github-issue` · file labeled triage issues
+  - `query-gcloud-logs` · pull entries from Cloud Logging
+
+  **Routines** (`kind: AgentRoutineTemplate`)
+  - `daily-dependency-scan` · cron-triggered scan + triage
+  - `hourly-log-analysis` · cron-triggered GCP log anomaly check
+  - `pr-review` · webhook-triggered PR security review
+
+  Each atomic template carries its own `setup_requirements:` block, so
+  installing one standalone surfaces the env vars + installations it
+  depends on without dragging the whole agent's checklist along.
+
+  ## Validate/import
+
+  ```sh
+  uv run scripts/sample_tool.py pack solutions/security-triage-agent-sample
+  ```
+
+  Upload the generated tarball through the Solution import flow.
+
+assets:
+  - asset_path: diagrams/architecture.svg
+  - asset_path: diagrams/triage-flow.svg
+
+templates:
+  # Deployable AgentTemplate (first entry — the install endpoint defaults
+  # to this one when no `template:` selector is passed). `readme_path:`
+  # is the bundle-relative path to a markdown file the Library inspector
+  # renders for this template. samples-catalog auto-bundles the bytes
+  # into `solution.files[]`; the platform serves them through
+  # `/solutions/:s/readme?file=…&token=…`.
+  - template_path: agents/security-triage-agent-sample.yaml
+    readme_path: agents/security-triage-agent-sample.md
+
+  # Atomic AgentToolTemplate library rows.
+  - template_path: tools/query-osv.yaml
+    readme_path: tools/query-osv.md
+  - template_path: tools/query-github-advisories.yaml
+    readme_path: tools/query-github-advisories.md
+  - template_path: tools/scan-dependencies.yaml
+    readme_path: tools/scan-dependencies.md
+  - template_path: tools/get-repo-file.yaml
+    readme_path: tools/get-repo-file.md
+  - template_path: tools/create-branch.yaml
+    readme_path: tools/create-branch.md
+  - template_path: tools/commit-file.yaml
+    readme_path: tools/commit-file.md
+  - template_path: tools/create-pull-request.yaml
+    readme_path: tools/create-pull-request.md
+  - template_path: tools/create-github-issue.yaml
+    readme_path: tools/create-github-issue.md
+  - template_path: tools/query-gcloud-logs.yaml
+    readme_path: tools/query-gcloud-logs.md
+
+  # Atomic AgentRoutineTemplate library rows.
+  - template_path: routines/daily-dependency-scan.yaml
+    readme_path: routines/daily-dependency-scan.md
+  - template_path: routines/hourly-log-analysis.yaml
+    readme_path: routines/hourly-log-analysis.md
+  - template_path: routines/pr-review.yaml
+    readme_path: routines/pr-review.md
+
+metadata:
+  category: security
+  sample_slug: security-triage-agent-sample

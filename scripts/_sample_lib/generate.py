@@ -12,27 +12,51 @@ from typing import Any
 
 import yaml
 
-from .paths import AGENTS_DIR, MANIFEST_PATH, REPO_ROOT
+from .paths import MANIFEST_PATH, REPO_ROOT, SAMPLE_ROOTS
 from .render import render_aaignore, render_manifest
 from .validation import SampleError, validate_sample
 
 
 def load_all_samples() -> list[dict[str, Any]]:
+    """
+    Walk every SAMPLE_ROOTS entry (agents/ and solutions/), treating
+    each top-level subdirectory as a sample. Slugs must stay unique
+    across roots — two samples with the same name in different roots
+    would collide on the catalog row keyed by lookup_key/slug.
+    """
     samples: list[dict[str, Any]] = []
-    for sample_dir in sorted(AGENTS_DIR.iterdir()):
-        if not sample_dir.is_dir():
+    seen_slugs: dict[str, pathlib.Path] = {}
+    for root in SAMPLE_ROOTS:
+        if not root.is_dir():
             continue
-        yaml_path = sample_dir / "sample.yaml"
-        if not yaml_path.exists():
-            raise SampleError(
-                f"{sample_dir.relative_to(REPO_ROOT)}: missing sample.yaml. "
-                f"Every sample directory must declare its version + DSL steps."
-            )
-        raw = yaml.safe_load(yaml_path.read_text())
-        sample = validate_sample(sample_dir.name, raw, yaml_path)
-        samples.append(sample)
+        for sample_dir in sorted(root.iterdir()):
+            if not sample_dir.is_dir():
+                continue
+            existing = seen_slugs.get(sample_dir.name)
+            if existing is not None:
+                raise SampleError(
+                    f"slug {sample_dir.name!r} appears in both "
+                    f"{existing.relative_to(REPO_ROOT)} and "
+                    f"{sample_dir.relative_to(REPO_ROOT)}. Slugs must be "
+                    f"unique across agents/ and solutions/."
+                )
+            yaml_path = sample_dir / "sample.yaml"
+            if not yaml_path.exists():
+                raise SampleError(
+                    f"{sample_dir.relative_to(REPO_ROOT)}: missing sample.yaml. "
+                    f"Every sample directory must declare its version + DSL steps."
+                )
+            raw = yaml.safe_load(yaml_path.read_text())
+            sample = validate_sample(sample_dir.name, raw, yaml_path)
+            # Stamp the discovery root so plan_outputs writes .aaignore
+            # back to the right directory (samples can live under either
+            # agents/ or solutions/).
+            sample["sample_dir"] = sample_dir
+            samples.append(sample)
+            seen_slugs[sample_dir.name] = sample_dir
     if not samples:
-        raise SampleError(f"No samples found under {AGENTS_DIR}")
+        roots = ", ".join(str(r.relative_to(REPO_ROOT)) for r in SAMPLE_ROOTS)
+        raise SampleError(f"No samples found under {roots}")
     return samples
 
 
@@ -43,7 +67,7 @@ def plan_outputs(samples: list[dict[str, Any]]) -> dict[pathlib.Path, str]:
     """
     planned: dict[pathlib.Path, str] = {}
     for sample in samples:
-        sample_dir = AGENTS_DIR / sample["slug"]
+        sample_dir = sample["sample_dir"]
         planned[sample_dir / ".aaignore"] = render_aaignore(sample_dir)
     planned[MANIFEST_PATH] = render_manifest(samples)
     return planned

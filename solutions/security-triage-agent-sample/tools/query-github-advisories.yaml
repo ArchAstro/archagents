@@ -1,0 +1,68 @@
+kind: AgentToolTemplate
+lookup_key: st-tool-query-github-advisories
+# Body lookup_key is prefixed with `st-tool-` to avoid collision with
+# the Script config at scripts/query-github-advisories.aascript (its
+# lookup_key derives from the filename stem `query-github-advisories`).
+# The platform's per-(app, org, sandbox) namespace is flat across kinds,
+# so the AgentToolTemplate has to own a distinct lookup_key even though
+# it's a different config kind.
+
+tool_type: custom
+name: query_github_advisories
+display_name: "Query GitHub Advisory DB"
+description: Query GitHub Advisory Database for vulnerabilities affecting a package
+parameters:
+  type: object
+  properties:
+    ecosystem: { type: string }
+    package_name: { type: string }
+    severity: { type: string, description: "low, medium, high, critical" }
+  required: [ecosystem, package_name]
+handler_type: script
+config_ref: query-github-advisories
+status: active
+
+# Native inline wire shape — multi-template Solutions ship
+# setup_actions: directly; samples-catalog only converts the catalog-
+# DSL `setup_requirements:` shape for single-template Solutions + the
+# deploy_agent path.
+setup_actions:
+  - action_type: env_var
+    title: Set GITHUB_TOKEN
+    description: |
+      GitHub token used to read the Advisory Database. A fine-grained
+      PAT with `Metadata: read` is sufficient.
+    params:
+      key: GITHUB_TOKEN
+      scope: agent_env_var
+      secret: true
+      example: "ghp_xxxxxxxxxxxx"
+    verify_config:
+      type: secret_present
+    required: true
+    sort_order: 0
+
+  - action_type: env_var
+    title: Set DEFAULT_ECOSYSTEM
+    description: |
+      Default package ecosystem (e.g. `hex`, `npm`, `pip`). Used when
+      the caller omits the `ecosystem` argument.
+    params:
+      key: DEFAULT_ECOSYSTEM
+      scope: agent_env_var
+    verify_config:
+      type: secret_present
+    required: false
+    sort_order: 1
+
+  - action_type: install
+    title: "Install: integration/github"
+    description: |
+      Install the ArchAstro GitHub App so the script's Advisory DB
+      query inherits the org's GitHub credentials.
+    params:
+      installation_kind: integration/github
+    verify_config:
+      type: installation_active
+    required: true
+    sort_order: 2

@@ -82,36 +82,57 @@ def _safe_source_dir(sample_dir: pathlib.Path, source_dir_value: str) -> pathlib
 
 
 def _sample_yaml_paths(repo_root: pathlib.Path) -> list[pathlib.Path]:
-    agents_dir = repo_root / "agents"
-    if agents_dir.is_symlink():
-        raise SampleScriptValidationError(f"{agents_dir}: agents directory must not be a symlink")
-    if not agents_dir.is_dir():
-        raise SampleScriptValidationError(f"{agents_dir}: agents directory not found")
+    """
+    Enumerate sample.yaml files across the two sample roots
+    (agents/ and solutions/). Symlink + parent-traversal checks at
+    each layer keep the hostile-data assumption from validate-sample-
+    scripts.yml intact: never follow a symlink, never resolve outside
+    the repository, never resolve outside the per-sample directory.
 
-    resolved_agents = agents_dir.resolve()
+    A missing solutions/ is fine (we don't require both roots to
+    exist), but a missing agents/ is treated as an error because every
+    historical sample lives there.
+    """
     resolved_repo = repo_root.resolve()
-    if not resolved_agents.is_relative_to(resolved_repo):
-        raise SampleScriptValidationError(f"{agents_dir}: agents directory must stay inside the repository")
 
     paths: list[pathlib.Path] = []
-    for sample_dir in sorted(agents_dir.iterdir()):
-        if sample_dir.is_symlink():
-            raise SampleScriptValidationError(f"{sample_dir}: sample directory must not be a symlink")
-        if not sample_dir.is_dir():
+    for root_name in ("agents", "solutions"):
+        root = repo_root / root_name
+        if root_name == "solutions" and not root.exists():
             continue
-        if not sample_dir.resolve().is_relative_to(resolved_agents):
-            raise SampleScriptValidationError(f"{sample_dir}: sample directory must stay inside agents/")
+        if root.is_symlink():
+            raise SampleScriptValidationError(f"{root}: {root_name} directory must not be a symlink")
+        if not root.is_dir():
+            raise SampleScriptValidationError(f"{root}: {root_name} directory not found")
 
-        sample_yaml = sample_dir / "sample.yaml"
-        if not sample_yaml.exists():
-            continue
-        if sample_yaml.is_symlink():
-            raise SampleScriptValidationError(f"{sample_yaml}: sample.yaml must not be a symlink")
-        if not sample_yaml.is_file():
-            raise SampleScriptValidationError(f"{sample_yaml}: sample.yaml must be a regular file")
-        if not sample_yaml.resolve().is_relative_to(sample_dir.resolve()):
-            raise SampleScriptValidationError(f"{sample_yaml}: sample.yaml must stay inside the sample directory")
-        paths.append(sample_yaml)
+        resolved_root = root.resolve()
+        if not resolved_root.is_relative_to(resolved_repo):
+            raise SampleScriptValidationError(
+                f"{root}: {root_name} directory must stay inside the repository"
+            )
+
+        for sample_dir in sorted(root.iterdir()):
+            if sample_dir.is_symlink():
+                raise SampleScriptValidationError(f"{sample_dir}: sample directory must not be a symlink")
+            if not sample_dir.is_dir():
+                continue
+            if not sample_dir.resolve().is_relative_to(resolved_root):
+                raise SampleScriptValidationError(
+                    f"{sample_dir}: sample directory must stay inside {root_name}/"
+                )
+
+            sample_yaml = sample_dir / "sample.yaml"
+            if not sample_yaml.exists():
+                continue
+            if sample_yaml.is_symlink():
+                raise SampleScriptValidationError(f"{sample_yaml}: sample.yaml must not be a symlink")
+            if not sample_yaml.is_file():
+                raise SampleScriptValidationError(f"{sample_yaml}: sample.yaml must be a regular file")
+            if not sample_yaml.resolve().is_relative_to(sample_dir.resolve()):
+                raise SampleScriptValidationError(
+                    f"{sample_yaml}: sample.yaml must stay inside the sample directory"
+                )
+            paths.append(sample_yaml)
     return paths
 
 

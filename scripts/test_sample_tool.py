@@ -97,22 +97,26 @@ class _TmpAgentsRoot:
 
     def __enter__(self):
         self.agents_dir.mkdir()
+        self.solutions_dir = self.tmp / "solutions"
+        sample_roots = (self.agents_dir, self.solutions_dir)
         # Patch every module that imported the constants. Because the
         # constants are bound at import time, each module that did
         # `from .paths import AGENTS_DIR` got its own binding — we
         # rewrite all of them. Future drive-by additions: keep this
         # list in sync.
         self._patch(paths_mod, "AGENTS_DIR", self.agents_dir)
+        self._patch(paths_mod, "SOLUTIONS_DIR", self.solutions_dir)
+        self._patch(paths_mod, "SAMPLE_ROOTS", sample_roots)
         self._patch(paths_mod, "MANIFEST_PATH", self.manifest_path)
         self._patch(paths_mod, "REPO_ROOT", self.tmp)
-        self._patch(gen_mod, "AGENTS_DIR", self.agents_dir)
+        # generate.py imports MANIFEST_PATH, REPO_ROOT, SAMPLE_ROOTS.
         self._patch(gen_mod, "MANIFEST_PATH", self.manifest_path)
         self._patch(gen_mod, "REPO_ROOT", self.tmp)
+        self._patch(gen_mod, "SAMPLE_ROOTS", sample_roots)
         self._patch(scaffold_mod, "AGENTS_DIR", self.agents_dir)
-        # pack only uses REPO_ROOT (for tarball path display). It
-        # resolves bare slugs against AGENTS_DIR and uses REPO_ROOT for
-        # tarball path display.
-        self._patch(pack_mod, "AGENTS_DIR", self.agents_dir)
+        # pack imports SAMPLE_ROOTS (slug resolution) + REPO_ROOT
+        # (tarball path display).
+        self._patch(pack_mod, "SAMPLE_ROOTS", sample_roots)
         self._patch(pack_mod, "REPO_ROOT", self.tmp)
         # lint imports AGENTS_DIR + REPO_ROOT for both the sample walk
         # and `display_path` error rendering.

@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 """
 Fail a PR if any sample directory has content changes without a
-corresponding version bump in agents/<slug>/sample.yaml.
+corresponding version bump in <root>/<slug>/sample.yaml, where <root>
+is either `agents/` or `solutions/`.
 
 Why this exists:
   release-samples.yml only cuts a new GitHub Release tarball when it
   sees a `<slug>-<version>` tag that doesn't already exist. Editing
-  files inside agents/<slug>/ without bumping the `version:` field is
-  a silent no-op as far as the published catalog is concerned — the
+  files inside a sample directory without bumping the `version:` field
+  is a silent no-op as far as the published catalog is concerned — the
   immutable old tarball keeps shipping, and CLI users installing
   `<slug>@<current_version>` get the pre-edit bytes.
 
   This check makes "I forgot to bump" a hard failure at PR time.
 
 Logic:
-  - Diff agents/** vs the PR base ref.
-  - Group changed paths by slug (agents/<slug>/...).
+  - Diff agents/** + solutions/** vs the PR base ref.
+  - Group changed paths by (root, slug).
   - For each slug where sample.yaml exists on both sides, fail if the
     `version:` field is identical between base and HEAD.
   - Skip slugs where sample.yaml is new or deleted (introducing or
@@ -36,7 +37,7 @@ from typing import Optional
 import yaml
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-AGENTS_DIR_NAME = "agents"
+SAMPLE_ROOT_NAMES = ("agents", "solutions")
 SAMPLE_FILENAME = "sample.yaml"
 
 
@@ -64,23 +65,33 @@ def _verify_ref(ref: str, repo_root: pathlib.Path = REPO_ROOT) -> None:
         )
 
 
-def changed_agent_paths(base_ref: str, repo_root: pathlib.Path = REPO_ROOT) -> list[str]:
-    """Paths under agents/ that differ between base_ref and HEAD."""
+def changed_sample_paths(base_ref: str, repo_root: pathlib.Path = REPO_ROOT) -> list[str]:
+    """Paths under any SAMPLE_ROOT_NAMES that differ between base_ref and HEAD."""
     out = subprocess.check_output(
         ["git", "diff", "--name-only", base_ref, "HEAD"],
         cwd=repo_root,
     ).decode()
-    prefix = f"{AGENTS_DIR_NAME}/"
-    return [line for line in out.splitlines() if line.startswith(prefix)]
+    prefixes = tuple(f"{name}/" for name in SAMPLE_ROOT_NAMES)
+    return [line for line in out.splitlines() if line.startswith(prefixes)]
+
+
+# Backwards-compat alias for any external callers (CI calls main()).
+changed_agent_paths = changed_sample_paths
+
+
+def root_slug_pairs_for_paths(paths: list[str]) -> list[tuple[str, str]]:
+    """Return sorted unique (root, slug) pairs from diff paths."""
+    pairs: set[tuple[str, str]] = set()
+    for p in paths:
+        parts = p.split("/")
+        if len(parts) >= 2 and parts[0] in SAMPLE_ROOT_NAMES and parts[1]:
+            pairs.add((parts[0], parts[1]))
+    return sorted(pairs)
 
 
 def slugs_for_paths(paths: list[str]) -> list[str]:
-    slugs = set()
-    for p in paths:
-        parts = p.split("/")
-        if len(parts) >= 2 and parts[0] == AGENTS_DIR_NAME and parts[1]:
-            slugs.add(parts[1])
-    return sorted(slugs)
+    """Back-compat: drop the root and return slugs only."""
+    return sorted({slug for _root, slug in root_slug_pairs_for_paths(paths)})
 
 
 def version_at(
@@ -108,19 +119,19 @@ def version_at(
 
 def find_unbumped_slugs(
     base_ref: str, repo_root: pathlib.Path = REPO_ROOT
-) -> list[tuple[str, str]]:
-    """Return (slug, version) pairs for samples touched without a version bump."""
-    paths = changed_agent_paths(base_ref, repo_root)
-    slugs = slugs_for_paths(paths)
-    unbumped: list[tuple[str, str]] = []
-    for slug in slugs:
-        sample_path = f"{AGENTS_DIR_NAME}/{slug}/{SAMPLE_FILENAME}"
+) -> list[tuple[str, str, str]]:
+    """Return (root, slug, version) triples for samples touched without a version bump."""
+    paths = changed_sample_paths(base_ref, repo_root)
+    pairs = root_slug_pairs_for_paths(paths)
+    unbumped: list[tuple[str, str, str]] = []
+    for root, slug in pairs:
+        sample_path = f"{root}/{slug}/{SAMPLE_FILENAME}"
         base_version = version_at(base_ref, sample_path, repo_root)
         head_version = version_at("HEAD", sample_path, repo_root)
         if base_version is None or head_version is None:
             continue
         if base_version == head_version:
-            unbumped.append((slug, head_version))
+            unbumped.append((root, slug, head_version))
     return unbumped
 
 
@@ -136,19 +147,19 @@ def main() -> int:
     unbumped = find_unbumped_slugs(base_ref)
 
     if not unbumped:
-        slugs = slugs_for_paths(changed_agent_paths(base_ref))
-        if slugs:
-            print(f"OK: all {len(slugs)} touched sample(s) have version bumps.")
+        pairs = root_slug_pairs_for_paths(changed_sample_paths(base_ref))
+        if pairs:
+            print(f"OK: all {len(pairs)} touched sample(s) have version bumps.")
         else:
             print("No sample directories touched.")
         return 0
 
     print("Version-bump check FAILED:", file=sys.stderr)
     print("", file=sys.stderr)
-    for slug, version in unbumped:
+    for root, slug, version in unbumped:
         print(
-            f"  agents/{slug}: files changed but version: unchanged at {version}.\n"
-            f"    Bump version: in agents/{slug}/sample.yaml so release-samples.yml\n"
+            f"  {root}/{slug}: files changed but version: unchanged at {version}.\n"
+            f"    Bump version: in {root}/{slug}/sample.yaml so release-samples.yml\n"
             f"    cuts a new tarball with your changes (and remember to regenerate\n"
             f"    samples.json via `uv run scripts/sample_tool.py generate`).",
             file=sys.stderr,

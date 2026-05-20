@@ -1,0 +1,40 @@
+kind: AgentRoutineTemplate
+lookup_key: st-routine-pr-review
+name: pr-review
+display_name: "PR Security Review"
+description: Triggered by GitHub PR webhooks; flag security concerns on opened/updated PRs
+handler_type: preset
+preset_name: do_task
+event_type: webhook.github_app.pull_request
+event_config:
+  webhook.github_app.pull_request:
+    filters: {}
+status: active
+setup_actions:
+  - action_type: env_var
+    title: Set GITHUB_TOKEN
+    description: |
+      GitHub token used for any inline read/write the review path
+      needs (e.g. posting a review comment). A fine-grained PAT with
+      `Pull requests: read/write` is sufficient.
+    params:
+      key: GITHUB_TOKEN
+      scope: agent_env_var
+      secret: true
+      example: ghp_xxxxxxxxxxxx
+    verify_config:
+      type: secret_present
+    required: true
+    sort_order: 0
+  - action_type: install
+    title: "Install: integration/github"
+    description: |
+      Install the ArchAstro GitHub App on the repos whose PRs should
+      flow into this review routine — without it, the webhook never
+      fires.
+    params:
+      installation_kind: integration/github
+    verify_config:
+      type: installation_active
+    required: true
+    sort_order: 1

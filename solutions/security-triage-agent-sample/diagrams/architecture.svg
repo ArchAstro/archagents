@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="-apple-system, system-ui, sans-serif" font-size="13">
+  <style>
+    .box { fill: #ffffff; stroke: #4b5563; stroke-width: 1.5; rx: 6; ry: 6; }
+    .input { fill: #ecfdf5; stroke: #047857; }
+    .triage { fill: #eff6ff; stroke: #1d4ed8; }
+    .output { fill: #fef3c7; stroke: #b45309; }
+    .label { fill: #111827; }
+    .sublabel { fill: #4b5563; font-size: 11px; }
+    .arrow { fill: none; stroke: #6b7280; stroke-width: 1.5; marker-end: url(#a); }
+    .title { font-size: 16px; font-weight: 600; fill: #111827; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <text x="360" y="28" text-anchor="middle" class="title">Security Triage Agent Sample — Architecture</text>
+
+  <rect class="box input" x="30" y="80" width="160" height="64"/>
+  <text x="110" y="105" text-anchor="middle" class="label">Monitored repos</text>
+  <text x="110" y="124" text-anchor="middle" class="sublabel">MONITORED_REPOS env</text>
+
+  <rect class="box input" x="30" y="170" width="160" height="64"/>
+  <text x="110" y="195" text-anchor="middle" class="label">OSV.dev</text>
+  <text x="110" y="214" text-anchor="middle" class="sublabel">GH Advisory DB</text>
+
+  <rect class="box input" x="30" y="260" width="160" height="64"/>
+  <text x="110" y="285" text-anchor="middle" class="label">Internal policies</text>
+  <text x="110" y="304" text-anchor="middle" class="sublabel">knowledge_search</text>
+
+  <rect class="box triage" x="270" y="170" width="180" height="84"/>
+  <text x="360" y="200" text-anchor="middle" class="label" font-weight="600">Triage engine</text>
+  <text x="360" y="220" text-anchor="middle" class="sublabel">cron: 0 8 * * *</text>
+  <text x="360" y="238" text-anchor="middle" class="sublabel">long-term memory dedup</text>
+
+  <rect class="box output" x="530" y="80" width="160" height="64"/>
+  <text x="610" y="105" text-anchor="middle" class="label">PR (auto-fix)</text>
+  <text x="610" y="124" text-anchor="middle" class="sublabel">Outcome B</text>
+
+  <rect class="box output" x="530" y="170" width="160" height="64"/>
+  <text x="610" y="195" text-anchor="middle" class="label">GitHub issue</text>
+  <text x="610" y="214" text-anchor="middle" class="sublabel">Outcome C</text>
+
+  <rect class="box output" x="530" y="260" width="160" height="64"/>
+  <text x="610" y="285" text-anchor="middle" class="label">Memory note</text>
+  <text x="610" y="304" text-anchor="middle" class="sublabel">Outcome A (noise)</text>
+
+  <path class="arrow" d="M190 112 C 230 112, 240 200, 270 200"/>
+  <path class="arrow" d="M190 202 L 270 212"/>
+  <path class="arrow" d="M190 292 C 230 292, 240 230, 270 222"/>
+
+  <path class="arrow" d="M450 200 C 490 200, 490 112, 530 112"/>
+  <path class="arrow" d="M450 212 L 530 202"/>
+  <path class="arrow" d="M450 222 C 490 222, 490 292, 530 292"/>
+</svg>

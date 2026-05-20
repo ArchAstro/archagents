@@ -1,0 +1,34 @@
+kind: AgentToolTemplate
+lookup_key: st-tool-query-osv
+# Body lookup_key is prefixed with `st-tool-` to disambiguate from the
+# Script config with the same logical name (scripts/query-osv.aascript
+# → lookup_key `query-osv`, referenced below via `config_ref`). The
+# platform's per-(app, org, sandbox) config namespace is flat across
+# kinds, so the AgentToolTemplate has to own a distinct lookup_key
+# even though it's a different kind. The filename stays
+# `tools/query-osv.yaml` because the directory already signals "tool"
+# and the stem describes what the tool does.
+
+# Standalone-installable AgentToolTemplate. The Security Triage Agent's
+# deployable AgentTemplate (agents/security-triage-agent.yaml) attaches
+# this tool via `template_path: tools/query-osv.yaml` in its `tools:`
+# polymorphic list; the same template row can be referenced from any
+# other AgentTemplate after the Solution is installed.
+
+tool_type: custom
+name: query_osv
+display_name: "Query OSV.dev"
+description: Query OSV.dev for known vulnerabilities by package name, version, and ecosystem
+parameters:
+  type: object
+  properties:
+    package_name: { type: string }
+    ecosystem: { type: string, description: "npm, Hex, PyPI, RubyGems, etc." }
+    version: { type: string, description: "Specific version to check" }
+  required: [package_name, ecosystem, version]
+handler_type: script
+config_ref: query-osv
+status: active
+
+# OSV.dev is public — no env vars or installations required.
+setup_actions: []

@@ -91,7 +91,7 @@ class FindUnbumpedSlugsTest(unittest.TestCase):
         (repo / "agents" / "alpha" / "agent.yaml").write_text("kind: AgentTemplate\nname: edited\n")
         _commit(repo, "edit agent")
 
-        self.assertEqual(mod.find_unbumped_slugs("HEAD~1", repo), [("alpha", "v0.1.0")])
+        self.assertEqual(mod.find_unbumped_slugs("HEAD~1", repo), [("agents", "alpha", "v0.1.0")])
 
     def test_sample_changed_with_version_bump_is_clean(self) -> None:
         repo = _init_repo()
@@ -123,7 +123,7 @@ class FindUnbumpedSlugsTest(unittest.TestCase):
         )
         _commit(repo, "edit tagline only")
 
-        self.assertEqual(mod.find_unbumped_slugs("HEAD~1", repo), [("alpha", "v0.1.0")])
+        self.assertEqual(mod.find_unbumped_slugs("HEAD~1", repo), [("agents", "alpha", "v0.1.0")])
 
     def test_new_sample_with_no_base_version_is_skipped(self) -> None:
         repo = _init_repo()
@@ -157,7 +157,7 @@ class FindUnbumpedSlugsTest(unittest.TestCase):
         (repo / "agents" / "beta" / "agent.yaml").write_text("b-edit\n")
         _commit(repo, "alpha bumped, beta forgot")
 
-        self.assertEqual(mod.find_unbumped_slugs("HEAD~1", repo), [("beta", "v0.2.0")])
+        self.assertEqual(mod.find_unbumped_slugs("HEAD~1", repo), [("agents", "beta", "v0.2.0")])
 
     def test_nested_file_change_without_bump_is_flagged(self) -> None:
         # Real samples ship subdirectories (scripts/, schemas/, examples/).
@@ -172,7 +172,7 @@ class FindUnbumpedSlugsTest(unittest.TestCase):
         (nested / "tool.aascript").write_text('def main(): "edited"\n')
         _commit(repo, "edit nested without bump")
 
-        self.assertEqual(mod.find_unbumped_slugs("HEAD~1", repo), [("alpha", "v0.1.0")])
+        self.assertEqual(mod.find_unbumped_slugs("HEAD~1", repo), [("agents", "alpha", "v0.1.0")])
 
     def test_unparseable_sample_yaml_at_head_is_silently_skipped(self) -> None:
         # check-sample-artifacts.yml owns parse-validation; this check

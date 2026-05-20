@@ -1,0 +1,73 @@
+kind: AgentToolTemplate
+lookup_key: st-tool-scan-dependencies
+# Body lookup_key is prefixed to avoid collision with the Script at
+# scripts/scan-dependencies.aascript (which derives lookup_key
+# `scan-dependencies` from its filename stem). Platform's per-(app,
+# org, sandbox) namespace is flat across kinds.
+
+tool_type: custom
+name: scan_dependencies
+display_name: "Scan Dependencies"
+description: Parse a project's lockfile and check every dependency against OSV
+parameters:
+  type: object
+  properties:
+    owner: { type: string }
+    repo: { type: string }
+    ecosystem: { type: string, description: "hex, npm, or pip" }
+    path: { type: string, description: "Optional path to lockfile" }
+  required: [owner, repo, ecosystem]
+handler_type: script
+config_ref: scan-dependencies
+status: active
+
+setup_actions:
+  - action_type: env_var
+    title: Set GITHUB_TOKEN
+    description: |
+      GitHub token used to read lockfiles from the target repo. A
+      fine-grained PAT with `Contents: read` and `Metadata: read` is
+      sufficient.
+    params:
+      key: GITHUB_TOKEN
+      scope: agent_env_var
+      secret: true
+      example: "ghp_xxxxxxxxxxxx"
+    verify_config:
+      type: secret_present
+    required: true
+    sort_order: 0
+
+  - action_type: env_var
+    title: Set DEFAULT_REPO_OWNER
+    description: "Org/user to use when no `owner` argument is provided."
+    params:
+      key: DEFAULT_REPO_OWNER
+      scope: agent_env_var
+    verify_config:
+      type: secret_present
+    required: false
+    sort_order: 1
+
+  - action_type: env_var
+    title: Set DEFAULT_REPO_NAME
+    description: "Repo name to use when no `repo` argument is provided."
+    params:
+      key: DEFAULT_REPO_NAME
+      scope: agent_env_var
+    verify_config:
+      type: secret_present
+    required: false
+    sort_order: 2
+
+  - action_type: install
+    title: "Install: integration/github"
+    description: |
+      Install the ArchAstro GitHub App so the scanner can read manifests
+      from private repos.
+    params:
+      installation_kind: integration/github
+    verify_config:
+      type: installation_active
+    required: true
+    sort_order: 3

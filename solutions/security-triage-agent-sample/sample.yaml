@@ -1,0 +1,11 @@
+schema_version: 2
+version: v0.4.2
+name: "Security Triage Agent Sample"
+tagline: "A senior security engineer that triages vulnerabilities found by daily dependency scans. Sample bundle — copy + tailor to your stack."
+min_cli_version: "0.28.0"
+
+steps:
+  - type: upload_scripts
+    source_dir: scripts
+  - type: deploy_solution
+    solution_file: solution.yaml

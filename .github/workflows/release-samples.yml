@@ -1,8 +1,10 @@
 name: release-samples
 
-# For every sample, if the version declared in agents/<slug>/sample.yaml
+# For every sample, if the version declared in <root>/<slug>/sample.yaml
 # does not yet have a corresponding GitHub Release, cut one with the
-# whole sample directory packaged as <slug>-<version>.tar.gz.
+# whole sample directory packaged as <slug>-<version>.tar.gz. <root>
+# is `agents/` for runtime agent samples or `solutions/` for catalog
+# Solution bundles (the convention-suffixed `-sample` directory).
 #
 # Runs on every push to main. Idempotent: re-running with no version
 # bumps is a no-op (the release-exists check short-circuits).
@@ -15,6 +17,7 @@ on:
     branches: [main]
     paths:
       - "agents/**"
+      - "solutions/**"
       - ".github/workflows/release-samples.yml"
   # Manual trigger so we can re-run if a release was deleted or the
   # workflow code changes after a sample was merged.
@@ -64,20 +67,32 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Each line of the printed plan is `<root>/<slug> <version>`,
+          # so the loop below can derive the on-disk path + the tag in
+          # one pass. SAMPLE_ROOTS lives in scripts/_sample_lib/paths.py
+          # — keep it the single source of truth.
           mapfile -t samples < <(
             uv run python -c "
           import pathlib, yaml
-          for d in sorted(pathlib.Path('agents').iterdir()):
-              if not d.is_dir():
+          for root_name in ('agents', 'solutions'):
+              root = pathlib.Path(root_name)
+              if not root.is_dir():
                   continue
-              data = yaml.safe_load((d / 'sample.yaml').read_text())
-              print(f\"{d.name} {data['version']}\")
+              for d in sorted(root.iterdir()):
+                  if not d.is_dir():
+                      continue
+                  sample_yaml = d / 'sample.yaml'
+                  if not sample_yaml.exists():
+                      continue
+                  data = yaml.safe_load(sample_yaml.read_text())
+                  print(f\"{root_name}/{d.name} {data['version']}\")
           "
           )
 
           for entry in "${samples[@]}"; do
-            slug="${entry%% *}"
+            sample_path="${entry%% *}"           # e.g. solutions/security-triage-agent-sample
             version="${entry##* }"
+            slug="${sample_path##*/}"            # tarball + tag name from basename only
             tag="${slug}-${version}"
             tarball="${slug}-${version}.tar.gz"
 
@@ -86,7 +101,7 @@ jobs:
               continue
             fi
 
-            echo "→ cutting release $tag"
+            echo "→ cutting release $tag from $sample_path"
             # Delegate to scripts/sample_tool.py pack so the local
             # `archastro install sample ./<tarball>` smoke-test path
             # and the CI release path produce the same archive. pack
@@ -95,7 +110,7 @@ jobs:
             # portal's full-deploy) streams the tarball in-memory and
             # runs sample.yaml's steps: block via @archastro/samples-catalog's
             # DSL executor — no files land on disk.
-            uv run scripts/sample_tool.py pack "agents/$slug" --output-dir .
+            uv run scripts/sample_tool.py pack "$sample_path" --output-dir .
 
             # --latest=false is load-bearing: without it, `gh release create`
             # auto-promotes each new release to "Latest", which steals the
