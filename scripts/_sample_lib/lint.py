@@ -27,7 +27,7 @@ from typing import Any
 
 import yaml
 
-from .paths import AGENTS_DIR, REPO_ROOT, display_path
+from .paths import REPO_ROOT, SAMPLE_ROOTS, display_path
 
 
 @dataclass(frozen=True)
@@ -42,13 +42,15 @@ class LintWarning:
 
 def run_lint(slug: str | None, strict: bool) -> int:
     """
-    Walk every sample under agents/ (or one slug when provided) and
-    print every best-practice warning. Returns 0 unless `strict` is
-    set and at least one warning fired.
+    Walk every sample under SAMPLE_ROOTS (agents/ + solutions/, in
+    order) — or just one slug when provided — and print every best-
+    practice warning. Returns 0 unless `strict` is set and at least
+    one warning fired.
     """
     sample_dirs = _resolve_sample_dirs(slug)
     if not sample_dirs:
-        print(f"lint: no samples found under {AGENTS_DIR}", file=sys.stderr)
+        roots = ", ".join(str(r.relative_to(REPO_ROOT)) for r in SAMPLE_ROOTS)
+        print(f"lint: no samples found under {roots}", file=sys.stderr)
         return 1
 
     warnings: list[LintWarning] = []
@@ -77,15 +79,23 @@ def run_lint(slug: str | None, strict: bool) -> int:
 
 def _resolve_sample_dirs(slug: str | None) -> list[pathlib.Path]:
     if slug is not None:
-        target = AGENTS_DIR / slug
-        if not target.is_dir():
-            print(
-                f"lint: {slug!r} is not a sample under {AGENTS_DIR}",
-                file=sys.stderr,
-            )
-            return []
-        return [target]
-    return [d for d in sorted(AGENTS_DIR.iterdir()) if d.is_dir()]
+        for root in SAMPLE_ROOTS:
+            target = root / slug
+            if target.is_dir():
+                return [target]
+        roots = ", ".join(str(r.relative_to(REPO_ROOT)) for r in SAMPLE_ROOTS)
+        print(
+            f"lint: {slug!r} is not a sample under {roots}",
+            file=sys.stderr,
+        )
+        return []
+    return [
+        d
+        for root in SAMPLE_ROOTS
+        if root.is_dir()
+        for d in sorted(root.iterdir())
+        if d.is_dir()
+    ]
 
 
 def _lint_sample(sample_dir: pathlib.Path) -> list[LintWarning]:

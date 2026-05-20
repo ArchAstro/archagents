@@ -31,6 +31,7 @@ setup_actions:
       example: ghp_xxxxxxxxxxxx
     verify_config:
       type: secret_present
+    dedupe_key: GITHUB_TOKEN
     required: true
     sort_order: 0
   - action_type: env_var
@@ -43,6 +44,7 @@ setup_actions:
       scope: agent_env_var
     verify_config:
       type: secret_present
+    dedupe_key: MONITORED_REPOS
     required: true
     sort_order: 1
   - action_type: install
@@ -55,6 +57,7 @@ setup_actions:
       installation_kind: integration/github
     verify_config:
       type: installation_active
+    dedupe_key: integration/github
     required: true
     sort_order: 2
   - action_type: custom
@@ -68,6 +71,7 @@ setup_actions:
     verify_config:
       type: script_ref
       script_ref: st-verify-monitored-repos-access
+    dedupe_key: st-verify-monitored-repos-access
     required: true
     sort_order: 3
     depends_on:

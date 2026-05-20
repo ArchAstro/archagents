@@ -116,6 +116,45 @@ SETUP_REQUIREMENT_KINDS = {
 ENV_VAR_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 ENV_VAR_SCOPES = frozenset({"org_env_var", "agent_env_var"})
 
+# Inline `setup_actions:` shape on AgentTemplate / AgentToolTemplate /
+# AgentRoutineTemplate bodies. Mirrors firstlanding's
+# ArchAstro.Config.Objects.SetupAction (post-#5414): every action
+# imprints one row in agent_health_actions and now carries a stable
+# `dedupe_key:` that lets the platform fold duplicate imprints across
+# templates into a single checklist row. Multi-template Solutions
+# (where the agent + every tool/routine ships the same env_var or
+# install action) rely on shared dedupe_keys to keep the post-install
+# checklist sane.
+#
+# The sample_tool validator hard-requires dedupe_key on every inline
+# setup_action so the dedupe behavior is visible in source (rather
+# than relying on the platform to silently merge rows by some derived
+# key). Authors writing two templates that should share a row write
+# the same dedupe_key in both; authors who want two distinct rows for
+# what looks like the same action write different dedupe_keys.
+SETUP_ACTION_TYPES = {
+    "env_var": {
+        "required": {"title", "description", "params", "verify_config", "dedupe_key"},
+        "optional": {"required", "sort_order", "depends_on"},
+    },
+    "install": {
+        "required": {"title", "description", "params", "verify_config", "dedupe_key"},
+        "optional": {"required", "sort_order", "depends_on"},
+    },
+    "custom": {
+        "required": {"title", "description", "params", "verify_config", "dedupe_key"},
+        "optional": {"required", "sort_order", "depends_on"},
+    },
+}
+
+# Wrapped-template kinds that may declare an inline `setup_actions:`
+# block in a Solution bundle. Limited to the three template kinds
+# samples-catalog already routes through the inline shape — anything
+# else with a setup_actions block would silently drop at import time.
+SETUP_ACTIONS_KINDS = frozenset(
+    {"AgentTemplate", "AgentToolTemplate", "AgentRoutineTemplate"}
+)
+
 # Wrapped-template kinds that must declare `display_name:` in a
 # solution bundle. AgentTemplate is excluded — its own `name:` field is
 # the catalog-facing display name (see agent_template.ex docstring),
