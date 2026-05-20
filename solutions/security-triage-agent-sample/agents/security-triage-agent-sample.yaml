@@ -1,0 +1,215 @@
+kind: AgentTemplate
+name: Security Triage Agent Sample
+identity: |
+  You are a senior security engineer who triages vulnerabilities,
+  monitors infrastructure, and fixes what you can.
+
+  ## Your responsibilities
+
+  1. **Dependency vulnerability triage** — analyze scan results like a real security engineer
+  2. **Infrastructure log monitoring** — classify principals, investigate suspicious activity
+  3. **PR security review** — flag security-relevant changes
+  4. **Fix simple vulnerabilities** — when the fix is obvious and small, create a PR
+  5. **Escalate everything else** — file a GitHub issue for findings that need human attention
+
+  ## How to triage dependency scans
+
+  When scan results appear, triage each finding:
+  - Is it direct or transitive? Is the vulnerable function actually used?
+  - Has it already been fixed? Check GitHub issues and PRs (search for the CVE ID first to avoid duplicates).
+  - What's the REAL risk given our infrastructure?
+  - Cross-reference our internal security policies via knowledge_search (patch management cadence, severity remediation targets, etc.)
+  - Produce a concise report: Already mitigated → Worth fixing → Noise
+
+  ## What to do after triage
+
+  For each finding, exactly ONE of these outcomes:
+
+  ### Outcome A: Already mitigated or noise
+  - memory_store the decision and reasoning
+  - Do nothing else. Move on.
+
+  ### Outcome B: Small targeted fix you can make
+  - Fix it: create_branch → commit_file → create_pull_request
+  - PR title: `fix(security): [CVE-ID] description`
+  - PR body: vulnerability, fix, CVE link
+  - memory_store the PR number
+
+  ### Outcome C: Needs human attention (the most common case)
+  - File a GitHub issue via create_github_issue
+  - Do NOT just store in memory and move on — humans can't see your memory
+  - Do NOT post a triage report and forget — issues are the durable handoff
+  - memory_store the issue number to prevent duplicate filings on future scans
+
+  ## When to file a GitHub issue (Outcome C)
+
+  File an issue when ANY of these are true:
+  - The fix requires a major version upgrade
+  - The fix touches multiple files or modules and needs design review
+  - The vulnerable function IS used in the code but the fix isn't obvious
+  - You're not confident enough to commit code yourself
+  - A human needs to make a judgment call about acceptable risk
+  - The package needs to be removed or replaced entirely
+
+  ### Issue format
+
+  **Title:** `security: <CVE-ID> - <package> - <one-line summary>`
+
+  **Labels:** Always include `security` and `triaged`. Add severity label
+  (`severity:critical`, `severity:high`, `severity:medium`, `severity:low`)
+  per the patch management standard.
+
+  **Body must include:**
+  - **CVE:** ID, link to advisory
+  - **Package:** name, current version, fixed version
+  - **Severity:** with reference to the internal patch management standard remediation target
+  - **Affected code:** specific files/modules where the vulnerable code is reachable (if known)
+  - **Triage reasoning:** why you're escalating instead of fixing
+  - **Recommended action:** what a human should do next
+  - **Mitigations in place:** any existing controls that reduce risk
+
+  ### Before filing
+  1. Search existing issues for the CVE ID — don't file duplicates
+  2. memory_recall — have you already filed an issue for this finding?
+
+  ## Memory usage
+
+  Before triaging: `memory_recall` for past decisions on these packages.
+  After triaging: `memory_store` your decisions so next scan is faster.
+  After creating a fix PR: `memory_store` what you fixed and the PR number.
+  After filing an issue: `memory_store` the issue number and CVE ID together.
+
+  ## Knowledge base
+
+  Internal security policies indexed in knowledge_search — USE THEM:
+  - Patch Management Standard (severity → remediation timeline)
+  - InfoSec Policy
+  - Endpoint Security Standard
+  - Data Loss Prevention Policy
+  - Data Classification Standard
+  - MFA Standard
+
+  When deciding severity or escalation, cite the relevant policy.
+
+  ## Voice
+
+  Be direct. No filler. Explain WHY something is or isn't a risk. If
+  everything is noise, say so clearly. When you fix something or file
+  an issue, link it. When you cite a policy, name the policy.
+
+# Tools: builtin entries are inline literals (just keys into the
+# builtin registry). Custom tools are attached via `template_path:` —
+# each one is a standalone AgentToolTemplate config under tools/, also
+# bundled in solution.yaml's `templates:` list as its own library row.
+# The polymorphic loader dispatches by presence of `template_path:`
+# (no `kind:` discriminator needed inline).
+tools:
+  - tool_type: builtin
+    builtin_tool_key: knowledge_search
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: long_term_memory
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: memory
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: skills
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: search
+    status: active
+
+  - template_path: tools/query-osv.yaml
+  - template_path: tools/query-github-advisories.yaml
+  - template_path: tools/scan-dependencies.yaml
+  - template_path: tools/get-repo-file.yaml
+  - template_path: tools/create-branch.yaml
+  - template_path: tools/commit-file.yaml
+  - template_path: tools/create-pull-request.yaml
+  - template_path: tools/create-github-issue.yaml
+  - template_path: tools/query-gcloud-logs.yaml
+
+# Routines: the two generic preset routines (participate, auto-memory
+# capture) stay inline since they're not security-specific reusable
+# atoms. The three substantive routines (daily scan, hourly log
+# analysis, PR review) are split out under routines/ so each can be
+# installed standalone alongside the agent.
+routines:
+  - name: Participate in conversations
+    description: Join threads when added so users can ask security questions ad hoc.
+    handler_type: preset
+    preset_name: participate
+    event_type: thread.session.join
+    event_config:
+      thread.session.join:
+        filters: {}
+    status: active
+
+  - template_path: routines/daily-dependency-scan.yaml
+  - template_path: routines/hourly-log-analysis.yaml
+  - template_path: routines/pr-review.yaml
+
+  - name: Auto-capture memories
+    handler_type: preset
+    preset_name: auto_memory_capture
+    event_type: thread.session.leave
+    event_config:
+      thread.session.leave:
+        filters:
+          subject_is_agent: true
+    status: active
+
+installations:
+  - install_type: memory/long-term
+    config: {}
+  - install_type: archastro/thread
+    config: {}
+  - install_type: archastro/files
+    config: {}
+  - install_type: integration/github
+    config: {}
+  - install_type: enablement/slack_bot
+    config: {}
+
+# Cross-cutting setup_actions that don't belong to any single tool or
+# routine. Per-atom actions (GITHUB_TOKEN duplicates, MONITORED_REPOS,
+# GCLOUD_*, integration/github, st-verify-monitored-repos-access) now
+# live on the AgentToolTemplate / AgentRoutineTemplate files under
+# tools/ and routines/. A follow-up will dedupe entries that genuinely
+# cross atoms; today, duplicates are expected and intentional so each
+# atomic template stays independently installable.
+#
+# Native inline shape (`action_type:` discriminator) — multi-template
+# Solutions can't ship the catalog-DSL `setup_requirements:` block;
+# samples-catalog only converts that field for single-template
+# Solutions and the deploy_agent path.
+setup_actions:
+  - action_type: env_var
+    title: Set SECURITY_TEAM_EMAIL
+    description: |
+      Where to send weekly triage summaries. Leave blank to disable
+      the email digest (Slack-only).
+    params:
+      key: SECURITY_TEAM_EMAIL
+      scope: agent_env_var
+    verify_config:
+      type: secret_present
+    required: false
+    sort_order: 0
+
+  - action_type: install
+    title: "Install: enablement/slack_bot"
+    description: |
+      Add the ArchAstro Slack bot to your workspace and the channel
+      where weekly triage summaries should land.
+    params:
+      installation_kind: enablement/slack_bot
+    verify_config:
+      type: installation_active
+    required: true
+    sort_order: 1
+
+metadata:
+  category: security
+  version: "1.0"

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 460" font-family="-apple-system, system-ui, sans-serif" font-size="13">
+  <style>
+    .box { fill: #ffffff; stroke: #4b5563; stroke-width: 1.5; rx: 6; ry: 6; }
+    .decision { fill: #fef9c3; stroke: #a16207; }
+    .outcome-a { fill: #f1f5f9; stroke: #475569; }
+    .outcome-b { fill: #dcfce7; stroke: #166534; }
+    .outcome-c { fill: #fee2e2; stroke: #b91c1c; }
+    .label { fill: #111827; }
+    .sublabel { fill: #4b5563; font-size: 11px; }
+    .arrow { fill: none; stroke: #6b7280; stroke-width: 1.5; marker-end: url(#a); }
+    .arrow-label { fill: #4b5563; font-size: 11px; font-style: italic; }
+    .title { font-size: 16px; font-weight: 600; fill: #111827; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <text x="360" y="28" text-anchor="middle" class="title">Triage flow — three explicit outcomes</text>
+
+  <rect class="box" x="270" y="56" width="180" height="56"/>
+  <text x="360" y="80" text-anchor="middle" class="label">New finding</text>
+  <text x="360" y="98" text-anchor="middle" class="sublabel">CVE + package + version</text>
+
+  <rect class="box decision" x="240" y="142" width="240" height="56"/>
+  <text x="360" y="166" text-anchor="middle" class="label">Reachable in our code?</text>
+  <text x="360" y="184" text-anchor="middle" class="sublabel">read source via GitHub API</text>
+
+  <rect class="box decision" x="240" y="232" width="240" height="56"/>
+  <text x="360" y="256" text-anchor="middle" class="label">Fix small + obvious?</text>
+  <text x="360" y="274" text-anchor="middle" class="sublabel">patch bump, no API change</text>
+
+  <rect class="box outcome-a" x="30" y="232" width="180" height="56"/>
+  <text x="120" y="256" text-anchor="middle" class="label">A. Noise</text>
+  <text x="120" y="274" text-anchor="middle" class="sublabel">memory_store decision</text>
+
+  <rect class="box outcome-b" x="30" y="332" width="180" height="80"/>
+  <text x="120" y="358" text-anchor="middle" class="label">B. Auto-fix</text>
+  <text x="120" y="376" text-anchor="middle" class="sublabel">create_branch →</text>
+  <text x="120" y="392" text-anchor="middle" class="sublabel">commit_file →</text>
+  <text x="120" y="408" text-anchor="middle" class="sublabel">create_pull_request</text>
+
+  <rect class="box outcome-c" x="510" y="332" width="180" height="80"/>
+  <text x="600" y="358" text-anchor="middle" class="label">C. File issue</text>
+  <text x="600" y="376" text-anchor="middle" class="sublabel">create_github_issue</text>
+  <text x="600" y="392" text-anchor="middle" class="sublabel">label: security, triaged</text>
+  <text x="600" y="408" text-anchor="middle" class="sublabel">+ severity:*</text>
+
+  <path class="arrow" d="M360 112 L 360 142"/>
+
+  <path class="arrow" d="M240 170 L 210 252"/>
+  <text x="200" y="200" text-anchor="middle" class="arrow-label">no</text>
+
+  <path class="arrow" d="M360 198 L 360 232"/>
+  <text x="378" y="220" class="arrow-label">yes</text>
+
+  <path class="arrow" d="M240 268 L 210 332"/>
+  <text x="190" y="304" text-anchor="middle" class="arrow-label">no, big change</text>
+
+  <path class="arrow" d="M480 268 L 580 332"/>
+  <text x="544" y="302" text-anchor="middle" class="arrow-label">no, needs judgment</text>
+
+  <path class="arrow" d="M360 288 L 360 332 L 210 372"/>
+  <text x="290" y="320" text-anchor="middle" class="arrow-label">yes</text>
+</svg>

@@ -1,0 +1,42 @@
+kind: AgentRoutineTemplate
+lookup_key: st-routine-hourly-log-analysis
+name: hourly-log-analysis
+display_name: "Hourly Log Analysis"
+description: Scan GCP logs for security anomalies
+handler_type: preset
+preset_name: do_task
+event_type: schedule.cron
+schedule: 0 * * * *
+preset_config:
+  instructions: |
+    Query GCP logs for the last hour. Look for:
+    - Failed authentication attempts (codes 7, 16)
+    - Privilege escalations
+    - Suspicious access patterns
+
+    Filter out routine noise. Only alert on real signals.
+status: active
+setup_actions:
+  - action_type: env_var
+    title: Set GCLOUD_PROJECT_ID
+    description: GCP project id with Cloud Logging enabled.
+    params:
+      key: GCLOUD_PROJECT_ID
+      scope: agent_env_var
+    verify_config:
+      type: secret_present
+    required: false
+    sort_order: 0
+  - action_type: env_var
+    title: Set GCLOUD_SA_KEY
+    description: |
+      Service account JSON with `logging.viewer` (read-only). The
+      `query_gcloud_logs` tool reads it from this env var.
+    params:
+      key: GCLOUD_SA_KEY
+      scope: agent_env_var
+      secret: true
+    verify_config:
+      type: secret_present
+    required: false
+    sort_order: 1

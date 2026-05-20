@@ -1,0 +1,51 @@
+kind: AgentToolTemplate
+lookup_key: st-tool-create-branch
+tool_type: custom
+name: create_branch
+display_name: "Create Branch"
+description: Create a new branch in a GitHub repository from a base ref
+parameters:
+  type: object
+  properties:
+    owner:
+      type: string
+    repo:
+      type: string
+    branch:
+      type: string
+      description: New branch name
+    from:
+      type: string
+      description: Base branch or SHA
+      default: main
+  required:
+    - owner
+    - repo
+    - branch
+handler_type: script
+config_ref: st-create-branch
+status: active
+setup_actions:
+  - action_type: env_var
+    title: Set GITHUB_TOKEN
+    description: |
+      GitHub token with `Contents: read/write` on the target repos —
+      branch creation hits the Git Refs API.
+    params:
+      key: GITHUB_TOKEN
+      scope: agent_env_var
+      secret: true
+      example: ghp_xxxxxxxxxxxx
+    verify_config:
+      type: secret_present
+    required: true
+    sort_order: 0
+  - action_type: install
+    title: "Install: integration/github"
+    description: Install the ArchAstro GitHub App on the target repos.
+    params:
+      installation_kind: integration/github
+    verify_config:
+      type: installation_active
+    required: true
+    sort_order: 1

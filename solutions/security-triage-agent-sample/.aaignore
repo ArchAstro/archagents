@@ -5,9 +5,13 @@
 # `archastro deploy configs` should skip every file inside this
 # directory.
 README.md
-agent.yaml
+agents/
+diagrams/
 env.example
 examples/
+routines/
 sample.yaml
 scripts/
+solution.yaml
 test/
+tools/

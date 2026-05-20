@@ -1,0 +1,47 @@
+kind: AgentToolTemplate
+lookup_key: st-tool-query-gcloud-logs
+tool_type: custom
+name: query_gcloud_logs
+display_name: "Query Cloud Logging"
+description: Query Google Cloud Logging for security-related events
+parameters:
+  type: object
+  properties:
+    project_id:
+      type: string
+    log_filter:
+      type: string
+      description: Cloud Logging filter expression
+    page_size:
+      type: integer
+      default: 100
+  required:
+    - project_id
+    - log_filter
+handler_type: script
+config_ref: query-gcloud-logs
+status: active
+setup_actions:
+  - action_type: env_var
+    title: Set GCLOUD_PROJECT_ID
+    description: GCP project id with Cloud Logging enabled.
+    params:
+      key: GCLOUD_PROJECT_ID
+      scope: agent_env_var
+    verify_config:
+      type: secret_present
+    required: false
+    sort_order: 0
+  - action_type: env_var
+    title: Set GCLOUD_SA_KEY
+    description: |
+      Service account JSON with `logging.viewer` (read-only). Paste
+      the entire JSON — the script reads it from this env var.
+    params:
+      key: GCLOUD_SA_KEY
+      scope: agent_env_var
+      secret: true
+    verify_config:
+      type: secret_present
+    required: false
+    sort_order: 1

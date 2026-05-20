@@ -1,20 +1,22 @@
-# Security Triage Agent
+# Security Triage Agent Sample
 
-## Deploy with your coding agent
+> This bundle lives under `solutions/security-triage-agent-sample/`.
+> The `-sample` suffix is the convention for every entry under
+> `solutions/` so the catalog makes clear "this is reference code,
+> copy + tailor it." See the top-level README for the convention.
+
+## Validate/import with your coding agent
 
 Paste this into Claude Code, Codex, or any AI coding assistant:
 
 ```
-Deploy the Security Triage Agent from this repo.
+Validate and import the Security Triage Agent Sample Solution from this repo.
 
-1) Read agents/security-triage-agent/agent.yaml — the `setup_requirements:` block lists everything you'll need.
-2) Install the ArchAgents CLI if missing: brew install ArchAstro/tools/archagent
-3) Run: archagent auth login <my-email> && archagent init
-4) Deploy: archagent install agentsample security-triage-agent
-5) Open the agent in the developer portal. Its "Finish setup" panel lists every required env var, install, and verifier.
-6) Walk me through each action: ask for the values it needs, install integrations on prompt, and confirm each verifier turns green.
-7) Test it: create an agent session and ask it to scan a small repo for vulnerabilities.
-8) Show me the result.
+1) Read solutions/security-triage-agent-sample/agents/security-triage-agent-sample.yaml — the `setup_requirements:` block lists everything you'll need.
+2) Pack it: uv run scripts/sample_tool.py pack solutions/security-triage-agent-sample
+3) Upload the generated tarball through the Solution import flow.
+4) After import, confirm the wrapped template and setup actions are present.
+5) Walk me through the setup actions: ask for the values they need, install integrations on prompt, and confirm each verifier turns green.
 ```
 
 > 🛡️ **A senior security engineer that triages vulnerabilities, fixes what it can, and escalates the rest.**
@@ -24,16 +26,28 @@ outcomes (mitigated, auto-fixable, needs human attention), opens fix
 PRs for the easy ones, and files GitHub issues for everything else
 with full triage reasoning.
 
+## Architecture
+
+![Architecture overview](diagrams/architecture.svg)
+
+Monitored repos and vulnerability feeds (OSV.dev, GitHub Advisory DB)
+fan into a single triage engine, cross-referenced against your internal
+security policies via `knowledge_search`. Every finding leaves the
+engine through exactly one of three durable outputs.
+
 ## What it does
 
 ### 1. Daily dependency scan (cron: 08:00 UTC)
 - Reads your `mix.lock`, `package-lock.json`, etc. via the GitHub API
 - Queries OSV.dev and the GitHub Advisory Database for known vulns
 - Cross-references findings against your internal security policies (knowledge base)
-- Triages each finding into one of three outcomes:
+- Triages each finding into one of three outcomes (see
+  [triage flow](diagrams/triage-flow.svg) below):
   - **A. Already mitigated / noise** → store decision in long-term memory, move on
   - **B. Small targeted fix** → create branch, commit fix, open PR
   - **C. Needs human attention** → file a GitHub issue with full reasoning
+
+![Triage decision flow](diagrams/triage-flow.svg)
 
 ### 2. PR security review
 - Reacts to GitHub PR webhooks for security-relevant changes
@@ -62,15 +76,15 @@ classification and remediation timelines instead of guessing.
 past decisions on the same package and existing GitHub issues for the
 same CVE — so it doesn't re-file the same finding every day.
 
-## Setup
+## Validate/import
 
 ```bash
-archagent install agentsample security-triage-agent
+uv run scripts/sample_tool.py pack solutions/security-triage-agent-sample
 ```
 
-After install, open the agent in the developer portal. The "Finish
-setup" panel — populated from `setup_requirements:` in `agent.yaml` —
-drives the rest:
+Upload the generated tarball through the Solution import flow. The
+imported Solution carries setup actions populated from
+`setup_requirements:` in `agents/security-triage-agent-sample.yaml`:
 
 - **Env vars** are stored per-agent (`scope: agent_env_var`), so the
   installer always has write access without needing org admin rights.
@@ -108,7 +122,7 @@ standard knowledge-ingestion flow. The agent's `knowledge_search`
 will index them and reference them during triage.
 
 ```bash
-INSTALLATION=$(archagent list agentinstallations --agent security-triage-agent -o json \
+INSTALLATION=$(archagent list agentinstallations --agent security-triage-agent-sample -o json \
   | python3 -c "import sys,json; d=json.load(sys.stdin); [print(i['id']) for i in d['data'] if i['kind']=='archastro/files']" | head -1)
 
 for pdf in /path/to/your/policies/*.pdf; do
@@ -182,22 +196,44 @@ Opus. Cheaper models will produce more false positives.
 ## Files
 
 ```
-security-triage-agent/
+security-triage-agent-sample/
 ├── README.md
-├── agent.yaml                   # AgentTemplate config
-├── env.example
-├── scripts/
-│   ├── query-osv.aascript
-│   ├── query-github-advisories.aascript
-│   ├── scan-dependencies.aascript
+├── sample.yaml                              # install DSL (upload_scripts + deploy_solution)
+├── solution.yaml                            # catalog wrapper (templates + assets + readme)
+├── agents/
+│   ├── security-triage-agent-sample.yaml    # deployable AgentTemplate
+│   └── security-triage-agent-sample.md      # per-template README rendered in Library inspector
+├── tools/                                   # standalone-installable AgentToolTemplate library rows
+│   ├── query-osv.{yaml,md}
+│   ├── query-github-advisories.{yaml,md}
+│   ├── scan-dependencies.{yaml,md}
+│   ├── get-repo-file.{yaml,md}
+│   ├── create-branch.{yaml,md}
+│   ├── commit-file.{yaml,md}
+│   ├── create-pull-request.{yaml,md}
+│   ├── create-github-issue.{yaml,md}
+│   └── query-gcloud-logs.{yaml,md}
+├── routines/                                # standalone-installable AgentRoutineTemplate library rows
+│   ├── daily-dependency-scan.{yaml,md}
+│   ├── hourly-log-analysis.{yaml,md}
+│   └── pr-review.{yaml,md}
+├── scripts/                                 # st-* prefixed to disambiguate from tool lookup_keys
+│   ├── st-query-osv.aascript
+│   ├── st-query-github-advisories.aascript
+│   ├── st-scan-dependencies.aascript
 │   ├── st-get-repo-file.aascript
 │   ├── st-create-branch.aascript
 │   ├── st-commit-file.aascript
 │   ├── st-create-pull-request.aascript
 │   ├── st-create-github-issue.aascript
-│   └── query-gcloud-logs.aascript
-└── examples/
-    ├── sample-triage-noise.md
-    ├── sample-triage-autofix.md
-    └── sample-triage-escalation.md
+│   ├── st-query-gcloud-logs.aascript
+│   └── st-verify-monitored-repos-access.aascript
+├── diagrams/
+│   ├── architecture.svg                     # rendered in README + Solution catalog
+│   └── triage-flow.svg                      # solution.yaml refs both via asset_path
+├── env.example
+├── examples/
+│   └── sample-scan.md
+└── test/
+    └── sample-package.json
 ```

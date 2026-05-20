@@ -1,0 +1,48 @@
+kind: AgentToolTemplate
+lookup_key: st-tool-get-repo-file
+tool_type: custom
+name: get_repo_file
+display_name: "Get Repo File"
+description: Read a file from a GitHub repository
+parameters:
+  type: object
+  properties:
+    owner:
+      type: string
+    repo:
+      type: string
+    path:
+      type: string
+    ref:
+      type: string
+  required:
+    - owner
+    - repo
+    - path
+handler_type: script
+config_ref: st-get-repo-file
+status: active
+setup_actions:
+  - action_type: env_var
+    title: Set GITHUB_TOKEN
+    description: |
+      GitHub token with `Contents: read` and `Metadata: read` on the
+      repos this tool will be asked to read from.
+    params:
+      key: GITHUB_TOKEN
+      scope: agent_env_var
+      secret: true
+      example: ghp_xxxxxxxxxxxx
+    verify_config:
+      type: secret_present
+    required: true
+    sort_order: 0
+  - action_type: install
+    title: "Install: integration/github"
+    description: Install the ArchAstro GitHub App on the target repos.
+    params:
+      installation_kind: integration/github
+    verify_config:
+      type: installation_active
+    required: true
+    sort_order: 1

@@ -13,6 +13,12 @@ import re
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 AGENTS_DIR = REPO_ROOT / "agents"
+# Catalog-facing Solution bundles live under solutions/ by convention.
+# Every sample under solutions/ ships with solution.yaml + a `-sample`
+# slug suffix; sample_tool walks SAMPLE_ROOTS so generate / pack /
+# validate / lint discover entries from either directory.
+SOLUTIONS_DIR = REPO_ROOT / "solutions"
+SAMPLE_ROOTS = (AGENTS_DIR, SOLUTIONS_DIR)
 MANIFEST_PATH = REPO_ROOT / "samples.json"
 MANIFEST_SCHEMA_VERSION = 1
 
