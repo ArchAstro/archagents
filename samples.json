@@ -72,13 +72,6 @@
       "min_cli_version": "0.28.0"
     },
     {
-      "slug": "solution-refs-demo",
-      "name": "Solution Refs Demo",
-      "tagline": "Feature test exercising workflow ref! and import(\"script:lib\") through deploy_solution.",
-      "current_version": "v0.1.0",
-      "min_cli_version": "0.28.0"
-    },
-    {
       "slug": "threat-intel-agent",
       "name": "Threat Intelligence Agent",
       "tagline": "A security intelligence analyst that produces daily threat briefs from monitored feeds.",
