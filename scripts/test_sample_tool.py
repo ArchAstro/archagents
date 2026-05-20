@@ -20,6 +20,7 @@ from __future__ import annotations
 import io
 import json
 import subprocess
+import os
 import sys
 import tarfile
 import tempfile
@@ -2136,6 +2137,64 @@ class PackSampleTest(unittest.TestCase):
                 names = tar.getnames()
             self.assertIn("external-sample/sample.yaml", names)
             self.assertIn("external-sample/agent.yaml", names)
+
+    def test_pack_skips_apple_double_companion_files(self):
+        # macOS spawns `._<name>` AppleDouble companions when files
+        # cross HFS+ ↔ non-HFS+ boundaries (SMB shares, ExFAT USB
+        # drives, some Docker bind mounts). The extractor on the
+        # platform side doesn't strip them; left in the tarball, they
+        # silently double-register every config and the resulting
+        # duplicate-row error is cryptic. Pack must filter them.
+        with _TmpAgentsRoot() as root, _RedirectStderr():
+            self._scaffold(root)
+            sample_dir = root.agents_dir / "hello-world"
+            # Sprinkle AppleDouble files at the sample root, under
+            # scripts/, and an entire `._foo` directory whose children
+            # should also be skipped.
+            (sample_dir / "._sample.yaml").write_text("stray xattr blob\n")
+            (sample_dir / "scripts" / "._agent.aascript").write_text("blob\n")
+            apple_double_dir = sample_dir / "._foo"
+            apple_double_dir.mkdir()
+            (apple_double_dir / "nested.txt").write_text("blob\n")
+
+            output_dir = root.tmp / "dist"
+            pack_mod.run_pack(str(sample_dir), output_dir)
+
+            tarball = output_dir / "hello-world-v0.1.0.tar.gz"
+            with tarfile.open(tarball, "r:gz") as tar:
+                names = tar.getnames()
+
+            # None of the AppleDouble entries (file or nested) made it
+            # into the archive…
+            self.assertFalse(
+                any(n.startswith("hello-world/._") for n in names),
+                msg=f"AppleDouble entry leaked into tarball: {names}",
+            )
+            self.assertFalse(
+                any("/._" in n for n in names),
+                msg=f"AppleDouble entry leaked into tarball: {names}",
+            )
+            # …but the legitimate sibling entries are still there.
+            self.assertIn("hello-world/sample.yaml", names)
+            self.assertIn("hello-world/scripts", names)
+
+    def test_pack_sets_copyfile_disable_env_on_macos(self):
+        # Defensive: COPYFILE_DISABLE=1 is the macOS-wide off-switch
+        # for AppleDouble emission on `cp`/`mv`/`bsdtar`. We set it
+        # only on darwin so child processes inheriting our env also
+        # get clean output.
+        if sys.platform != "darwin":
+            self.skipTest("COPYFILE_DISABLE only meaningful on darwin")
+        with _TmpAgentsRoot() as root, _RedirectStderr():
+            self._scaffold(root)
+            os.environ.pop("COPYFILE_DISABLE", None)
+            try:
+                pack_mod.run_pack(
+                    str(root.agents_dir / "hello-world"), root.tmp / "dist"
+                )
+                self.assertEqual(os.environ.get("COPYFILE_DISABLE"), "1")
+            finally:
+                os.environ.pop("COPYFILE_DISABLE", None)
 
     def test_pack_accepts_catalog_bare_slug(self):
         # The public usage examples advertise `pack code-review-agent`.
