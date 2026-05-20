@@ -50,6 +50,13 @@ Subcommands:
                    on merge to main — use it locally for
                    `archastro install sample ./<tarball>` smoke tests.
 
+  lint [<slug>]    Surface best-practice warnings on every sample (or
+                   one slug) — missing solution.yaml category_keys /
+                   tag_keys / description, no README.md, no per-template
+                   readme_path. Exits 0 by default so the command stays
+                   advisory; pass --strict to make CI fail on any
+                   warning once a sample is clean.
+
   validate         Walk every sample's `upload_scripts` source_dir and
                    shell out `archagent validate script --file <path>`
                    per .aascript. Requires `archagent` on $PATH and
@@ -63,6 +70,8 @@ USAGE
     uv run scripts/sample_tool.py new my-new-sample
     uv run scripts/sample_tool.py pack code-review-agent
     uv run scripts/sample_tool.py pack code-review-agent --output-dir dist/
+    uv run scripts/sample_tool.py lint
+    uv run scripts/sample_tool.py lint security-triage-agent --strict
     uv run scripts/sample_tool.py validate
     uv run scripts/sample_tool.py validate --repo-root ./sample-source --cli archagent
 
@@ -80,6 +89,7 @@ import pathlib
 import sys
 
 from _sample_lib.generate import run_generate
+from _sample_lib.lint import run_lint
 from _sample_lib.pack import run_pack
 from _sample_lib.paths import REPO_ROOT
 from _sample_lib.scaffold import run_new
@@ -166,6 +176,32 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Where to write the .tar.gz (defaults to the current directory).",
     )
 
+    lint = sub.add_parser(
+        "lint",
+        help=(
+            "Surface best-practice warnings (display-name fallbacks, "
+            "missing category/tag/README) without failing CI by default."
+        ),
+    )
+    lint.add_argument(
+        "slug",
+        nargs="?",
+        default=None,
+        help=(
+            "Optional sample slug (under agents/) to lint. Lints every "
+            "sample when omitted."
+        ),
+    )
+    lint.add_argument(
+        "--strict",
+        action="store_true",
+        help=(
+            "Exit non-zero if any warning fires. Off by default so the "
+            "command stays advisory; CI can opt in once a sample is "
+            "clean."
+        ),
+    )
+
     validate = sub.add_parser(
         "validate",
         help="Run `archagent validate script` over every sample's scripts.",
@@ -211,6 +247,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.command == "pack":
         return run_pack(args.slug, args.output_dir.resolve())
+    if args.command == "lint":
+        return run_lint(args.slug, strict=args.strict)
     if args.command == "validate":
         return run_validate(args.repo_root, args.cli, args.timeout_seconds)
     parser.error(f"unknown command: {args.command}")

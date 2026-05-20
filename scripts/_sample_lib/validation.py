@@ -25,6 +25,7 @@ import yaml
 
 from .paths import (
     CLI_VERSION_RE,
+    DISPLAY_NAME_REQUIRED_KINDS,
     ENV_VAR_KEY_RE,
     ENV_VAR_SCOPES,
     SAMPLE_SCHEMA_VERSION,
@@ -672,9 +673,10 @@ def validate_solution_yaml(sample_dir: pathlib.Path) -> None:
     contract for any `assets:` entries. All `*_path` values must
     resolve to real local files inside the sample dir; all `*_ref`
     values must resolve to real local files by basename lookup_key.
-    The same local-file rule applies to local image/link refs in the
-    inline `readme:` markdown and in any `.md` files under the sample
-    dir.
+    Per-template `readme_path:` (when declared) is held to the same
+    `*_path` rule. The same local-file rule applies to local
+    image/link refs in the inline `readme:` markdown and in any `.md`
+    files under the sample dir.
 
     Samples without solution.yaml are unchanged.
     """
@@ -762,7 +764,7 @@ def validate_solution_yaml(sample_dir: pathlib.Path) -> None:
                 template_path_value,
                 f"{field_prefix}.template_path",
             )
-            _reject_agent_key_in_wrapped_template_at_path(
+            _validate_wrapped_template_body(
                 where, template_path_value, template_path
             )
         elif has_ref:
@@ -770,7 +772,7 @@ def validate_solution_yaml(sample_dir: pathlib.Path) -> None:
             template_path = _resolve_template_ref_file(
                 where, sample_dir, template_ref, f"{field_prefix}.template_ref"
             )
-            _reject_agent_key_in_wrapped_template_at_path(
+            _validate_wrapped_template_body(
                 where, template_ref, template_path
             )
         else:
@@ -791,6 +793,22 @@ def validate_solution_yaml(sample_dir: pathlib.Path) -> None:
                 f"`templates:`. Each template must appear once."
             )
         seen_template_paths.add(resolved_template_path)
+
+        # `readme_path:` is optional, but when declared it must point
+        # at a real bundle-relative file — the platform serves it via
+        # the per-template signed `readme_url`, and samples-catalog
+        # uploads the bytes from this path into `solution.files[]`. A
+        # typo here only surfaces at install time as a missing readme
+        # rendered as a placeholder; catching it locally fails the
+        # author's pack step instead.
+        if "readme_path" in entry:
+            _require_local_file(
+                where,
+                sample_dir,
+                sample_dir,
+                entry["readme_path"],
+                f"{field_prefix}.readme_path",
+            )
 
     # `assets:` is optional, but when present it must be a list. A
     # non-list value (e.g. a mapping the author wrote thinking they
@@ -924,13 +942,19 @@ def _find_unique_lookup_key_file(
     return candidates[0]
 
 
-def _reject_agent_key_in_wrapped_template_at_path(
+def _validate_wrapped_template_body(
     where: str, template_label: str, template_path: pathlib.Path
 ) -> None:
     """
-    Read the wrapped template body at `template_path` and raise if (a)
-    it does not parse as a YAML mapping, or (b) it declares
-    `agent_key:`.
+    Read the wrapped template body at `template_path` and raise if:
+      (a) it does not parse as a YAML mapping,
+      (b) it declares `agent_key:` (deploy_agent-only field), or
+      (c) it is an AgentToolTemplate / AgentRoutineTemplate without a
+          non-empty `display_name:` — the Library carousel and inspector
+          render that label, and the backend's display fallbacks
+          (humanize `name`) lose acronym casing (`query_osv` →
+          `Query Osv` instead of `Query OSV`). Forcing samples to
+          declare `display_name:` keeps the catalog presentation crisp.
 
     Parseability has to be checked here — otherwise a syntactically
     broken template body would slip past sample-time validation and
@@ -956,6 +980,18 @@ def _reject_agent_key_in_wrapped_template_at_path(
             f"so `agent_key` has no meaning here. Move the agent_key-bearing "
             f"template into a separate deploy_agent sample, or drop the field."
         )
+    kind = raw.get("kind")
+    if kind in DISPLAY_NAME_REQUIRED_KINDS:
+        display_name = raw.get("display_name")
+        if not isinstance(display_name, str) or not display_name.strip():
+            raise SampleError(
+                f"{where}: wrapped template {template_label!r} "
+                f"({kind}) must declare a non-empty `display_name:`. "
+                f"`name:` is the machine-facing identifier (snake_case "
+                f"for tools, kebab-case for routines); `display_name:` "
+                f"is the human label rendered in the Library carousel "
+                f"and inspector. Add e.g. `display_name: \"Query OSV.dev\"`."
+            )
 
 
 def _require_non_empty_string(where: str, value: Any, field: str) -> None:

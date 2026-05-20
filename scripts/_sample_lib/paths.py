@@ -110,6 +110,15 @@ SETUP_REQUIREMENT_KINDS = {
 ENV_VAR_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 ENV_VAR_SCOPES = frozenset({"org_env_var", "agent_env_var"})
 
+# Wrapped-template kinds that must declare `display_name:` in a
+# solution bundle. AgentTemplate is excluded — its own `name:` field is
+# the catalog-facing display name (see agent_template.ex docstring),
+# whereas AgentToolTemplate.name is the LLM-facing tool function id and
+# AgentRoutineTemplate.name is the kebab-case routine handle. Without
+# `display_name:` the Library carousel humanizes those identifiers,
+# which loses acronym casing.
+DISPLAY_NAME_REQUIRED_KINDS = frozenset({"AgentToolTemplate", "AgentRoutineTemplate"})
+
 
 def display_path(path: pathlib.Path) -> str:
     """Render `path` relative to REPO_ROOT when possible (cleaner errors in CI)."""
