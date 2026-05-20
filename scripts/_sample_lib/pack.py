@@ -6,6 +6,7 @@ one definition of "the tarball" — same archive whether it comes from
 """
 from __future__ import annotations
 
+import os
 import pathlib
 import sys
 import tarfile
@@ -70,14 +71,33 @@ def run_pack(slug_or_path: str, output_dir: pathlib.Path) -> int:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # macOS hygiene: stop any child processes we shell out to (and any
+    # macOS-aware file operations underneath) from emitting AppleDouble
+    # `._<name>` companion files. Python's tarfile doesn't produce them
+    # itself, but COPYFILE_DISABLE also stops them from being created
+    # by `cp`/`mv`/`bsdtar` ops the author might run alongside `pack`,
+    # and the env var is a cheap and well-known signal of intent.
+    if sys.platform == "darwin":
+        os.environ.setdefault("COPYFILE_DISABLE", "1")
+
     # arcname=slug matches the layout the GitHub Releases tarball uses
     # (`tar -C agents -czf <tarball> <slug>`), so the consumer doesn't
     # have to care which producer built it. Sort entries for a
     # deterministic-ish archive — Python's tarfile still embeds mtimes,
     # so this isn't bit-reproducible, but byte-stable layout is enough
     # for `archastro install sample` smoke tests.
+    #
+    # `._<name>` AppleDouble companions are skipped explicitly: macOS
+    # creates them when files cross HFS+ ↔ non-HFS+ boundaries (SMB
+    # shares, ExFAT/FAT32 USB drives, some Docker bind mounts). They
+    # carry only extended attributes the platform doesn't read, and
+    # extractors that don't strip them silently double-register every
+    # config (and the platform's import error message for the
+    # resulting duplicate is cryptic).
     with tarfile.open(tarball, "w:gz") as tar:
         for entry in sorted(sample_dir.rglob("*")):
+            if _is_apple_double(entry):
+                continue
             rel = entry.relative_to(sample_dir)
             arcname = f"{slug}/{rel.as_posix()}"
             tar.add(entry, arcname=arcname, recursive=False)
@@ -88,3 +108,17 @@ def run_pack(slug_or_path: str, output_dir: pathlib.Path) -> int:
         display = tarball
     print(f"Wrote {display}", file=sys.stderr)
     return 0
+
+
+def _is_apple_double(entry: pathlib.Path) -> bool:
+    """
+    True if `entry` is a macOS AppleDouble companion (`._<name>`) or
+    one lives anywhere on its path. Walks the parents so a stray
+    `._foo` directory doesn't smuggle its children into the tarball.
+    """
+    if entry.name.startswith("._"):
+        return True
+    for parent in entry.parents:
+        if parent.name.startswith("._"):
+            return True
+    return False
