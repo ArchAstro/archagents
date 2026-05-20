@@ -68,7 +68,14 @@
       "slug": "security-triage-agent-sample",
       "name": "Security Triage Agent Sample",
       "tagline": "A senior security engineer that triages vulnerabilities found by daily dependency scans. Sample bundle — copy + tailor to your stack.",
-      "current_version": "v0.4.2",
+      "current_version": "v0.4.3",
+      "min_cli_version": "0.28.0"
+    },
+    {
+      "slug": "solution-refs-demo",
+      "name": "Solution Refs Demo",
+      "tagline": "Feature test exercising workflow ref! and import(\"script:lib\") through deploy_solution.",
+      "current_version": "v0.1.0",
       "min_cli_version": "0.28.0"
     },
     {

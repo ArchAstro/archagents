@@ -120,7 +120,7 @@ class _TmpAgentsRoot:
         self._patch(pack_mod, "REPO_ROOT", self.tmp)
         # lint imports AGENTS_DIR + REPO_ROOT for both the sample walk
         # and `display_path` error rendering.
-        self._patch(lint_mod, "AGENTS_DIR", self.agents_dir)
+        self._patch(lint_mod, "SAMPLE_ROOTS", sample_roots)
         self._patch(lint_mod, "REPO_ROOT", self.tmp)
         return self
 
@@ -1743,6 +1743,178 @@ class ValidateSolutionYamlTest(unittest.TestCase):
             r"'query-osv'.*AgentToolTemplate.*display_name",
         ):
             self._validate(sample_dir)
+
+    def test_setup_actions_missing_dedupe_key_is_rejected(self):
+        # The platform's agent_health_actions unique constraint is
+        # (agent_user_id, dedupe_key); inline setup_actions without an
+        # explicit dedupe_key would silently double-count when two
+        # templates ship the same logical action.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(
+            sample_dir,
+            body=textwrap.dedent("""\
+                kind: AgentTemplate
+                name: X
+                setup_actions:
+                  - action_type: env_var
+                    title: Set GITHUB_TOKEN
+                    description: GH token
+                    params:
+                      key: GITHUB_TOKEN
+                      scope: agent_env_var
+                    verify_config:
+                      type: secret_present
+                    required: true
+                    sort_order: 0
+            """),
+        )
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+            """),
+        )
+        with self.assertRaisesRegex(
+            SampleError,
+            r"setup_actions\[0\] \(env_var\) missing required fields: dedupe_key",
+        ):
+            self._validate(sample_dir)
+
+    def test_setup_actions_with_dedupe_key_passes(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(
+            sample_dir,
+            body=textwrap.dedent("""\
+                kind: AgentTemplate
+                name: X
+                setup_actions:
+                  - action_type: env_var
+                    title: Set GITHUB_TOKEN
+                    description: GH token
+                    params:
+                      key: GITHUB_TOKEN
+                      scope: agent_env_var
+                    verify_config:
+                      type: secret_present
+                    dedupe_key: GITHUB_TOKEN
+                    required: true
+                    sort_order: 0
+                  - action_type: install
+                    title: Install GitHub App
+                    description: GH App
+                    params:
+                      installation_kind: integration/github
+                    verify_config:
+                      type: installation_active
+                    dedupe_key: integration/github
+                    required: true
+                    sort_order: 1
+            """),
+        )
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+            """),
+        )
+        self._validate(sample_dir)
+
+    def test_setup_actions_unknown_action_type_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(
+            sample_dir,
+            body=textwrap.dedent("""\
+                kind: AgentTemplate
+                name: X
+                setup_actions:
+                  - action_type: webhook
+                    title: t
+                    description: d
+                    params: {}
+                    verify_config: {}
+                    dedupe_key: x
+            """),
+        )
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+            """),
+        )
+        with self.assertRaisesRegex(
+            SampleError,
+            r"setup_actions\[0\]\.action_type 'webhook' is not a known type",
+        ):
+            self._validate(sample_dir)
+
+    def test_setup_actions_dedupe_key_required_on_tool_template(self):
+        # Same hard check fires on AgentToolTemplate bodies — they're
+        # the most common shippers of inline setup_actions.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "tools").mkdir()
+        (sample_dir / "tools" / "create-issue.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            tool_type: custom
+            name: create_issue
+            display_name: Create Issue
+            description: stub
+            handler_type: script
+            config_ref: create-issue
+            setup_actions:
+              - action_type: install
+                title: Install GitHub App
+                description: GH App
+                params:
+                  installation_kind: integration/github
+                verify_config:
+                  type: installation_active
+                required: true
+                sort_order: 0
+        """))
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: tools/create-issue.yaml
+            """),
+        )
+        with self.assertRaisesRegex(
+            SampleError,
+            r"tools/create-issue.yaml.*setup_actions\[0\] \(install\) missing required fields: dedupe_key",
+        ):
+            self._validate(sample_dir)
+
+    def test_setup_actions_empty_list_is_fine(self):
+        # Templates that have nothing to set up explicitly ship
+        # `setup_actions: []` — the explicit "no setup needed" form
+        # must pass validation.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(
+            sample_dir,
+            body=textwrap.dedent("""\
+                kind: AgentTemplate
+                name: X
+                setup_actions: []
+            """),
+        )
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+            """),
+        )
+        self._validate(sample_dir)
 
 
 # --- bundle lookup_key uniqueness ----------------------------------------

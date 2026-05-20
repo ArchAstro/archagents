@@ -43,6 +43,7 @@ setup_actions:
       example: ghp_xxxxxxxxxxxx
     verify_config:
       type: secret_present
+    dedupe_key: GITHUB_TOKEN
     required: true
     sort_order: 0
   - action_type: install
@@ -52,5 +53,6 @@ setup_actions:
       installation_kind: integration/github
     verify_config:
       type: installation_active
+    dedupe_key: integration/github
     required: true
     sort_order: 1

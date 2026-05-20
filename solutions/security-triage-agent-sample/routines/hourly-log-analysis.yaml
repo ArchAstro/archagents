@@ -25,6 +25,7 @@ setup_actions:
       scope: agent_env_var
     verify_config:
       type: secret_present
+    dedupe_key: GCLOUD_PROJECT_ID
     required: false
     sort_order: 0
   - action_type: env_var
@@ -38,5 +39,6 @@ setup_actions:
       secret: true
     verify_config:
       type: secret_present
+    dedupe_key: GCLOUD_SA_KEY
     required: false
     sort_order: 1

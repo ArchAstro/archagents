@@ -30,6 +30,8 @@ from .paths import (
     ENV_VAR_SCOPES,
     SAMPLE_SCHEMA_VERSION,
     SCRIPT_EXTENSIONS,
+    SETUP_ACTIONS_KINDS,
+    SETUP_ACTION_TYPES,
     SETUP_REQUIREMENT_KINDS,
     STEP_VERBS,
     VERSION_RE,
@@ -948,13 +950,20 @@ def _validate_wrapped_template_body(
     """
     Read the wrapped template body at `template_path` and raise if:
       (a) it does not parse as a YAML mapping,
-      (b) it declares `agent_key:` (deploy_agent-only field), or
+      (b) it declares `agent_key:` (deploy_agent-only field),
       (c) it is an AgentToolTemplate / AgentRoutineTemplate without a
           non-empty `display_name:` — the Library carousel and inspector
           render that label, and the backend's display fallbacks
           (humanize `name`) lose acronym casing (`query_osv` →
           `Query Osv` instead of `Query OSV`). Forcing samples to
-          declare `display_name:` keeps the catalog presentation crisp.
+          declare `display_name:` keeps the catalog presentation crisp,
+          or
+      (d) any inline `setup_actions:` entry is missing a non-empty
+          `dedupe_key:`. Multi-template Solutions ship the same env_var
+          or install action across the agent + every tool/routine that
+          depends on it; without explicit dedupe_keys the post-install
+          checklist double-counts. Source must declare dedupe so cross-
+          template sharing is intentional and visible.
 
     Parseability has to be checked here — otherwise a syntactically
     broken template body would slip past sample-time validation and
@@ -991,6 +1000,105 @@ def _validate_wrapped_template_body(
                 f"for tools, kebab-case for routines); `display_name:` "
                 f"is the human label rendered in the Library carousel "
                 f"and inspector. Add e.g. `display_name: \"Query OSV.dev\"`."
+            )
+    if kind in SETUP_ACTIONS_KINDS:
+        validate_setup_actions(where, template_label, raw)
+
+
+def validate_setup_actions(
+    where: str, template_label: str, raw: dict[str, Any]
+) -> None:
+    """
+    Validate the inline `setup_actions:` block on an AgentTemplate /
+    AgentToolTemplate / AgentRoutineTemplate body. Empty / absent block
+    is fine — the field is optional and an empty list is the explicit
+    "no setup needed" shape.
+
+    Each entry must declare:
+      * `action_type:` (env_var | install | custom)
+      * `title:`, `description:` — both non-empty strings
+      * `params:` — kind-specific mapping (key/scope, installation_kind,
+        or id)
+      * `verify_config:` — kind-specific mapping
+      * `dedupe_key:` — non-empty string. The platform uses
+        (agent, dedupe_key) as a unique constraint on
+        `agent_health_actions`, so two templates that ship the same
+        env_var or install action should share a dedupe_key (one
+        checklist row); two distinct actions should pick distinct keys.
+
+    Optional fields: `required:` (bool), `sort_order:` (int),
+    `depends_on:` (list of strings).
+
+    Mirrors the discriminator surface of firstlanding's
+    `ArchAstro.Config.Objects.SetupAction` after PR #5414.
+    """
+    actions = raw.get("setup_actions")
+    if actions is None:
+        return
+    if not isinstance(actions, list):
+        raise SampleError(
+            f"{where}: wrapped template {template_label!r} `setup_actions:` "
+            f"must be a list, got {type(actions).__name__}."
+        )
+
+    for idx, action in enumerate(actions):
+        prefix = f"setup_actions[{idx}]"
+        if not isinstance(action, dict):
+            raise SampleError(
+                f"{where}: wrapped template {template_label!r} "
+                f"{prefix} must be a mapping, got {type(action).__name__}."
+            )
+        action_type = action.get("action_type")
+        if action_type not in SETUP_ACTION_TYPES:
+            valid = ", ".join(sorted(SETUP_ACTION_TYPES))
+            raise SampleError(
+                f"{where}: wrapped template {template_label!r} "
+                f"{prefix}.action_type {action_type!r} is not a known type. "
+                f"Valid types: {valid}."
+            )
+
+        spec = SETUP_ACTION_TYPES[action_type]
+        supplied = set(action.keys()) - {"action_type"}
+        missing = spec["required"] - supplied
+        if missing:
+            raise SampleError(
+                f"{where}: wrapped template {template_label!r} "
+                f"{prefix} ({action_type}) missing required fields: "
+                f"{', '.join(sorted(missing))}. Every inline setup_action "
+                f"must declare `dedupe_key:` so cross-template imprints "
+                f"of the same action fold into one checklist row."
+            )
+        unknown = supplied - spec["required"] - spec["optional"]
+        if unknown:
+            raise SampleError(
+                f"{where}: wrapped template {template_label!r} "
+                f"{prefix} ({action_type}) has unknown fields: "
+                f"{', '.join(sorted(unknown))}."
+            )
+
+        dedupe_key = action.get("dedupe_key")
+        if not isinstance(dedupe_key, str) or not dedupe_key.strip():
+            raise SampleError(
+                f"{where}: wrapped template {template_label!r} "
+                f"{prefix}.dedupe_key must be a non-empty string."
+            )
+
+        for field in ("title", "description"):
+            value = action.get(field)
+            if not isinstance(value, str) or not value.strip():
+                raise SampleError(
+                    f"{where}: wrapped template {template_label!r} "
+                    f"{prefix}.{field} must be a non-empty string."
+                )
+
+        depends_on = action.get("depends_on")
+        if depends_on is not None and (
+            not isinstance(depends_on, list)
+            or not all(isinstance(x, str) for x in depends_on)
+        ):
+            raise SampleError(
+                f"{where}: wrapped template {template_label!r} "
+                f"{prefix}.depends_on must be a list of strings."
             )
 
 

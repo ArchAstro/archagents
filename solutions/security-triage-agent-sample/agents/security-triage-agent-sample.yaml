@@ -184,6 +184,14 @@ installations:
 # Solutions can't ship the catalog-DSL `setup_requirements:` block;
 # samples-catalog only converts that field for single-template
 # Solutions and the deploy_agent path.
+# `dedupe_key:` on every entry is the cross-template idempotency key
+# used by ArchAstro.Config.Objects.SetupAction. The platform's unique
+# constraint is (agent_user_id, dedupe_key), so two templates that
+# imprint the same logical action (e.g. installing the GitHub
+# integration) share one dedupe_key and produce one checklist row;
+# two distinct actions pick distinct keys. Convention here mirrors
+# the TS samples-catalog identifierFor() auto-derivation: env_var ->
+# env var key, install -> installation_kind, custom -> id.
 setup_actions:
   - action_type: env_var
     title: Set SECURITY_TEAM_EMAIL
@@ -195,6 +203,7 @@ setup_actions:
       scope: agent_env_var
     verify_config:
       type: secret_present
+    dedupe_key: SECURITY_TEAM_EMAIL
     required: false
     sort_order: 0
 
@@ -207,6 +216,7 @@ setup_actions:
       installation_kind: enablement/slack_bot
     verify_config:
       type: installation_active
+    dedupe_key: enablement/slack_bot
     required: true
     sort_order: 1
 
