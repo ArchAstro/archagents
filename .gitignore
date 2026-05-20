@@ -10,3 +10,7 @@ __pycache__/
 
 # Local review-tool scratch directory (filament). Not part of the repo.
 .filament/
+
+# Local tarball output from scripts/build-releases.sh. CI produces these
+# as GitHub Release assets; local builds are for smoke-testing only.
+releases/
