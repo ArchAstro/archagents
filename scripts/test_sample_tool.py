@@ -37,6 +37,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from _sample_lib import generate as gen_mod  # noqa: E402
+from _sample_lib import lint as lint_mod  # noqa: E402
 from _sample_lib import pack as pack_mod  # noqa: E402
 from _sample_lib import paths as paths_mod  # noqa: E402
 from _sample_lib import scaffold as scaffold_mod  # noqa: E402
@@ -113,6 +114,10 @@ class _TmpAgentsRoot:
         # tarball path display.
         self._patch(pack_mod, "AGENTS_DIR", self.agents_dir)
         self._patch(pack_mod, "REPO_ROOT", self.tmp)
+        # lint imports AGENTS_DIR + REPO_ROOT for both the sample walk
+        # and `display_path` error rendering.
+        self._patch(lint_mod, "AGENTS_DIR", self.agents_dir)
+        self._patch(lint_mod, "REPO_ROOT", self.tmp)
         return self
 
     def __exit__(self, *exc):
@@ -1550,6 +1555,191 @@ class ValidateSolutionYamlTest(unittest.TestCase):
         ):
             self._validate(sample_dir)
 
+    def test_tool_template_without_display_name_is_rejected(self):
+        # The backend allows AgentToolTemplate.display_name to be empty
+        # and falls back to humanizing `name`, but the humanizer loses
+        # acronym casing (`query_osv` → `Query Osv`). validate_sample
+        # forces samples to declare `display_name:` so the catalog
+        # renders properly.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "tools").mkdir()
+        (sample_dir / "tools" / "query-osv.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            tool_type: custom
+            name: query_osv
+            description: stub
+            handler_type: script
+            config_ref: query-osv
+        """))
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: tools/query-osv.yaml
+            """),
+        )
+        with self.assertRaisesRegex(
+            SampleError,
+            r"tools/query-osv.yaml.*AgentToolTemplate.*display_name",
+        ):
+            self._validate(sample_dir)
+
+    def test_routine_template_without_display_name_is_rejected(self):
+        # Same rule applies to AgentRoutineTemplate. `name` is the
+        # kebab-case routine handle; without `display_name` the carousel
+        # label degrades to `Daily Dependency Scan`-style humanization.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "routines").mkdir()
+        (sample_dir / "routines" / "daily-scan.yaml").write_text(textwrap.dedent("""\
+            kind: AgentRoutineTemplate
+            name: daily-scan
+            description: stub
+        """))
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: routines/daily-scan.yaml
+            """),
+        )
+        with self.assertRaisesRegex(
+            SampleError,
+            r"routines/daily-scan.yaml.*AgentRoutineTemplate.*display_name",
+        ):
+            self._validate(sample_dir)
+
+    def test_tool_template_with_display_name_passes(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "tools").mkdir()
+        (sample_dir / "tools" / "query-osv.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            tool_type: custom
+            name: query_osv
+            display_name: "Query OSV.dev"
+            description: stub
+            handler_type: script
+            config_ref: query-osv
+        """))
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: tools/query-osv.yaml
+            """),
+        )
+        self._validate(sample_dir)
+
+    def test_agent_template_does_not_require_display_name(self):
+        # AgentTemplate.name *is* the catalog-facing display name (per
+        # agent_template.ex), so the display_name requirement only
+        # applies to AgentToolTemplate / AgentRoutineTemplate.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+            """),
+        )
+        self._validate(sample_dir)
+
+    def test_template_readme_path_missing_file_is_rejected(self):
+        # A `readme_path:` typo would silently fall through to a
+        # placeholder in the Library inspector. The strict validator
+        # catches it at pack time instead — same gate as template_path.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                    readme_path: docs/typo.md
+            """),
+        )
+        with self.assertRaisesRegex(
+            SampleError,
+            r"templates\[0\]\.readme_path 'docs/typo.md'.*does not point at a real file",
+        ):
+            self._validate(sample_dir)
+
+    def test_template_readme_path_present_passes(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "agents" / "x.md").write_text("# X\n")
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                    readme_path: agents/x.md
+            """),
+        )
+        self._validate(sample_dir)
+
+    def test_template_readme_path_escaping_sample_dir_is_rejected(self):
+        # `_require_local_file` also rejects `..` traversal, matching
+        # the backend's SolutionRelativePath rules.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                    readme_path: ../escape.md
+            """),
+        )
+        with self.assertRaisesRegex(
+            SampleError, "readme_path '../escape.md' escapes the sample directory"
+        ):
+            self._validate(sample_dir)
+
+    def test_tool_template_via_template_ref_also_requires_display_name(self):
+        # template_ref takes a different resolution path than
+        # template_path, but the wrapped-template body check fires
+        # either way. The lookup_key resolver only walks under agents/
+        # right now, so the fixture parks the tool template there.
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "agents" / "query-osv.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            lookup_key: query-osv
+            tool_type: custom
+            name: query_osv
+            description: stub
+            handler_type: script
+            config_ref: query-osv
+        """))
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_ref: query-osv
+            """),
+        )
+        with self.assertRaisesRegex(
+            SampleError,
+            r"'query-osv'.*AgentToolTemplate.*display_name",
+        ):
+            self._validate(sample_dir)
+
 
 # --- bundle lookup_key uniqueness ----------------------------------------
 
@@ -1713,6 +1903,7 @@ class ValidateBundleLookupKeyUniquenessTest(unittest.TestCase):
             lookup_key: st-tool-query-osv
             tool_type: custom
             name: query_osv
+            display_name: Query OSV
             description: stub
             handler_type: script
             config_ref: query-osv
@@ -1741,6 +1932,7 @@ class ValidateBundleLookupKeyUniquenessTest(unittest.TestCase):
             kind: AgentToolTemplate
             tool_type: custom
             name: shared
+            display_name: Shared
             description: stub
             handler_type: script
             config_ref: shared
@@ -1754,6 +1946,255 @@ class ValidateBundleLookupKeyUniquenessTest(unittest.TestCase):
             """)
         )
         self._validate(sample_dir)
+
+
+# --- lint -----------------------------------------------------------------
+
+
+class LintTest(unittest.TestCase):
+    """
+    `sample_tool lint` surfaces best-practice warnings without failing
+    by default. --strict flips the exit code so CI can opt in.
+    """
+
+    _MINIMAL_SOLUTION_HEADER = textwrap.dedent("""\
+        kind: Solution
+        lookup_key: x-solution
+        solution_id: 7a1c4f10-1e2b-4d6f-9a8d-2b71f2c6a103
+        solution_version: v0.1.0
+        name: X
+    """)
+
+    def _make_agents_root(self) -> _TmpAgentsRoot:
+        return _TmpAgentsRoot()
+
+    def _write_minimal_sample(
+        self,
+        root: _TmpAgentsRoot,
+        slug: str,
+        *,
+        with_solution: bool = False,
+        with_readme: bool = False,
+        solution_extra: str = "",
+    ) -> Path:
+        sample_dir = root.agents_dir / slug
+        sample_dir.mkdir()
+        (sample_dir / "scripts").mkdir()
+        (sample_dir / "agent.yaml").write_text(
+            "kind: AgentTemplate\nname: X\n"
+        )
+        (sample_dir / "sample.yaml").write_text(textwrap.dedent("""\
+            schema_version: 2
+            version: v0.1.0
+            name: X
+            tagline: A sample.
+            min_cli_version: "0.28.0"
+            steps:
+              - type: upload_scripts
+                source_dir: scripts
+              - type: deploy_agent
+                template_file: agent.yaml
+        """))
+        if with_readme:
+            (sample_dir / "README.md").write_text("# X\n")
+        if with_solution:
+            (sample_dir / "agents").mkdir(exist_ok=True)
+            (sample_dir / "agents" / "x.yaml").write_text(
+                "kind: AgentTemplate\nname: X\n"
+            )
+            (sample_dir / "solution.yaml").write_text(
+                self._MINIMAL_SOLUTION_HEADER
+                + textwrap.dedent("""\
+                    description: A solution.
+                    category_keys: [operations]
+                    tag_keys: [demo]
+                    readme: "Body."
+                    templates:
+                      - template_path: agents/x.yaml
+                """)
+                + solution_extra
+            )
+        return sample_dir
+
+    def _run(self, slug: str | None, strict: bool) -> tuple[int, str]:
+        buf = io.StringIO()
+        with redirect_stderr(buf):
+            code = lint_mod.run_lint(slug, strict=strict)
+        return code, buf.getvalue()
+
+    def test_clean_sample_with_solution_passes(self):
+        with self._make_agents_root() as root:
+            self._write_minimal_sample(
+                root, "alpha", with_solution=True, with_readme=True
+            )
+            code, output = self._run(None, strict=True)
+        self.assertEqual(code, 0, output)
+        self.assertIn("clean", output)
+
+    def test_missing_readme_warns(self):
+        with self._make_agents_root() as root:
+            self._write_minimal_sample(root, "alpha", with_readme=False)
+            code_default, output = self._run(None, strict=False)
+            code_strict, _ = self._run(None, strict=True)
+        self.assertEqual(code_default, 0)
+        self.assertEqual(code_strict, 1)
+        self.assertIn("missing README.md", output)
+
+    def test_missing_category_keys_warns(self):
+        with self._make_agents_root() as root:
+            sample_dir = self._write_minimal_sample(
+                root, "alpha", with_solution=True, with_readme=True
+            )
+            (sample_dir / "solution.yaml").write_text(
+                self._MINIMAL_SOLUTION_HEADER
+                + textwrap.dedent("""\
+                    description: A solution.
+                    tag_keys: [demo]
+                    readme: "Body."
+                    templates:
+                      - template_path: agents/x.yaml
+                """)
+            )
+            code_strict, output = self._run(None, strict=True)
+        self.assertEqual(code_strict, 1)
+        self.assertIn("category_keys", output)
+        self.assertNotIn("tag_keys", output)
+
+    def test_missing_tag_keys_warns(self):
+        with self._make_agents_root() as root:
+            sample_dir = self._write_minimal_sample(
+                root, "alpha", with_solution=True, with_readme=True
+            )
+            (sample_dir / "solution.yaml").write_text(
+                self._MINIMAL_SOLUTION_HEADER
+                + textwrap.dedent("""\
+                    description: A solution.
+                    category_keys: [operations]
+                    readme: "Body."
+                    templates:
+                      - template_path: agents/x.yaml
+                """)
+            )
+            code_strict, output = self._run(None, strict=True)
+        self.assertEqual(code_strict, 1)
+        self.assertIn("tag_keys", output)
+
+    def test_missing_solution_readme_warns(self):
+        # No top-level readme: AND no per-template readme_path: → warn
+        # the inspector will fall back to a placeholder.
+        with self._make_agents_root() as root:
+            sample_dir = self._write_minimal_sample(
+                root, "alpha", with_solution=True, with_readme=True
+            )
+            (sample_dir / "solution.yaml").write_text(
+                self._MINIMAL_SOLUTION_HEADER
+                + textwrap.dedent("""\
+                    description: A solution.
+                    category_keys: [operations]
+                    tag_keys: [demo]
+                    templates:
+                      - template_path: agents/x.yaml
+                """)
+            )
+            code_strict, output = self._run(None, strict=True)
+        self.assertEqual(code_strict, 1)
+        self.assertIn("no `readme:`", output)
+
+    def test_per_template_readme_path_satisfies_readme_check(self):
+        # The shared/top-level readme check is satisfied if EVERY
+        # template entry carries its own readme_path:, so authors who
+        # split docs per template don't get nagged.
+        with self._make_agents_root() as root:
+            sample_dir = self._write_minimal_sample(
+                root, "alpha", with_solution=True, with_readme=True
+            )
+            (sample_dir / "TEMPLATE_README.md").write_text("body")
+            (sample_dir / "solution.yaml").write_text(
+                self._MINIMAL_SOLUTION_HEADER
+                + textwrap.dedent("""\
+                    description: A solution.
+                    category_keys: [operations]
+                    tag_keys: [demo]
+                    templates:
+                      - template_path: agents/x.yaml
+                        readme_path: TEMPLATE_README.md
+                """)
+            )
+            code_strict, output = self._run(None, strict=True)
+        self.assertEqual(code_strict, 0, output)
+        self.assertNotIn("readme", output)
+
+    def test_partial_readme_coverage_warns_per_entry(self):
+        # One template has readme_path, the other doesn't, and there's
+        # no shared top-level readme: the second entry would render as
+        # a placeholder.
+        with self._make_agents_root() as root:
+            sample_dir = self._write_minimal_sample(
+                root, "alpha", with_solution=True, with_readme=True
+            )
+            (sample_dir / "agents" / "y.yaml").write_text(
+                "kind: AgentTemplate\nname: Y\n"
+            )
+            (sample_dir / "TEMPLATE_README.md").write_text("body")
+            (sample_dir / "solution.yaml").write_text(
+                self._MINIMAL_SOLUTION_HEADER
+                + textwrap.dedent("""\
+                    description: A solution.
+                    category_keys: [operations]
+                    tag_keys: [demo]
+                    templates:
+                      - template_path: agents/x.yaml
+                        readme_path: TEMPLATE_README.md
+                      - template_path: agents/y.yaml
+                """)
+            )
+            code_strict, output = self._run(None, strict=True)
+        self.assertEqual(code_strict, 1)
+        self.assertIn("templates[1] has no `readme_path:`", output)
+        self.assertNotIn("templates[0]", output)
+
+    def test_shared_readme_covers_per_template_gaps(self):
+        # When the Solution declares a top-level readme:, every
+        # template falls back to it and the per-template gap is not
+        # worth nagging about.
+        with self._make_agents_root() as root:
+            sample_dir = self._write_minimal_sample(
+                root, "alpha", with_solution=True, with_readme=True
+            )
+            (sample_dir / "agents" / "y.yaml").write_text(
+                "kind: AgentTemplate\nname: Y\n"
+            )
+            (sample_dir / "solution.yaml").write_text(
+                self._MINIMAL_SOLUTION_HEADER
+                + textwrap.dedent("""\
+                    description: A solution.
+                    category_keys: [operations]
+                    tag_keys: [demo]
+                    readme: "Shared body."
+                    templates:
+                      - template_path: agents/x.yaml
+                      - template_path: agents/y.yaml
+                """)
+            )
+            code_strict, output = self._run(None, strict=True)
+        self.assertEqual(code_strict, 0, output)
+        self.assertNotIn("readme", output)
+
+    def test_single_slug_target(self):
+        with self._make_agents_root() as root:
+            self._write_minimal_sample(root, "alpha", with_readme=False)
+            self._write_minimal_sample(root, "beta", with_readme=True)
+            code, output = self._run("alpha", strict=True)
+        self.assertEqual(code, 1)
+        self.assertIn("alpha", output)
+        self.assertNotIn("WARN beta", output)
+
+    def test_unknown_slug_errors(self):
+        with self._make_agents_root() as root:
+            self._write_minimal_sample(root, "alpha", with_readme=True)
+            code, output = self._run("nope", strict=False)
+        self.assertEqual(code, 1)
+        self.assertIn("not a sample", output)
 
 
 # --- rendering ------------------------------------------------------------
