@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 # Local mirror of .github/workflows/release-samples.yml — packs every
-# sample under agents/ and solutions/ into ./releases/<slug>-<version>.tar.gz.
+# sample under agents/ and solutions/ into
+# ./releases/<root>/<slug>-<version>.tar.gz (where <root> is `agents`
+# or `solutions`). The split lets downstream tools (e.g. local
+# importers) pull only Solution bundles without needing to peek inside
+# every tarball to filter out agent-mode samples that don't have a
+# `deploy_solution` step.
+#
 # Use this to:
 #   - smoke-test the catalog flow locally with
-#     `archastro install sample ./releases/<slug>-<version>.tar.gz`,
+#     `archastro install sample ./releases/<root>/<slug>-<version>.tar.gz`,
 #   - regenerate every tarball after a version-bump sweep,
 #   - confirm `pack` is green across the whole catalog before pushing.
 #
@@ -72,8 +78,10 @@ mkdir -p "$OUTPUT_DIR"
 
 if [[ "$CLEAN" -eq 1 ]]; then
   # Only touch *.tar.gz so this can't accidentally nuke unrelated
-  # files if the user passed `--output-dir .` or similar.
-  find "$OUTPUT_DIR" -maxdepth 1 -name "*.tar.gz" -delete
+  # files if the user passed `--output-dir .` or similar. Sweeps the
+  # root + the per-root subdirs (`agents/`, `solutions/`) because the
+  # layout switched from flat to nested.
+  find "$OUTPUT_DIR" -maxdepth 2 -name "*.tar.gz" -delete
 fi
 
 cd "$REPO_ROOT"
@@ -108,6 +116,11 @@ failed=0
 
 for sample_path in "${PLAN[@]}"; do
   slug=$(basename "$sample_path")
+  # $sample_path is always `<root>/<slug>` (PLAN is populated that way
+  # above), so dirname gives back `agents` or `solutions` — the
+  # destination subdir under $OUTPUT_DIR.
+  root=$(dirname "$sample_path")
+  target_dir="$OUTPUT_DIR/$root"
   # Read version from sample.yaml without pulling in PyYAML for a
   # one-line lookup — sample.yaml is line-oriented and the validator
   # already rejects anything that wouldn't match this regex.
@@ -117,7 +130,7 @@ for sample_path in "${PLAN[@]}"; do
     failed=$((failed + 1))
     continue
   fi
-  tarball="$OUTPUT_DIR/${slug}-${version}.tar.gz"
+  tarball="$target_dir/${slug}-${version}.tar.gz"
   if [[ "$SKIP_EXISTING" -eq 1 && -f "$tarball" ]]; then
     echo "✓ $sample_path → already at ${tarball#$REPO_ROOT/} (skipping)"
     skipped=$((skipped + 1))
@@ -125,7 +138,7 @@ for sample_path in "${PLAN[@]}"; do
   fi
 
   echo "→ $sample_path → ${tarball#$REPO_ROOT/}"
-  if uv run scripts/sample_tool.py pack "$sample_path" --output-dir "$OUTPUT_DIR" >/dev/null; then
+  if uv run scripts/sample_tool.py pack "$sample_path" --output-dir "$target_dir" >/dev/null; then
     packed=$((packed + 1))
   else
     echo "✗ $sample_path: pack failed" >&2
