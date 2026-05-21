@@ -26,7 +26,7 @@ def load_all_samples() -> list[dict[str, Any]]:
     """
     samples: list[dict[str, Any]] = []
     seen_slugs: dict[str, pathlib.Path] = {}
-    for root in SAMPLE_ROOTS:
+    for root, kind in SAMPLE_ROOTS:
         if not root.is_dir():
             continue
         for sample_dir in sorted(root.iterdir()):
@@ -52,10 +52,14 @@ def load_all_samples() -> list[dict[str, Any]]:
             # back to the right directory (samples can live under either
             # agents/ or solutions/).
             sample["sample_dir"] = sample_dir
+            # Stamp the manifest kind from the discovery root. Catalog
+            # consumers (CLI `list agentsamples`, synth tests) split on
+            # this to keep agent-mode and solution-mode installs apart.
+            sample["kind"] = kind
             samples.append(sample)
             seen_slugs[sample_dir.name] = sample_dir
     if not samples:
-        roots = ", ".join(str(r.relative_to(REPO_ROOT)) for r in SAMPLE_ROOTS)
+        roots = ", ".join(str(root.relative_to(REPO_ROOT)) for root, _ in SAMPLE_ROOTS)
         raise SampleError(f"No samples found under {roots}")
     return samples
 

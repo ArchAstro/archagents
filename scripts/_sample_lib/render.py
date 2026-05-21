@@ -53,6 +53,7 @@ def render_manifest(samples: list[dict[str, Any]]) -> str:
                 "tagline": s["tagline"],
                 "current_version": s["version"],
                 "min_cli_version": s["min_cli_version"],
+                "kind": s["kind"],
             }
             for s in samples
         ],

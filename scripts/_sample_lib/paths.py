@@ -18,7 +18,15 @@ AGENTS_DIR = REPO_ROOT / "agents"
 # slug suffix; sample_tool walks SAMPLE_ROOTS so generate / pack /
 # validate / lint discover entries from either directory.
 SOLUTIONS_DIR = REPO_ROOT / "solutions"
-SAMPLE_ROOTS = (AGENTS_DIR, SOLUTIONS_DIR)
+# Each entry pairs a discovery root with the manifest `kind` it
+# produces. The CLI's `install agentsample` only handles `agent` rows
+# (solutions go through `import solution`), so consumers filter on this
+# field — the source directory is the catalog-side source of truth.
+SAMPLE_ROOTS: tuple[tuple[pathlib.Path, str], ...] = (
+    (AGENTS_DIR, "agent"),
+    (SOLUTIONS_DIR, "solution"),
+)
+SAMPLE_KINDS = frozenset({kind for _, kind in SAMPLE_ROOTS})
 MANIFEST_PATH = REPO_ROOT / "samples.json"
 MANIFEST_SCHEMA_VERSION = 1
 

@@ -57,7 +57,7 @@ def run_lint(slug: str | None, strict: bool) -> int:
     """
     sample_dirs = _resolve_sample_dirs(slug)
     if not sample_dirs:
-        roots = ", ".join(str(r.relative_to(REPO_ROOT)) for r in SAMPLE_ROOTS)
+        roots = ", ".join(str(root.relative_to(REPO_ROOT)) for root, _ in SAMPLE_ROOTS)
         print(f"lint: no samples found under {roots}", file=sys.stderr)
         return 1
 
@@ -87,11 +87,11 @@ def run_lint(slug: str | None, strict: bool) -> int:
 
 def _resolve_sample_dirs(slug: str | None) -> list[pathlib.Path]:
     if slug is not None:
-        for root in SAMPLE_ROOTS:
+        for root, _kind in SAMPLE_ROOTS:
             target = root / slug
             if target.is_dir():
                 return [target]
-        roots = ", ".join(str(r.relative_to(REPO_ROOT)) for r in SAMPLE_ROOTS)
+        roots = ", ".join(str(root.relative_to(REPO_ROOT)) for root, _ in SAMPLE_ROOTS)
         print(
             f"lint: {slug!r} is not a sample under {roots}",
             file=sys.stderr,
@@ -99,7 +99,7 @@ def _resolve_sample_dirs(slug: str | None) -> list[pathlib.Path]:
         return []
     return [
         d
-        for root in SAMPLE_ROOTS
+        for root, _kind in SAMPLE_ROOTS
         if root.is_dir()
         for d in sorted(root.iterdir())
         if d.is_dir()
