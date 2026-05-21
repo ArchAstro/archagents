@@ -34,6 +34,7 @@ from .paths import (
     SETUP_ACTION_TYPES,
     SETUP_REQUIREMENT_KINDS,
     STEP_VERBS,
+    TEMPLATE_DESCRIPTION_REQUIRED_KINDS,
     VERSION_RE,
     display_path,
 )
@@ -252,6 +253,7 @@ def validate_steps(slug: str, steps: Any, source: pathlib.Path) -> None:
         verb = step.get("type")
         if verb == "deploy_agent":
             template_path = sample_dir / step["template_file"]
+            validate_template_metadata(template_path)
             validate_setup_requirements(template_path, script_lookup_keys)
         elif verb == "deploy_solution":
             for template_path in _resolve_wrapped_templates(sample_dir, step):
@@ -575,6 +577,24 @@ def validate_setup_requirements(
                 f"{where}: setup_requirements[{idx}].depends_on must be a list "
                 f"of strings"
             )
+
+
+def validate_template_metadata(template_path: pathlib.Path) -> None:
+    """
+    Validate required top-level metadata on a deploy_agent template
+    body. Solution-wrapped templates run the same metadata checks in
+    `_validate_wrapped_template_body`; this covers regular agent
+    samples that point directly at agent.yaml.
+    """
+    try:
+        raw = yaml.safe_load(template_path.read_text())
+    except yaml.YAMLError as exc:
+        raise SampleError(
+            f"{display_path(template_path)}: invalid YAML — {exc}"
+        )
+    if not isinstance(raw, dict):
+        return
+    _require_template_description(display_path(template_path), template_path.name, raw)
 
 
 def _check_setup_requirement_shape(
@@ -990,6 +1010,7 @@ def _validate_wrapped_template_body(
             f"template into a separate deploy_agent sample, or drop the field."
         )
     kind = raw.get("kind")
+    _require_template_description(where, template_label, raw)
     if kind in DISPLAY_NAME_REQUIRED_KINDS:
         display_name = raw.get("display_name")
         if not isinstance(display_name, str) or not display_name.strip():
@@ -1003,6 +1024,21 @@ def _validate_wrapped_template_body(
             )
     if kind in SETUP_ACTIONS_KINDS:
         validate_setup_actions(where, template_label, raw)
+
+
+def _require_template_description(
+    where: str, template_label: str, raw: dict[str, Any]
+) -> None:
+    kind = raw.get("kind")
+    if kind not in TEMPLATE_DESCRIPTION_REQUIRED_KINDS:
+        return
+    description = raw.get("description")
+    if not isinstance(description, str) or not description.strip():
+        raise SampleError(
+            f"{where}: template {template_label!r} ({kind}) must declare "
+            f"a non-empty `description:`. Template descriptions are shown "
+            f"beside standalone agent, tool, and routine rows in the Library."
+        )
 
 
 def validate_setup_actions(

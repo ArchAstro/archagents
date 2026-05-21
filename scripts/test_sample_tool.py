@@ -56,7 +56,9 @@ def _make_sample_dir(**overrides) -> Path:
     """
     tmp = Path(tempfile.mkdtemp())
     (tmp / "scripts").mkdir()
-    (tmp / "agent.yaml").write_text("kind: AgentTemplate\nname: X\n")
+    (tmp / "agent.yaml").write_text(
+        "kind: AgentTemplate\nname: X\ndescription: X does Y. It returns Z.\n"
+    )
     sample_body = overrides.pop(
         "sample_yaml",
         textwrap.dedent("""\
@@ -396,7 +398,10 @@ class ValidateStepsTest(unittest.TestCase):
             """)
         )
         (sample_dir / "agents").mkdir()
-        (sample_dir / "agents" / "x.yaml").write_text("kind: AgentTemplate\nname: X\n")
+        (sample_dir / "agents" / "x.yaml").write_text(
+            "kind: AgentTemplate\nname: X\n"
+            "description: X does Y. It returns Z.\n"
+        )
         validate_sample("x", _parsed(sample_dir), sample_dir / "sample.yaml")
 
     def test_deploy_solution_absolute_template_path_is_rejected_by_solution_gate(self):
@@ -509,12 +514,24 @@ class ValidateSetupRequirementsTest(unittest.TestCase):
     exercise the full path including script_ref cross-referencing.
     """
 
-    def _make_dir_with_agent_yaml(self, agent_body: str, scripts=None):
+    def _make_dir_with_agent_yaml(
+        self, agent_body: str, scripts=None, add_description: bool = True
+    ):
         scripts = scripts or []
         tmp = Path(tempfile.mkdtemp())
         (tmp / "scripts").mkdir()
         for name in scripts:
             (tmp / "scripts" / name).write_text("// stub\n")
+        if (
+            add_description
+            and "\ndescription:" not in agent_body
+            and not agent_body.startswith("description:")
+        ):
+            agent_body = agent_body.replace(
+                "name: X\n",
+                "name: X\ndescription: X does Y. It returns Z.\n",
+                1,
+            )
         (tmp / "agent.yaml").write_text(agent_body)
         (tmp / "sample.yaml").write_text(
             textwrap.dedent("""\
@@ -536,6 +553,16 @@ class ValidateSetupRequirementsTest(unittest.TestCase):
         validate_sample(
             "setup-sample", _parsed(sample_dir), sample_dir / "sample.yaml"
         )
+
+    def test_agent_template_description_is_required(self):
+        sample_dir = self._make_dir_with_agent_yaml(
+            "kind: AgentTemplate\nname: X\n",
+            add_description=False,
+        )
+        with self.assertRaisesRegex(
+            SampleError, r"AgentTemplate.*description"
+        ):
+            self._validate(sample_dir)
 
     def test_no_setup_requirements_block_is_fine(self):
         sample_dir = self._make_dir_with_agent_yaml("kind: AgentTemplate\nname: X\n")
@@ -734,7 +761,10 @@ class ValidateSolutionYamlTest(unittest.TestCase):
     """)
 
     _WRAPPED_PATH = "agents/x.yaml"
-    _WRAPPED_DEFAULT_BODY = "kind: AgentTemplate\nname: X\n"
+    _WRAPPED_DEFAULT_BODY = (
+        "kind: AgentTemplate\nname: X\n"
+        "description: X does Y. It returns Z.\n"
+    )
 
     def _make_solution_sample_dir(self, slug: str = "x") -> Path:
         """
@@ -771,6 +801,15 @@ class ValidateSolutionYamlTest(unittest.TestCase):
     def _write_path_template(
         self, sample_dir: Path, body: str = _WRAPPED_DEFAULT_BODY
     ) -> Path:
+        if (
+            "\ndescription:" not in body
+            and not body.startswith("description:")
+        ):
+            body = body.replace(
+                "name: X\n",
+                "name: X\ndescription: X does Y. It returns Z.\n",
+                1,
+            )
         target = sample_dir / self._WRAPPED_PATH
         target.parent.mkdir(exist_ok=True)
         target.write_text(body)
@@ -1261,13 +1300,30 @@ class ValidateSolutionYamlTest(unittest.TestCase):
         # any other template body content.
         sample_dir = self._make_solution_sample_dir()
         self._write_path_template(
-            sample_dir, "kind: AgentTemplate\nname: X\nidentity: |\n  You are X.\n"
+            sample_dir,
+            "kind: AgentTemplate\nname: X\n"
+            "description: X does Y. It returns Z.\n"
+            "identity: |\n  You are X.\n",
         )
         self._write_solution(
             sample_dir,
             self._solution_with_template_path(),
         )
         self._validate(sample_dir)
+
+    def test_wrapped_agent_template_without_description_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        target = sample_dir / self._WRAPPED_PATH
+        target.parent.mkdir(exist_ok=True)
+        target.write_text("kind: AgentTemplate\nname: X\n")
+        self._write_solution(
+            sample_dir,
+            self._solution_with_template_path(),
+        )
+        with self.assertRaisesRegex(
+            SampleError, r"agents/x.yaml.*AgentTemplate.*description"
+        ):
+            self._validate(sample_dir)
 
     def test_inline_readme_with_missing_image_ref_is_rejected(self):
         sample_dir = self._make_solution_sample_dir()
@@ -1537,6 +1593,7 @@ class ValidateSolutionYamlTest(unittest.TestCase):
         sibling.write_text(textwrap.dedent("""\
             kind: AgentTemplate
             name: Sibling
+            description: Sibling does Y. It returns Z.
             setup_requirements:
               - kind: custom
                 id: sibling-check
@@ -1641,6 +1698,33 @@ class ValidateSolutionYamlTest(unittest.TestCase):
             """),
         )
         self._validate(sample_dir)
+
+    def test_tool_template_without_description_is_rejected(self):
+        sample_dir = self._make_solution_sample_dir()
+        self._write_path_template(sample_dir)
+        (sample_dir / "tools").mkdir()
+        (sample_dir / "tools" / "query-osv.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            tool_type: custom
+            name: query_osv
+            display_name: "Query OSV.dev"
+            handler_type: script
+            config_ref: query-osv
+        """))
+        self._write_solution(
+            sample_dir,
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: tools/query-osv.yaml
+            """),
+        )
+        with self.assertRaisesRegex(
+            SampleError,
+            r"tools/query-osv.yaml.*AgentToolTemplate.*description",
+        ):
+            self._validate(sample_dir)
 
     def test_agent_template_does_not_require_display_name(self):
         # AgentTemplate.name *is* the catalog-facing display name (per
@@ -1946,6 +2030,7 @@ class ValidateBundleLookupKeyUniquenessTest(unittest.TestCase):
         (sample_dir / "agents").mkdir()
         (sample_dir / "agents" / "x.yaml").write_text(
             "kind: AgentTemplate\nname: X\n"
+            "description: X does Y. It returns Z.\n"
         )
         (sample_dir / "sample.yaml").write_text(textwrap.dedent("""\
             schema_version: 2
@@ -2045,6 +2130,7 @@ class ValidateBundleLookupKeyUniquenessTest(unittest.TestCase):
             kind: AgentTemplate
             lookup_key: shared
             name: X
+            description: X does Y. It returns Z.
         """))
         (tmp / "sample.yaml").write_text(textwrap.dedent("""\
             schema_version: 2
@@ -2158,6 +2244,7 @@ class LintTest(unittest.TestCase):
         (sample_dir / "scripts").mkdir()
         (sample_dir / "agent.yaml").write_text(
             "kind: AgentTemplate\nname: X\n"
+            "description: X does Y. It returns Z.\n"
         )
         (sample_dir / "sample.yaml").write_text(textwrap.dedent("""\
             schema_version: 2
@@ -2177,6 +2264,7 @@ class LintTest(unittest.TestCase):
             (sample_dir / "agents").mkdir(exist_ok=True)
             (sample_dir / "agents" / "x.yaml").write_text(
                 "kind: AgentTemplate\nname: X\n"
+                "description: X does Y. It returns Z.\n"
             )
             (sample_dir / "solution.yaml").write_text(
                 self._MINIMAL_SOLUTION_HEADER
@@ -2206,6 +2294,28 @@ class LintTest(unittest.TestCase):
             code, output = self._run(None, strict=True)
         self.assertEqual(code, 0, output)
         self.assertIn("clean", output)
+
+    def test_missing_wrapped_template_description_warns(self):
+        with self._make_agents_root() as root:
+            sample_dir = self._write_minimal_sample(
+                root, "alpha", with_solution=True, with_readme=True
+            )
+            (sample_dir / "agents" / "x.yaml").write_text(
+                "kind: AgentTemplate\nname: X\n"
+            )
+            code, output = self._run(None, strict=True)
+        self.assertEqual(code, 1)
+        self.assertIn("AgentTemplate", output)
+        self.assertIn("description", output)
+
+    def test_missing_deploy_agent_template_description_warns(self):
+        with self._make_agents_root() as root:
+            sample_dir = self._write_minimal_sample(root, "alpha", with_readme=True)
+            (sample_dir / "agent.yaml").write_text("kind: AgentTemplate\nname: X\n")
+            code, output = self._run(None, strict=True)
+        self.assertEqual(code, 1)
+        self.assertIn("AgentTemplate", output)
+        self.assertIn("description", output)
 
     def test_missing_readme_warns(self):
         with self._make_agents_root() as root:
@@ -2310,6 +2420,7 @@ class LintTest(unittest.TestCase):
             )
             (sample_dir / "agents" / "y.yaml").write_text(
                 "kind: AgentTemplate\nname: Y\n"
+                "description: Y does work. It returns results.\n"
             )
             (sample_dir / "TEMPLATE_README.md").write_text("body")
             (sample_dir / "solution.yaml").write_text(
@@ -2339,6 +2450,7 @@ class LintTest(unittest.TestCase):
             )
             (sample_dir / "agents" / "y.yaml").write_text(
                 "kind: AgentTemplate\nname: Y\n"
+                "description: Y does work. It returns results.\n"
             )
             (sample_dir / "solution.yaml").write_text(
                 self._MINIMAL_SOLUTION_HEADER
