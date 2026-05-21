@@ -5,7 +5,6 @@ solution_version: v0.2.2
 name: ArchAstro Sample
 description: The default ArchAstro project concierge.
 category_keys:
-- general
 - sample
 tag_keys:
 - concierge
@@ -46,5 +45,5 @@ templates:
 - template_path: tools/escalate.yaml
   readme_path: tools/escalate.md
 metadata:
-  category: general
+  category: sample
   sample_slug: archastro-sample

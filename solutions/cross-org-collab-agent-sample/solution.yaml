@@ -5,7 +5,6 @@ solution_version: v0.3.3
 name: Cross-Org Collaboration Agent Sample
 description: A code-aware engineering agent that participates in cross-org threads with field guards enforced.
 category_keys:
-- engineering
 - sample
 tag_keys:
 - collaboration
@@ -46,5 +45,5 @@ templates:
 - template_path: tools/create-pull-request.yaml
   readme_path: tools/create-pull-request.md
 metadata:
-  category: engineering
+  category: sample
   sample_slug: cross-org-collab-agent-sample

@@ -5,7 +5,6 @@ solution_version: v0.3.4
 name: Release Notes Bot Sample
 description: Drafts the weekly changelog by scanning merged PRs on a schedule.
 category_keys:
-- engineering
 - sample
 tag_keys:
 - release-notes
@@ -45,5 +44,5 @@ templates:
 - template_path: routines/weekly-release-notes.yaml
   readme_path: routines/weekly-release-notes.md
 metadata:
-  category: engineering
+  category: sample
   sample_slug: release-notes-bot-sample

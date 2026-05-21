@@ -5,7 +5,6 @@ solution_version: v0.1.2
 name: FDE Agent Sample
 description: A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff.
 category_keys:
-- developer-experience
 - sample
 tag_keys:
 - developer-experience
@@ -37,5 +36,5 @@ templates:
 - template_path: agents/fde-agent-sample.yaml
   readme_path: agents/fde-agent-sample.md
 metadata:
-  category: developer-experience
+  category: sample
   sample_slug: fde-agent-sample
