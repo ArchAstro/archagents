@@ -277,21 +277,34 @@ def _validate_bundle_lookup_key_uniqueness(
     Reject any lookup_key reused across artifacts in this sample's
     bundle.
 
+    Mirrors the platform's `InstallPrimitives.derive_lookup_key/2`
+    (src/elixir/core/lib/solutions/install_primitives.ex): the body's
+    `lookup_key:` field wins when declared; otherwise identity falls
+    back to the filename stem (basename without extension). Once the
+    platform namespaces every entry with the bundle's
+    `sol-<solution_id>-` prefix, two artifacts sharing a derived key
+    land in the same `(app_id, lookup_key, sandbox_id, org_id)` slot
+    on the `configs_lookup_key_unique_index` and the second one
+    fails the INSERT inside the import transaction.
+
     Artifacts checked:
       * Every `upload_scripts` source_dir entry (lookup_key = filename
-        stem, matching samples-catalog's `stripExtension` derivation).
-      * The `deploy_agent` template_file (lookup_key = body's
-        explicit `lookup_key:` field if present; otherwise skipped
-        because the derivation rule for an undeclared key isn't
-        observable from authoring side alone).
+        stem; scripts are aascript text with no YAML body so they
+        never declare an explicit lookup_key).
+      * The `deploy_agent` template_file (body's explicit `lookup_key:`
+        when set, else filename stem — same precedence the platform
+        uses now).
       * Every template body in a `deploy_solution`'s
-        `solution.yaml.templates:` list (same explicit-only rule).
+        `solution.yaml.templates:` list (same precedence).
 
-    The "explicit-only" stance trades one class of false-negative (an
-    auto-derived AgentTemplate lookup_key colliding with a script
-    stem) for zero false-positives. Authors who hit the auto-derived
-    case can opt in by declaring `lookup_key:` in the body, at which
-    point the check picks it up.
+    The earlier "explicit-only" stance let a sample author ship a
+    tool YAML alongside a script with the same stem (e.g.
+    `tools/foo.yaml` + `scripts/foo.aascript`); the validator saw two
+    different declared/derived keys and passed, but the platform's
+    stem-only derivation collapsed them and the import returned a
+    422 on `configs_lookup_key_unique_index`. Falling back to the
+    stem here keeps the validator honest about the platform's actual
+    namespace flatness.
     """
     where = display_path(source)
     owners: dict[str, str] = {}
@@ -303,11 +316,14 @@ def _validate_bundle_lookup_key_uniqueness(
                 f"{where}: lookup_key {key!r} is used by two bundle "
                 f"artifacts: {existing} and {owner}. The platform's "
                 f"per-(app, org, sandbox) config namespace is flat "
-                f"across kinds, so both can't coexist at import time. "
-                f"Prefix one — e.g. `st-tool-{key}` on an "
-                f"AgentToolTemplate, `st-routine-{key}` on an "
-                f"AgentRoutineTemplate — so each ends up in its own "
-                f"final `sol-<uuid>-<key>` slot."
+                f"across kinds, so both collide on the "
+                f"`configs_lookup_key_unique_index` at import time. "
+                f"Fix by either (a) declaring an explicit, distinct "
+                f"`lookup_key:` in the template's body — e.g. "
+                f"`lookup_key: arc-tool-{key}` on an AgentToolTemplate, "
+                f"`arc-routine-{key}` on an AgentRoutineTemplate — or "
+                f"(b) renaming one of the colliding files so the "
+                f"stems differ."
             )
         owners[key] = owner
 
@@ -350,19 +366,27 @@ def _register_template_lookup_key(
     rel: str,
     register: Any,
 ) -> None:
-    """Best-effort read of a template body's kind + lookup_key, then
-    register with the caller's collision-detecting closure. Silent on
-    parse failures — the other validation paths surface those."""
+    """Read a template body's kind + lookup_key and register with the
+    caller's collision-detecting closure. Mirrors the platform's
+    `derive_lookup_key/2` precedence (body's `lookup_key:` wins, else
+    filename stem)."""
+    declared_key: str | None = None
+    kind = "Template"
     try:
         raw = yaml.safe_load(template_path.read_text())
     except (OSError, yaml.YAMLError):
-        return
-    if not isinstance(raw, dict):
-        return
-    key = raw.get("lookup_key")
-    if not isinstance(key, str) or not key.strip():
-        return
-    kind = raw.get("kind") if isinstance(raw.get("kind"), str) else "Template"
+        # Parse failures surface in the dedicated YAML validator; here
+        # we only need the stem-fallback identity.
+        raw = None
+    if isinstance(raw, dict):
+        candidate = raw.get("lookup_key")
+        if isinstance(candidate, str) and candidate.strip():
+            declared_key = candidate.strip()
+        raw_kind = raw.get("kind")
+        if isinstance(raw_kind, str) and raw_kind.strip():
+            kind = raw_kind.strip()
+
+    key = declared_key or template_path.stem
     register(key, f"{kind} {rel}")
 
 

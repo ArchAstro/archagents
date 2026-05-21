@@ -2180,16 +2180,21 @@ class ValidateBundleLookupKeyUniquenessTest(unittest.TestCase):
         )
         self._validate(sample_dir)
 
-    def test_template_without_explicit_lookup_key_skipped(self):
-        # The check is explicit-only — a template body that doesn't
-        # declare `lookup_key:` is not registered. (The platform
-        # auto-derives a key, but that derivation rule isn't reliably
-        # observable from authoring side, so we don't speculate.)
+    def test_template_without_explicit_lookup_key_falls_back_to_stem(self):
+        # The platform's `derive_lookup_key/2` honors a template body's
+        # `lookup_key:` when declared and otherwise falls back to the
+        # filename stem (matching the script-derivation rule). The
+        # validator mirrors that precedence, so an undeclared
+        # `tools/shared.yaml` alongside `scripts/shared.aascript` is a
+        # real collision and must be rejected — the prior "explicit-only"
+        # stance let this through and the import returned a 422 on
+        # `configs_lookup_key_unique_index` (commit adding the
+        # body-aware derivation also tightened this check).
         sample_dir = self._make_solution_sample_dir()
         (sample_dir / "scripts" / "shared.aascript").write_text("// stub\n")
         (sample_dir / "tools").mkdir()
-        # No `lookup_key:` declared — collision-by-derivation possible
-        # but not registered, so validate passes.
+        # No `lookup_key:` declared — falls back to filename stem
+        # `shared`, which collides with the script's stem.
         (sample_dir / "tools" / "shared.yaml").write_text(textwrap.dedent("""\
             kind: AgentToolTemplate
             tool_type: custom
@@ -2207,7 +2212,12 @@ class ValidateBundleLookupKeyUniquenessTest(unittest.TestCase):
                   - template_path: tools/shared.yaml
             """)
         )
-        self._validate(sample_dir)
+        with self.assertRaisesRegex(
+            SampleError,
+            r"lookup_key 'shared'.*Script scripts/shared\.aascript.*"
+            r"AgentToolTemplate tools/shared\.yaml",
+        ):
+            self._validate(sample_dir)
 
 
 # --- lint -----------------------------------------------------------------
