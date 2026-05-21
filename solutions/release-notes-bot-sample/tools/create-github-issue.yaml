@@ -1,0 +1,60 @@
+kind: AgentToolTemplate
+lookup_key: rn-tool-create-github-issue
+tool_type: custom
+name: create_github_issue
+description: File the changelog draft as a GitHub issue
+parameters:
+  type: object
+  properties:
+    owner:
+      type: string
+    repo:
+      type: string
+    title:
+      type: string
+    body:
+      type: string
+    labels:
+      type: array
+      items:
+        type: string
+  required:
+  - owner
+  - repo
+  - title
+  - body
+handler_type: script
+config_ref: rn-create-github-issue
+status: active
+display_name: Create GitHub Issue
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    GitHub token used by this sample's custom scripts to list merged
+    PRs and create draft issues. Prefer a fine-grained PAT with Pull
+    requests: read, Issues: read/write, and Metadata: read. A
+    classic `repo` token also works but is broader.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: install
+  title: 'Install: integration/github'
+  description: |-
+    Install the ArchAstro GitHub App on `REPO_OWNER/REPO_NAME`.
+    Without this, the repo is not enabled for ArchAgents GitHub
+    integration events and tools.
+  params:
+    installation_kind: integration/github
+  verify_config:
+    type: installation_active
+  dedupe_key: integration/github
+  required: true
+  sort_order: 4

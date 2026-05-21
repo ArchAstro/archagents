@@ -1,0 +1,50 @@
+kind: Solution
+lookup_key: archastro-sample-solution
+solution_id: c0de1aec-24dd-47b6-8815-2a4d24cdb5dc
+solution_version: v0.2.2
+name: ArchAstro Sample
+description: The default ArchAstro project concierge.
+category_keys:
+- general
+- sample
+tag_keys:
+- concierge
+- support
+- slack
+- sample
+readme: |-
+  # ArchAstro Sample
+
+  The default ArchAstro project concierge.
+
+  ## Architecture
+
+  ![Architecture overview](diagrams/architecture.svg)
+
+  ## What it ships
+
+  - Deployable agent template under `agents/archastro-sample.yaml`
+  - 4 standalone custom tool template(s) under `tools/`
+  - Setup actions embedded directly on the agent and atomic templates
+
+  ## Validate/import
+
+  ```sh
+  uv run scripts/sample_tool.py pack solutions/archastro-sample
+  ```
+assets:
+- asset_path: diagrams/architecture.svg
+templates:
+- template_path: agents/archastro-sample.yaml
+  readme_path: agents/archastro-sample.md
+- template_path: tools/org-overview.yaml
+  readme_path: tools/org-overview.md
+- template_path: tools/describe-agent.yaml
+  readme_path: tools/describe-agent.md
+- template_path: tools/handoff.yaml
+  readme_path: tools/handoff.md
+- template_path: tools/escalate.yaml
+  readme_path: tools/escalate.md
+metadata:
+  category: general
+  sample_slug: archastro-sample

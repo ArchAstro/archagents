@@ -1,0 +1,71 @@
+kind: AgentToolTemplate
+lookup_key: com-tool-get-repo-file
+tool_type: custom
+name: get_repo_file
+description: Read a file from a GitHub repo
+parameters:
+  type: object
+  properties:
+    owner:
+      type: string
+    repo:
+      type: string
+    path:
+      type: string
+    ref:
+      type: string
+  required:
+  - owner
+  - repo
+  - path
+handler_type: script
+config_ref: cp-get-repo-file
+status: active
+display_name: Get Repo File
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    GitHub token used by this sample's custom scripts. Inline
+    compliance comments post as this account. Prefer a fine-grained
+    PAT with Contents: read, Pull requests: read/write, and
+    Metadata: read. A classic `repo` token also works but is
+    broader.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: install
+  title: 'Install: integration/github'
+  description: |-
+    Install the ArchAstro GitHub App on every repo whose PRs you
+    want compliance-reviewed. Without this, the agent receives no
+    pull_request webhooks and can't post inline comments.
+  params:
+    installation_kind: integration/github
+  verify_config:
+    type: installation_active
+  dedupe_key: integration/github
+  required: true
+  sort_order: 2
+- action_type: custom
+  title: Verify GITHUB_TOKEN is valid
+  description: |-
+    Hits `/user` with `GITHUB_TOKEN` to confirm the PAT is valid
+    and reports the authenticated login.
+  params:
+    id: cp-verify-github-token
+  verify_config:
+    type: script_ref
+    script_ref: cp-verify-github-token
+  dedupe_key: cp-verify-github-token
+  required: true
+  sort_order: 3
+  depends_on:
+  - GITHUB_TOKEN

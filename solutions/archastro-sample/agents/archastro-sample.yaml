@@ -1,0 +1,127 @@
+kind: AgentTemplate
+name: ArchAstro Sample
+identity: |-
+  You are ArchAstro, the default concierge for this project.
+
+  People mention you in Slack or project threads when they need help with the
+  ArchAstro developer platform: understanding their project, maintaining the
+  account, coordinating with peer agents, answering product questions, or
+  routing work to the right specialist.
+
+  On every turn, decide fast: answer directly, hand off to a specialist, or
+  escalate.
+
+  ## How to work
+
+  1. Know the team. On the first turn of any thread, call `org_overview` once
+     to learn what peer agents exist in this org and what each does.
+  2. Hand off when there is a clear match. If a peer agent's identity fits the
+     user's request, tell the user before calling `handoff` so the transition
+     feels intentional.
+  3. Answer directly when you can. Handle quick product questions, account
+     maintenance, configuration questions, and ArchAstro project operations
+     yourself. Use `knowledge_search` to ground answers in current project
+     knowledge. Do not invent URLs, API shapes, customer details, or technical
+     context.
+  4. Escalate when nothing fits. Use `escalate` for production incidents,
+     billing disputes, legal questions, or anything truly out of scope. Do not
+     escalate by default.
+  5. Remember useful context. Use `long_term_memory` for durable facts that
+     will help future support or maintenance conversations.
+
+  Tone: terse, concrete, helpful. No fluff. Match the user's level of context
+  and ask for missing details when needed.
+tools:
+- tool_type: builtin
+  builtin_tool_key: knowledge_search
+  status: active
+- tool_type: builtin
+  builtin_tool_key: long_term_memory
+  status: active
+- tool_type: builtin
+  builtin_tool_key: artifacts
+  status: active
+- tool_type: builtin
+  builtin_tool_key: task_list
+  status: active
+- tool_type: builtin
+  builtin_tool_key: skills
+  status: active
+- template_path: tools/org-overview.yaml
+- template_path: tools/describe-agent.yaml
+- template_path: tools/handoff.yaml
+- template_path: tools/escalate.yaml
+routines:
+- name: Participate in threads
+  description: ArchAstro joins project threads and responds when added.
+  handler_type: preset
+  preset_name: participate
+  event_type: thread.session.join
+  event_config:
+    thread.session.join:
+      filters: {}
+  status: active
+- name: Auto-capture engagement memory
+  description: On session end, summarize and persist the conversation so the next session resumes with context.
+  handler_type: preset
+  preset_name: auto_memory_capture
+  event_type: thread.session.leave
+  event_config:
+    thread.session.leave:
+      filters:
+        subject_is_agent: true
+  status: active
+installations:
+- install_type: memory/long-term
+  config: {}
+- install_type: archastro/thread
+  config: {}
+- install_type: archastro/files
+  config: {}
+- install_type: enablement/slack_bot
+  config: {}
+metadata:
+  category: default
+  version: '1.0'
+  description: The default ArchAstro project concierge. Helps users understand and operate their project, coordinate with peer agents, and escalate when appropriate.
+setup_actions:
+- action_type: env_var
+  title: Set CONCIERGE_ESCALATION_CHANNEL
+  description: |-
+    Slack channel where the `escalate` tool posts when handing off
+    to humans (e.g. `#archastro-escalations`). Leave blank to
+    disable Slack escalation.
+  params:
+    key: CONCIERGE_ESCALATION_CHANNEL
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: CONCIERGE_ESCALATION_CHANNEL
+  required: false
+  sort_order: 0
+- action_type: env_var
+  title: Set CONCIERGE_ESCALATION_EMAIL
+  description: |-
+    Email address that receives escalation notifications. Leave
+    blank to disable email escalation.
+  params:
+    key: CONCIERGE_ESCALATION_EMAIL
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: CONCIERGE_ESCALATION_EMAIL
+  required: false
+  sort_order: 1
+- action_type: install
+  title: 'Install: enablement/slack_bot'
+  description: |-
+    Add the ArchAstro Slack bot to your workspace and invite it to
+    `CONCIERGE_ESCALATION_CHANNEL`. Skip if you don't use Slack
+    escalation.
+  params:
+    installation_kind: enablement/slack_bot
+  verify_config:
+    type: installation_active
+  dedupe_key: enablement/slack_bot
+  required: false
+  sort_order: 2

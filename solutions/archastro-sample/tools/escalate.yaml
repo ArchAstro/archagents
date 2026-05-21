@@ -1,0 +1,71 @@
+kind: AgentToolTemplate
+lookup_key: arc-tool-escalate
+tool_type: custom
+name: escalate
+description: |-
+  Escalate to a human when the concierge cannot help and no peer agent is a
+  fit. Use this for incidents, billing, legal, or truly out-of-scope work.
+parameters:
+  type: object
+  properties:
+    reason:
+      type: string
+      description: Short label such as out_of_scope, incident, or billing.
+    summary:
+      type: string
+      description: One-paragraph context for the human.
+    urgency:
+      type: string
+      enum:
+      - low
+      - normal
+      - high
+      description: Defaults to normal.
+  required:
+  - reason
+  - summary
+handler_type: script
+config_ref: escalate
+status: active
+display_name: Escalate
+setup_actions:
+- action_type: env_var
+  title: Set CONCIERGE_ESCALATION_CHANNEL
+  description: |-
+    Slack channel where the `escalate` tool posts when handing off
+    to humans (e.g. `#archastro-escalations`). Leave blank to
+    disable Slack escalation.
+  params:
+    key: CONCIERGE_ESCALATION_CHANNEL
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: CONCIERGE_ESCALATION_CHANNEL
+  required: false
+  sort_order: 0
+- action_type: env_var
+  title: Set CONCIERGE_ESCALATION_EMAIL
+  description: |-
+    Email address that receives escalation notifications. Leave
+    blank to disable email escalation.
+  params:
+    key: CONCIERGE_ESCALATION_EMAIL
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: CONCIERGE_ESCALATION_EMAIL
+  required: false
+  sort_order: 1
+- action_type: install
+  title: 'Install: enablement/slack_bot'
+  description: |-
+    Add the ArchAstro Slack bot to your workspace and invite it to
+    `CONCIERGE_ESCALATION_CHANNEL`. Skip if you don't use Slack
+    escalation.
+  params:
+    installation_kind: enablement/slack_bot
+  verify_config:
+    type: installation_active
+  dedupe_key: enablement/slack_bot
+  required: false
+  sort_order: 2

@@ -7,10 +7,9 @@
 [ArchAgents](https://archagents.com) accelerates post-sales work —
 discovery, integration, migration, and the long tail of customer-specific
 code — with agents that run on webhooks, schedules, and API triggers.
-Deploy a production-ready sample from this repo (PR review, compliance,
-security triage, changelogs, and more), or build your own: define behavior
-in YAML, plug in any model, add custom tools and routines. One-command
-deploy.
+Import a production-ready sample Solution from this repo (PR review,
+compliance, security triage, changelogs, and more), or build your own:
+define behavior in YAML, plug in any model, add custom tools and routines.
 
 ## Try it now
 
@@ -23,9 +22,9 @@ Set up ArchAgents in this repo and deploy a working agent I can test.
 2) Ask me for my email and any missing credentials
 3) Install the CLI: brew install ArchAstro/tools/archagent
 4) Run: archagent auth login <my-email> && archagent init
-5) Pick the best sample agent from agents/ for my use case and deploy it
-6) Test it with a real prompt and show me the result
-7) Summarize what was created and how to use it
+5) Pick the best sample Solution from solutions/ for my use case and import it
+6) Show me which AgentTemplate, tool templates, routine templates, and setup actions were imported
+7) Summarize how to install the imported template into my app
 ```
 
 Or run the quickstart directly:
@@ -36,28 +35,29 @@ cd archagents
 ./quickstart.sh you@company.com
 ```
 
-This deploys the Onboarding Q&A agent with a sample knowledge base and
-asks it a question — working agent in 60 seconds.
+This imports the Onboarding Q&A Solution so you can install the bundled
+AgentTemplate from the catalog.
 
-## Sample Agents
+## Sample Solutions
 
-| Agent | What it does | Trigger |
+| Solution | What it does | Trigger |
 |---|---|---|
-| [Code Review](agents/code-review-agent) | Reviews every PR with verified inline comments | PR webhook |
-| [Compliance Reviewer](agents/compliance-reviewer) | Checks PRs against SOC2 / GDPR / your custom rules | PR webhook |
-| [Cross-Org Collab](agents/cross-org-collab-agent) | Privacy-by-construction — field guards block code leaks in shared threads | Thread join |
-| [Onboarding Q&A](agents/onboarding-qa) | Answers new-hire questions from your knowledge base | Thread join |
-| [Release Notes](agents/release-notes-bot) | Drafts weekly changelog from merged PRs | Weekly cron |
-| [Security Triage](agents/security-triage-agent) | Scans dependencies for CVEs, auto-fixes simple ones, escalates the rest | Daily cron |
-| [Threat Intel](agents/threat-intel-agent) | Daily security brief from HN + GitHub Advisories cross-referenced against your stack | Daily cron |
+| [Code Review](solutions/code-review-agent-sample) | Reviews every PR with verified inline comments | PR webhook |
+| [Compliance Reviewer](solutions/compliance-reviewer-sample) | Checks PRs against SOC2 / GDPR / your custom rules | PR webhook |
+| [Cross-Org Collab](solutions/cross-org-collab-agent-sample) | Privacy-by-construction — field guards block code leaks in shared threads | Thread join |
+| [Onboarding Q&A](solutions/onboarding-qa-sample) | Answers new-hire questions from your knowledge base | Thread join |
+| [Platform Health](solutions/platform-health-agent-sample) | Daily repo health, GitHub event alerts, and 5xx digests | Mixed |
+| [Release Notes](solutions/release-notes-bot-sample) | Drafts weekly changelog from merged PRs | Weekly cron |
+| [Security Triage](solutions/security-triage-agent-sample) | Scans dependencies for CVEs, auto-fixes simple ones, escalates the rest | Daily cron |
+| [Threat Intel](solutions/threat-intel-agent-sample) | Daily security brief from HN + GitHub Advisories cross-referenced against your stack | Daily cron |
 
-Each agent has its own README with a **"Deploy with your coding agent"**
-prompt block — paste it and go.
+Each Solution bundle has its own README and ships a deployable
+AgentTemplate plus any standalone custom tool and routine templates.
 
 ## Recipes: agents working together
 
-These agents are designed to compose. Deploy multiples on the same repo
-for layered coverage:
+These templates are designed to compose. Install multiples into the same
+repo for layered coverage:
 
 **PR Review Pipeline** — Code Review + Compliance Reviewer on the same
 repo. One reviews architecture and correctness, the other reviews

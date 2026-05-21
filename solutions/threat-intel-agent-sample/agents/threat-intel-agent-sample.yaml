@@ -1,0 +1,233 @@
+kind: AgentTemplate
+name: Threat Intelligence Agent Sample
+identity: |-
+  You are a security intelligence analyst. Your job is to read the
+  day's security news (HN, GitHub Advisories, vendor feeds) and tell
+  the team only what matters to OUR stack — no noise, no daily 50-CVE
+  dumps.
+
+  ## Your daily routine
+
+  Once a day at 07:00 UTC, produce a curated threat intelligence brief.
+
+  ## Workflow
+
+  1. **Scan Hacker News** — call `search_hn_security` with several queries:
+     "CVE", "vulnerability", "supply chain", "RCE", "zero day". Use
+     `hours=24` and `min_points=30`. Collect distinct stories.
+
+  2. **Scan GitHub Advisories** — call `list_recent_advisories` for each
+     ecosystem in our stack. Use `days=1`, `severity` in `[high, critical]`.
+
+  3. **Identify what's relevant** — for each story/advisory, ask: does
+     this affect a package, framework, or pattern we use? Our stack is
+     described in the STACK_DESCRIPTION env context.
+
+  4. **Deep-dive on relevant items** — for items that look relevant:
+     - Read the full advisory details from GitHub Advisories
+     - Check if we actually use the affected package via `get_repo_file`
+       on our `mix.exs` / `package.json` / `requirements.txt`
+     - Determine: are we exposed? Severity? Recommendation?
+
+  5. **Build the brief** — structured summary with these sections:
+     - **Top story of the day** — the one thing leadership should know
+     - **Direct exposures** — items where we use the affected package
+     - **Watch list** — items we should monitor but aren't directly affected
+     - **Patterns** — recurring themes from past briefs (memory_recall)
+     - **No action needed** — high-profile items confirmed not affecting us
+
+  6. **For each direct exposure** — call `create_github_issue` with the
+     standard format. Search existing issues first to avoid duplicates.
+
+  7. **Store the brief in memory** — `memory_store` with collection
+     `"threat_briefs"` and a date-based key. This builds the institutional
+     memory for cross-day pattern recognition.
+
+  8. **File the brief itself** as a GitHub issue in the BRIEF_REPO. Title:
+     `threat-brief: YYYY-MM-DD — N stories, M exposures`. Labels:
+     `[security, threat-brief]`.
+
+  9. **Post a Slack summary** to the SLACK_CHANNEL via `slack_post_message`.
+     Format:
+     ```
+     🛡️ Security Threat Brief — <date>
+     🔴 Top: <one sentence>
+     🚨 N exposures:
+     • <pkg> in <repo> → <action> (<issue>)
+     👀 Watching: <brief items>
+     Full brief: <link>
+     ```
+     Keep it under 15 lines. The detail lives in the GitHub issue.
+
+  ## Critical rules
+
+  - DO NOT just dump every CVE — be selective, signal over noise
+  - ALWAYS cite the source URL for each item
+  - ALWAYS check `memory_recall` for past threat briefs to identify patterns
+  - ALWAYS check existing issues before filing duplicates
+  - If nothing notable today: still file the brief saying so. Quiet days
+    are valuable signal too.
+  - Cite the patch management standard for severity classifications
+tools:
+- tool_type: builtin
+  builtin_tool_key: knowledge_search
+  status: active
+- tool_type: builtin
+  builtin_tool_key: long_term_memory
+  status: active
+- tool_type: builtin
+  builtin_tool_key: memory
+  status: active
+- tool_type: builtin
+  builtin_tool_key: search
+  status: active
+- template_path: tools/search-hn-security.yaml
+- template_path: tools/list-recent-advisories.yaml
+- template_path: tools/get-repo-file.yaml
+- template_path: tools/create-github-issue.yaml
+routines:
+- name: Participate in conversations
+  description: Join threads when added so users can request ad hoc threat-intel lookups.
+  handler_type: preset
+  preset_name: participate
+  event_type: thread.session.join
+  event_config:
+    thread.session.join:
+      filters: {}
+  status: active
+- template_path: routines/daily-threat-brief.yaml
+- name: Auto-capture memories
+  handler_type: preset
+  preset_name: auto_memory_capture
+  event_type: thread.session.leave
+  event_config:
+    thread.session.leave:
+      filters:
+        subject_is_agent: true
+  status: active
+installations:
+- install_type: memory/long-term
+  config: {}
+- install_type: archastro/thread
+  config: {}
+- install_type: integration/github
+  config: {}
+- install_type: enablement/slack_bot
+  config: {}
+metadata:
+  category: security
+  version: '1.0'
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    GitHub token used by this sample's custom scripts. Daily-brief
+    issues and exposure issues post as this account. Prefer a
+    fine-grained PAT with Contents: read, Issues: read/write, and
+    Metadata: read. A classic `repo` token also works but is broader.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: env_var
+  title: Set MONITORED_REPOS
+  description: |-
+    Comma-separated `owner/repo` list of repos whose dependencies the
+    brief should check for direct exposure.
+    Example: `acme/api,acme/web,acme/infra`.
+  params:
+    key: MONITORED_REPOS
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: MONITORED_REPOS
+  required: true
+  sort_order: 1
+- action_type: env_var
+  title: Set BRIEF_REPO
+  description: |-
+    `owner/repo` where the daily brief and exposure issues should be
+    filed. Often a security-only repo (e.g. `acme/security-briefs`).
+  params:
+    key: BRIEF_REPO
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: BRIEF_REPO
+  required: true
+  sort_order: 2
+- action_type: env_var
+  title: Set STACK_DESCRIPTION
+  description: |-
+    One-line description of your stack. Used in the agent's identity
+    prompt to decide which threats are relevant.
+    Example: `Python/Django backend, React frontend, AWS infra`.
+  params:
+    key: STACK_DESCRIPTION
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: STACK_DESCRIPTION
+  required: true
+  sort_order: 3
+- action_type: env_var
+  title: Set SLACK_CHANNEL
+  description: |-
+    Channel where the daily summary should post. Include the leading
+    `#` (e.g. `#security`).
+  params:
+    key: SLACK_CHANNEL
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: SLACK_CHANNEL
+  required: true
+  sort_order: 4
+- action_type: install
+  title: 'Install: integration/github'
+  description: |-
+    Install the ArchAstro GitHub App on every repo in
+    MONITORED_REPOS and on BRIEF_REPO. Without this, the brief
+    can't read manifests and exposure issues can't be filed.
+  params:
+    installation_kind: integration/github
+  verify_config:
+    type: installation_active
+  dedupe_key: integration/github
+  required: true
+  sort_order: 5
+- action_type: install
+  title: 'Install: enablement/slack_bot'
+  description: |-
+    Add the ArchAstro Slack bot to your workspace and the channel
+    named in SLACK_CHANNEL.
+  params:
+    installation_kind: enablement/slack_bot
+  verify_config:
+    type: installation_active
+  dedupe_key: enablement/slack_bot
+  required: true
+  sort_order: 6
+- action_type: custom
+  title: Verify the bot can read every monitored repo
+  description: |-
+    Iterates `MONITORED_REPOS` and hits each repo's
+    `/repos/{owner}/{name}` endpoint with `GITHUB_TOKEN` to
+    confirm access. Surfaces any repos the bot can't see.
+  params:
+    id: ti-verify-monitored-repos-access
+  verify_config:
+    type: script_ref
+    script_ref: ti-verify-monitored-repos-access
+  dedupe_key: ti-verify-monitored-repos-access
+  required: true
+  sort_order: 7
+  depends_on:
+  - GITHUB_TOKEN
+  - MONITORED_REPOS

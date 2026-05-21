@@ -89,7 +89,7 @@ def validate_sample(slug: str, raw: Any, source: pathlib.Path) -> dict[str, Any]
     if steps_raw is None:
         raise SampleError(
             f"{where}: missing `steps:` block. Every sample must declare its "
-            f"deploy sequence. See agents/code-review-agent/sample.yaml for the "
+            f"deploy sequence. See solutions/code-review-agent-sample/sample.yaml for the "
             f"simplest shape; the full DSL reference is in @archastro/samples-catalog."
         )
     validate_steps(slug, steps_raw, source)

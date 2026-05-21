@@ -1,0 +1,18 @@
+kind: AgentToolTemplate
+lookup_key: ao-tool-fetch-archagents-docs
+tool_type: custom
+name: fetch_archagents_docs
+description: Fetch a documentation page from docs.archagents.com as Markdown. Pass a path like "/docs/start-here/getting-started", a full URL, or the string "llms-full.txt" for the full machine-readable index.
+parameters:
+  type: object
+  properties:
+    path:
+      type: string
+      description: Path under docs.archagents.com, a full URL, or 'llms-full.txt' for the full docs index.
+  required:
+  - path
+handler_type: script
+config_ref: archastro-fetch-archagents-docs
+status: active
+display_name: Fetch Archagents Docs
+setup_actions: []

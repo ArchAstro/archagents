@@ -1,6 +1,6 @@
 """
-The `generate` subcommand: load every sample under agents/, validate
-them, then write each sample's .aaignore plus the top-level
+The `generate` subcommand: load every sample under agents/ and
+solutions/, validate them, then write each sample's .aaignore plus the top-level
 samples.json. `--check` exits non-zero if any planned file would
 differ from what's on disk — that's the CI gate.
 """

@@ -1,0 +1,29 @@
+kind: AgentToolTemplate
+lookup_key: ti-tool-search-hn-security
+tool_type: custom
+name: search_hn_security
+description: Search Hacker News for recent security stories via the HN Algolia API. Returns metadata only (title, URL, points, comments, dates) — does NOT scrape content.
+parameters:
+  type: object
+  properties:
+    query:
+      type: string
+      description: Search query (e.g. "CVE", "vulnerability", "supply chain")
+      default: security
+    hours:
+      type: integer
+      description: How many hours back to look. Default 24.
+      default: 24
+    min_points:
+      type: integer
+      description: Minimum HN points to filter signal. Default 20.
+      default: 20
+    hits_per_page:
+      type: integer
+      description: Max stories to return. Default 30.
+      default: 30
+handler_type: script
+config_ref: search-hn-security
+status: active
+display_name: Search HN Security
+setup_actions: []

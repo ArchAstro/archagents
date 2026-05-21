@@ -1,0 +1,205 @@
+kind: AgentTemplate
+name: Cross-Org Collaboration Agent Sample
+identity: |-
+  You are a code-aware engineering agent that participates in cross-org
+  collaboration threads with external partners. You can read your
+  organization's private codebase, design integration plans, and write
+  code — but in shared threads, you ONLY share architecture-level
+  information, never implementation details.
+
+  ## How you communicate
+
+  Your responses are constrained by a strict structured schema with
+  multi-layer field guards. You CANNOT post raw source code, internal
+  file paths, secrets, or implementation details — the platform will
+  reject those messages before they reach the partner. Don't try.
+
+  Every message you send must include:
+  - `classification: PUBLIC` (anything else is rejected at the schema level)
+  - `message_type` (question, design_proposal, etc.)
+  - `summary` (architecture-level English)
+  - `safety_self_check` with all 5 booleans set to true
+
+  Optional fields: `interface_shape` (pseudocode), `proposed_approach`
+  (architecture), `questions_for_partner`, `next_steps`.
+
+  ## What you can do
+
+  - Read your codebase via the GitHub App tools (privately, in your context)
+  - Understand existing patterns, integration points, and code structure
+  - Design how to integrate with the partner's API
+  - Open PRs in your org's repos with actual implementation
+  - Discuss architecture and integration patterns with the partner
+
+  ## What you CANNOT share with the partner
+
+  - Raw source code in any language
+  - Function bodies, module definitions, class implementations
+  - Internal file paths (services/internal/, lib/yourapp/, etc.)
+  - Environment variables, secret keys, API tokens, database URLs
+  - Internal infrastructure details
+  - Database schemas or migration SQL
+  - Internal product roadmap details beyond what's needed for the integration
+
+  ## What you CAN share
+
+  - Architecture-level descriptions in plain English
+  - Pseudocode using generic syntax
+  - Interface signatures (without real implementation)
+  - Questions about the partner's external APIs
+  - Project status updates
+  - References to public documentation
+
+  ## Self-check before every message
+
+  Before setting `safety_self_check.architecture_level_only = true`,
+  verify:
+  1. Does this contain raw code? → REMOVE IT
+  2. Does this contain internal file paths? → GENERALIZE THEM
+  3. Does this contain env vars or secrets? → REMOVE THEM
+  4. Would a competitor learn implementation details from this? → REWRITE IT
+
+  If you can't honestly set all 5 self-check booleans to true, do NOT
+  send the message — rewrite it to remove what you flagged.
+
+  ## Implementation work
+
+  Actual code happens in PRs in your own repo, never in the chat.
+  When you've reached agreement on an integration plan with the
+  partner, use `create_branch` + `commit_file` + `create_pull_request`
+  to land the actual code. Then share the PR LINK in the shared
+  thread (the URL is fine, the code in the PR stays in your repo).
+tools:
+- tool_type: builtin
+  builtin_tool_key: knowledge_search
+  status: active
+- tool_type: builtin
+  builtin_tool_key: long_term_memory
+  status: active
+- tool_type: builtin
+  builtin_tool_key: memory
+  status: active
+- tool_type: builtin
+  builtin_tool_key: skills
+  status: active
+- template_path: tools/get-repo-file.yaml
+- template_path: tools/create-branch.yaml
+- template_path: tools/commit-file.yaml
+- template_path: tools/create-pull-request.yaml
+routines:
+- name: Participate in conversations
+  handler_type: preset
+  preset_name: participate
+  event_type: thread.session.join
+  event_config:
+    thread.session.join:
+      filters: {}
+  structured_message_template_refs:
+  - cross-org-hardened
+  status: active
+- name: Auto-capture memories
+  handler_type: preset
+  preset_name: auto_memory_capture
+  event_type: thread.session.leave
+  event_config:
+    thread.session.leave:
+      filters:
+        subject_is_agent: true
+  status: active
+installations:
+- install_type: memory/long-term
+  config: {}
+- install_type: archastro/thread
+  config: {}
+- install_type: integration/github
+  config: {}
+metadata:
+  category: engineering
+  version: '1.0'
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    GitHub token used by this sample's custom scripts to read code,
+    create branches, commit files, and open PRs. Prefer a
+    fine-grained PAT with Contents: read/write, Pull requests:
+    read/write, and Metadata: read. A classic `repo` token also
+    works but is broader.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: env_var
+  title: Set REPO_OWNER
+  description: GitHub org/user that owns the private repo the agent reads/writes.
+  params:
+    key: REPO_OWNER
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: REPO_OWNER
+  required: true
+  sort_order: 1
+- action_type: env_var
+  title: Set REPO_NAME
+  description: Private repo name the agent reads from and opens PRs against.
+  params:
+    key: REPO_NAME
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: REPO_NAME
+  required: true
+  sort_order: 2
+- action_type: env_var
+  title: Set STACK_DESCRIPTION
+  description: |-
+    One-line description of your stack. Injected into the agent's
+    identity prompt so it can reason about your code without needing
+    to mention it in cross-org messages.
+    Example: `Python/Django backend, React frontend, AWS infra`.
+  params:
+    key: STACK_DESCRIPTION
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: STACK_DESCRIPTION
+  required: true
+  sort_order: 3
+- action_type: install
+  title: 'Install: integration/github'
+  description: |-
+    Install the ArchAstro GitHub App on `REPO_OWNER/REPO_NAME`.
+    Without this, the agent can't read the source it's supposed to
+    collaborate on or open PRs with implementation.
+  params:
+    installation_kind: integration/github
+  verify_config:
+    type: installation_active
+  dedupe_key: integration/github
+  required: true
+  sort_order: 4
+- action_type: custom
+  title: Verify the bot can read the source repo
+  description: |-
+    Hits `/repos/{REPO_OWNER}/{REPO_NAME}` with `GITHUB_TOKEN` to
+    confirm the bot has access to the private repo it'll reason
+    about during cross-org collaboration.
+  params:
+    id: verify-source-repo-access
+  verify_config:
+    type: script_ref
+    script_ref: verify-source-repo-access
+  dedupe_key: verify-source-repo-access
+  required: true
+  sort_order: 5
+  depends_on:
+  - GITHUB_TOKEN
+  - REPO_OWNER
+  - REPO_NAME

@@ -1,0 +1,44 @@
+kind: Solution
+lookup_key: archastro-onboarding-sample-solution
+solution_id: ee57c05f-5745-4be6-b725-77d6113a8f36
+solution_version: v0.1.5
+name: ArchAstro Onboarding Sample
+description: Guides a new user through setting up their first agent in ArchAstro.
+category_keys:
+- onboarding
+- sample
+tag_keys:
+- onboarding
+- docs
+- skills
+- sample
+readme: |-
+  # ArchAstro Onboarding Sample
+
+  Guides a new user through setting up their first agent in ArchAstro.
+
+  ## Architecture
+
+  ![Architecture overview](diagrams/architecture.svg)
+
+  ## What it ships
+
+  - Deployable agent template under `agents/archastro-onboarding-sample.yaml`
+  - 1 standalone custom tool template(s) under `tools/`
+  - Setup actions embedded directly on the agent and atomic templates
+
+  ## Validate/import
+
+  ```sh
+  uv run scripts/sample_tool.py pack solutions/archastro-onboarding-sample
+  ```
+assets:
+- asset_path: diagrams/architecture.svg
+templates:
+- template_path: agents/archastro-onboarding-sample.yaml
+  readme_path: agents/archastro-onboarding-sample.md
+- template_path: tools/fetch-archagents-docs.yaml
+  readme_path: tools/fetch-archagents-docs.md
+metadata:
+  category: onboarding
+  sample_slug: archastro-onboarding-sample

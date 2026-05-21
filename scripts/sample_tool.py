@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
 sample_tool — author, validate, regenerate artifacts for, and package
-ArchAstro samples under agents/<slug>/.
+ArchAstro samples under agents/<slug>/ and solutions/<slug>/.
 
 Subcommands:
 
-  generate         Validate every sample.yaml under agents/ and refresh
+  generate         Validate every sample.yaml under agents/ and solutions/ and refresh
                    each sample's .aaignore + the top-level samples.json.
                    Pass --check to exit non-zero on drift (CI uses this).
 
-  new <slug>       Scaffold a fresh sample at agents/<slug>/ — sample.yaml
+  new <slug>       Scaffold a fresh sample — sample.yaml
                    (schema v2 with upload_scripts + deploy_agent),
                    agent.yaml with builtin tools + a participate routine,
                    an empty scripts/ dir, env.example, README.md. Runs
@@ -68,10 +68,10 @@ USAGE
     uv run scripts/sample_tool.py generate
     uv run scripts/sample_tool.py generate --check
     uv run scripts/sample_tool.py new my-new-sample
-    uv run scripts/sample_tool.py pack code-review-agent
-    uv run scripts/sample_tool.py pack code-review-agent --output-dir dist/
+    uv run scripts/sample_tool.py pack code-review-agent-sample
+    uv run scripts/sample_tool.py pack code-review-agent-sample --output-dir dist/
     uv run scripts/sample_tool.py lint
-    uv run scripts/sample_tool.py lint security-triage-agent --strict
+    uv run scripts/sample_tool.py lint security-triage-agent-sample --strict
     uv run scripts/sample_tool.py validate
     uv run scripts/sample_tool.py validate --repo-root ./sample-source --cli archagent
 
@@ -120,7 +120,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     new = sub.add_parser(
         "new",
-        help="Scaffold a new sample (under agents/ by default, or anywhere via --target-dir).",
+        help="Scaffold a new sample (in the current directory by default, or anywhere via --target-dir).",
     )
     new.add_argument("slug", help="kebab-case slug — used as the directory + install handle.")
     new.add_argument(
@@ -138,7 +138,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Parent directory where <slug>/ should be scaffolded. Defaults "
             "to the current working directory. Pass the archagents repo's "
-            "agents/ to scaffold into the catalog — that path additionally "
+            "agents/ or solutions/ to scaffold into the catalog — that path additionally "
             "refreshes .aaignore + samples.json."
         ),
     )
@@ -164,7 +164,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "slug",
         help=(
             "Path to the sample directory, always cwd-relative (e.g. "
-            "`my-sample`, `./my-sample`, or `agents/code-review-agent` "
+            "`my-sample`, `./my-sample`, or `solutions/code-review-agent-sample` "
             "from the archagents repo root). Absolute paths also work. "
             "The tarball name derives from the directory's basename."
         ),
@@ -188,7 +188,7 @@ def _build_parser() -> argparse.ArgumentParser:
         nargs="?",
         default=None,
         help=(
-            "Optional sample slug (under agents/) to lint. Lints every "
+            "Optional sample slug (under agents/ or solutions/) to lint. Lints every "
             "sample when omitted."
         ),
     )
@@ -211,7 +211,7 @@ def _build_parser() -> argparse.ArgumentParser:
         type=pathlib.Path,
         default=REPO_ROOT,
         help=(
-            "Repository root containing the agents/ directory to validate. "
+            "Repository root containing the agents/ and/or solutions/ directories to validate. "
             "Defaults to the archagents repo root. CI uses this to point at "
             "an untrusted PR checkout while running the validator from a "
             "trusted ref."

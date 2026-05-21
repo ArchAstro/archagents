@@ -1,0 +1,53 @@
+kind: Solution
+lookup_key: platform-health-agent-sample-solution
+solution_id: 4560e6eb-4135-4fec-bf83-db47ca9cc245
+solution_version: v0.2.2
+name: Platform Health Agent Sample
+description: Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack.
+category_keys:
+- operations
+- sample
+tag_keys:
+- platform-health
+- github
+- slack
+- gcp-logging
+- sample
+readme: |-
+  # Platform Health Agent Sample
+
+  Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack.
+
+  ## Architecture
+
+  ![Architecture overview](diagrams/architecture.svg)
+
+  ## What it ships
+
+  - Deployable agent template under `agents/platform-health-agent-sample.yaml`
+  - 5 standalone routine template(s) under `routines/`
+  - Setup actions embedded directly on the agent and atomic templates
+
+  ## Validate/import
+
+  ```sh
+  uv run scripts/sample_tool.py pack solutions/platform-health-agent-sample
+  ```
+assets:
+- asset_path: diagrams/architecture.svg
+templates:
+- template_path: agents/platform-health-agent-sample.yaml
+  readme_path: agents/platform-health-agent-sample.md
+- template_path: routines/daily-health-report-prompt.yaml
+  readme_path: routines/daily-health-report-prompt.md
+- template_path: routines/github-event-alert.yaml
+  readme_path: routines/github-event-alert.md
+- template_path: routines/5xx-daily-digest.yaml
+  readme_path: routines/5xx-daily-digest.md
+- template_path: routines/slack-delivery.yaml
+  readme_path: routines/slack-delivery.md
+- template_path: routines/continuity-capture.yaml
+  readme_path: routines/continuity-capture.md
+metadata:
+  category: operations
+  sample_slug: platform-health-agent-sample

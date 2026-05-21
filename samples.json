@@ -2,64 +2,64 @@
   "$schema_version": 1,
   "samples": [
     {
-      "slug": "archastro",
-      "name": "ArchAstro",
-      "tagline": "The default ArchAstro project concierge.",
-      "current_version": "v0.2.2",
-      "min_cli_version": "0.28.0"
-    },
-    {
-      "slug": "archastro-onboarding",
-      "name": "ArchAstro Onboarding",
+      "slug": "archastro-onboarding-sample",
+      "name": "ArchAstro Onboarding Sample",
       "tagline": "Guides a new user through setting up their first agent in ArchAstro.",
       "current_version": "v0.1.5",
       "min_cli_version": "0.28.0"
     },
     {
-      "slug": "code-review-agent",
-      "name": "Code Review Agent",
+      "slug": "archastro-sample",
+      "name": "ArchAstro Sample",
+      "tagline": "The default ArchAstro project concierge.",
+      "current_version": "v0.2.2",
+      "min_cli_version": "0.28.0"
+    },
+    {
+      "slug": "code-review-agent-sample",
+      "name": "Code Review Agent Sample",
       "tagline": "A senior engineer that reviews every PR like it's going into production at 3am.",
       "current_version": "v0.3.5",
       "min_cli_version": "0.28.0"
     },
     {
-      "slug": "compliance-reviewer",
-      "name": "Compliance Reviewer",
+      "slug": "compliance-reviewer-sample",
+      "name": "Compliance Reviewer Sample",
       "tagline": "Reviews pull requests against compliance rules — does not review style or bugs.",
       "current_version": "v0.3.5",
       "min_cli_version": "0.28.0"
     },
     {
-      "slug": "cross-org-collab-agent",
-      "name": "Cross-Org Collaboration Agent",
+      "slug": "cross-org-collab-agent-sample",
+      "name": "Cross-Org Collaboration Agent Sample",
       "tagline": "A code-aware engineering agent that participates in cross-org threads with field guards enforced.",
       "current_version": "v0.3.3",
       "min_cli_version": "0.28.0"
     },
     {
-      "slug": "fde-agent",
-      "name": "FDE Agent",
+      "slug": "fde-agent-sample",
+      "name": "FDE Agent Sample",
       "tagline": "A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff.",
       "current_version": "v0.1.2",
       "min_cli_version": "0.28.0"
     },
     {
-      "slug": "onboarding-qa",
-      "name": "Onboarding Q&A",
+      "slug": "onboarding-qa-sample",
+      "name": "Onboarding Q&A Sample",
       "tagline": "Answers new-hire questions about how things work at the company.",
       "current_version": "v0.3.2",
       "min_cli_version": "0.28.0"
     },
     {
-      "slug": "platform-health-agent",
-      "name": "Platform Health Agent",
+      "slug": "platform-health-agent-sample",
+      "name": "Platform Health Agent Sample",
       "tagline": "Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack.",
       "current_version": "v0.2.2",
       "min_cli_version": "0.28.0"
     },
     {
-      "slug": "release-notes-bot",
-      "name": "Release Notes Bot",
+      "slug": "release-notes-bot-sample",
+      "name": "Release Notes Bot Sample",
       "tagline": "Drafts the weekly changelog by scanning merged PRs on a schedule.",
       "current_version": "v0.3.4",
       "min_cli_version": "0.28.0"
@@ -68,12 +68,12 @@
       "slug": "security-triage-agent-sample",
       "name": "Security Triage Agent Sample",
       "tagline": "A senior security engineer that triages vulnerabilities found by daily dependency scans. Sample bundle — copy + tailor to your stack.",
-      "current_version": "v0.4.3",
+      "current_version": "v0.4.4",
       "min_cli_version": "0.28.0"
     },
     {
-      "slug": "threat-intel-agent",
-      "name": "Threat Intelligence Agent",
+      "slug": "threat-intel-agent-sample",
+      "name": "Threat Intelligence Agent Sample",
       "tagline": "A security intelligence analyst that produces daily threat briefs from monitored feeds.",
       "current_version": "v0.3.5",
       "min_cli_version": "0.28.0"

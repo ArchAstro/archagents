@@ -1,0 +1,41 @@
+kind: Solution
+lookup_key: fde-agent-sample-solution
+solution_id: 6adf74ce-cad2-438f-b0d7-e07255f80488
+solution_version: v0.1.2
+name: FDE Agent Sample
+description: A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff.
+category_keys:
+- developer-experience
+- sample
+tag_keys:
+- developer-experience
+- implementation
+- handoff
+- sample
+readme: |-
+  # FDE Agent Sample
+
+  A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff.
+
+  ## Architecture
+
+  ![Architecture overview](diagrams/architecture.svg)
+
+  ## What it ships
+
+  - Deployable agent template under `agents/fde-agent-sample.yaml`
+  - Setup actions embedded directly on the agent and atomic templates
+
+  ## Validate/import
+
+  ```sh
+  uv run scripts/sample_tool.py pack solutions/fde-agent-sample
+  ```
+assets:
+- asset_path: diagrams/architecture.svg
+templates:
+- template_path: agents/fde-agent-sample.yaml
+  readme_path: agents/fde-agent-sample.md
+metadata:
+  category: developer-experience
+  sample_slug: fde-agent-sample

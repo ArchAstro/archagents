@@ -1,0 +1,56 @@
+kind: AgentToolTemplate
+lookup_key: ti-tool-list-recent-advisories
+tool_type: custom
+name: list_recent_advisories
+description: List recently published GitHub Security Advisories filtered by ecosystem and severity.
+parameters:
+  type: object
+  properties:
+    ecosystem:
+      type: string
+      description: Package ecosystem (npm, pip, hex, rubygems, etc.). Optional — leave blank for all.
+    severity:
+      type: string
+      description: low, medium, high, critical
+    days:
+      type: integer
+      description: How many days back to look. Default 1.
+      default: 1
+    per_page:
+      type: integer
+      default: 30
+handler_type: script
+config_ref: list-recent-advisories
+status: active
+display_name: List Recent Advisories
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    GitHub token used by this sample's custom scripts. Daily-brief
+    issues and exposure issues post as this account. Prefer a
+    fine-grained PAT with Contents: read, Issues: read/write, and
+    Metadata: read. A classic `repo` token also works but is broader.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: install
+  title: 'Install: integration/github'
+  description: |-
+    Install the ArchAstro GitHub App on every repo in
+    MONITORED_REPOS and on BRIEF_REPO. Without this, the brief
+    can't read manifests and exposure issues can't be filed.
+  params:
+    installation_kind: integration/github
+  verify_config:
+    type: installation_active
+  dedupe_key: integration/github
+  required: true
+  sort_order: 5

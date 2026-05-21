@@ -1,0 +1,64 @@
+kind: AgentToolTemplate
+lookup_key: coc-tool-commit-file
+tool_type: custom
+name: commit_file
+description: Create or update a file on a branch
+parameters:
+  type: object
+  properties:
+    owner:
+      type: string
+    repo:
+      type: string
+    branch:
+      type: string
+    path:
+      type: string
+    content:
+      type: string
+      description: Base64-encoded content
+    message:
+      type: string
+  required:
+  - owner
+  - repo
+  - branch
+  - path
+  - content
+  - message
+handler_type: script
+config_ref: cx-commit-file
+status: active
+display_name: Commit File
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    GitHub token used by this sample's custom scripts to read code,
+    create branches, commit files, and open PRs. Prefer a
+    fine-grained PAT with Contents: read/write, Pull requests:
+    read/write, and Metadata: read. A classic `repo` token also
+    works but is broader.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: install
+  title: 'Install: integration/github'
+  description: |-
+    Install the ArchAstro GitHub App on `REPO_OWNER/REPO_NAME`.
+    Without this, the agent can't read the source it's supposed to
+    collaborate on or open PRs with implementation.
+  params:
+    installation_kind: integration/github
+  verify_config:
+    type: installation_active
+  dedupe_key: integration/github
+  required: true
+  sort_order: 4

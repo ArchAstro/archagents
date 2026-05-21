@@ -1,0 +1,10 @@
+schema_version: 2
+version: v0.1.2
+name: FDE Agent Sample
+tagline: A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff.
+min_cli_version: 0.28.0
+steps:
+- type: upload_skills
+  source_dir: skills
+- type: deploy_solution
+  solution_file: solution.yaml

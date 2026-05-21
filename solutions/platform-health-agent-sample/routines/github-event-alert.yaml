@@ -1,0 +1,47 @@
+kind: AgentRoutineTemplate
+lookup_key: ph-routine-github-event-alert
+name: GitHub Event Alert
+description: |-
+  Reacts to GitHub webhook events (issues opened/closed/reopened, PR
+  closed+merged, CI failures) by prompting the agent in the
+  `health-alerts` thread. Memory-gated: new problems write
+  `alerted_issue_<N>` / `alerted_ci_*` keys via `working_memory_set`;
+  closures look up the matching key and only post a "✅ resolved"
+  update on a hit. For issue close/reopen events the script
+  pre-fetches memory state via `storage.get` and embeds it in the
+  prompt to remove an LLM tool call.
+handler_type: script
+config_ref: ph-github-event-alert
+event_type: webhook.github_app.*
+event_config:
+  webhook.github_app.*: {}
+status: active
+display_name: GitHub Event Alert
+setup_actions:
+- action_type: env_var
+  title: Set MONITORED_REPO
+  description: |-
+    The repo to monitor in `owner/name` format. The agent only acts
+    on events from this repo; other repos receiving events from the
+    same GitHub App install are silently ignored.
+  params:
+    key: MONITORED_REPO
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: MONITORED_REPO
+  required: true
+  sort_order: 1
+- action_type: install
+  title: 'Install: enablement/github_app'
+  description: |-
+    Install the ArchAstro GitHub App on the `MONITORED_REPO`.
+    Without this, the agent receives no GitHub events and can't
+    post resolution comments.
+  params:
+    installation_kind: enablement/github_app
+  verify_config:
+    type: installation_active
+  dedupe_key: enablement/github_app
+  required: true
+  sort_order: 8

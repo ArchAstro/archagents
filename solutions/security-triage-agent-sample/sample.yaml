@@ -1,5 +1,5 @@
 schema_version: 2
-version: v0.4.3
+version: v0.4.4
 name: "Security Triage Agent Sample"
 tagline: "A senior security engineer that triages vulnerabilities found by daily dependency scans. Sample bundle — copy + tailor to your stack."
 min_cli_version: "0.28.0"

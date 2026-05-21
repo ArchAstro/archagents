@@ -1,0 +1,45 @@
+kind: AgentRoutineTemplate
+lookup_key: ph-routine-daily-health-report-prompt
+name: Daily Health Report Prompt
+description: |-
+  Cron-fires once per morning. Posts a prompt to the `health-reports`
+  thread, which triggers the agent (via the participate routine) to
+  generate today's report. The script reads the previous day's
+  continuity summary from `storage` (key `last_report_summary`) and
+  embeds it as starting context.
+handler_type: script
+config_ref: ph-health-report-prompt
+event_type: schedule.cron
+event_config:
+  schedule.cron: {}
+schedule: 5 9 * * *
+status: active
+display_name: Daily Health Report Prompt
+setup_actions:
+- action_type: env_var
+  title: Set MONITORED_REPO
+  description: |-
+    The repo to monitor in `owner/name` format. The agent only acts
+    on events from this repo; other repos receiving events from the
+    same GitHub App install are silently ignored.
+  params:
+    key: MONITORED_REPO
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: MONITORED_REPO
+  required: true
+  sort_order: 1
+- action_type: install
+  title: 'Install: enablement/github_app'
+  description: |-
+    Install the ArchAstro GitHub App on the `MONITORED_REPO`.
+    Without this, the agent receives no GitHub events and can't
+    post resolution comments.
+  params:
+    installation_kind: enablement/github_app
+  verify_config:
+    type: installation_active
+  dedupe_key: enablement/github_app
+  required: true
+  sort_order: 8
