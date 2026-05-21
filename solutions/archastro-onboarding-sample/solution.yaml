@@ -5,7 +5,6 @@ solution_version: v0.1.5
 name: ArchAstro Onboarding Sample
 description: Guides a new user through setting up their first agent in ArchAstro.
 category_keys:
-- onboarding
 - sample
 tag_keys:
 - onboarding
@@ -40,5 +39,5 @@ templates:
 - template_path: tools/fetch-archagents-docs.yaml
   readme_path: tools/fetch-archagents-docs.md
 metadata:
-  category: onboarding
+  category: sample
   sample_slug: archastro-onboarding-sample

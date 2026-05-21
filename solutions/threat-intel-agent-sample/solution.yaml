@@ -5,7 +5,6 @@ solution_version: v0.3.5
 name: Threat Intelligence Agent Sample
 description: A security intelligence analyst that produces daily threat briefs from monitored feeds.
 category_keys:
-- security
 - sample
 tag_keys:
 - threat-intel
@@ -49,5 +48,5 @@ templates:
 - template_path: routines/daily-threat-brief.yaml
   readme_path: routines/daily-threat-brief.md
 metadata:
-  category: security
+  category: sample
   sample_slug: threat-intel-agent-sample

@@ -5,7 +5,6 @@ solution_version: v0.2.2
 name: Platform Health Agent Sample
 description: Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack.
 category_keys:
-- operations
 - sample
 tag_keys:
 - platform-health
@@ -49,5 +48,5 @@ templates:
 - template_path: routines/continuity-capture.yaml
   readme_path: routines/continuity-capture.md
 metadata:
-  category: operations
+  category: sample
   sample_slug: platform-health-agent-sample
