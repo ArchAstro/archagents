@@ -2207,6 +2207,20 @@ class LintTest(unittest.TestCase):
         self.assertEqual(code, 0, output)
         self.assertIn("clean", output)
 
+    def test_ignores_agents_compatibility_dir_without_sample_yaml(self):
+        with self._make_agents_root() as root:
+            self._write_minimal_sample(
+                root, "alpha", with_solution=True, with_readme=True
+            )
+            compat_dir = root.agents_dir / "legacy-template"
+            compat_dir.mkdir()
+            (compat_dir / "agent.yaml").write_text("kind: AgentTemplate\nname: Legacy\n")
+
+            code, output = self._run(None, strict=True)
+
+        self.assertEqual(code, 0, output)
+        self.assertIn("clean (1 sample(s) checked)", output)
+
     def test_missing_readme_warns(self):
         with self._make_agents_root() as root:
             self._write_minimal_sample(root, "alpha", with_readme=False)
@@ -2371,6 +2385,45 @@ class LintTest(unittest.TestCase):
             code, output = self._run("nope", strict=False)
         self.assertEqual(code, 1)
         self.assertIn("not a sample", output)
+
+
+# --- generate -------------------------------------------------------------
+
+
+class GenerateSampleTest(unittest.TestCase):
+    def _write_minimal_sample(self, sample_dir: Path) -> None:
+        sample_dir.mkdir(parents=True)
+        (sample_dir / "scripts").mkdir()
+        (sample_dir / "agent.yaml").write_text("kind: AgentTemplate\nname: X\n")
+        (sample_dir / "sample.yaml").write_text(textwrap.dedent("""\
+            schema_version: 2
+            version: v0.1.0
+            name: X
+            tagline: A sample.
+            min_cli_version: "0.28.0"
+            steps:
+              - type: upload_scripts
+                source_dir: scripts
+              - type: deploy_agent
+                template_file: agent.yaml
+        """))
+
+    def test_ignores_agents_compatibility_dir_without_sample_yaml(self):
+        with _TmpAgentsRoot() as root:
+            compat_dir = root.agents_dir / "legacy-template"
+            compat_dir.mkdir()
+            (compat_dir / "agent.yaml").write_text("kind: AgentTemplate\nname: Legacy\n")
+            self._write_minimal_sample(root.solutions_dir / "alpha-sample")
+
+            rc = gen_mod.run_generate(check=False)
+
+            self.assertEqual(rc, 0)
+            manifest = json.loads(root.manifest_path.read_text())
+            self.assertEqual(
+                [sample["slug"] for sample in manifest["samples"]],
+                ["alpha-sample"],
+            )
+            self.assertFalse((compat_dir / ".aaignore").exists())
 
 
 # --- rendering ------------------------------------------------------------
@@ -2819,6 +2872,31 @@ class PackSampleTest(unittest.TestCase):
         # through agents/<slug> when present.
         with _TmpAgentsRoot() as root, _RedirectStderr():
             self._scaffold(root)
+            output_dir = root.tmp / "dist"
+            pack_mod.run_pack("hello-world", output_dir)
+
+            tarball = output_dir / "hello-world-v0.1.0.tar.gz"
+            self.assertTrue(tarball.is_file())
+            with tarfile.open(tarball, "r:gz") as tar:
+                names = tar.getnames()
+            self.assertIn("hello-world/sample.yaml", names)
+            self.assertIn("hello-world/agent.yaml", names)
+
+    def test_pack_bare_slug_skips_agents_compatibility_dir_without_sample_yaml(self):
+        with _TmpAgentsRoot() as root, _RedirectStderr():
+            compat_dir = root.agents_dir / "hello-world"
+            compat_dir.mkdir()
+            (compat_dir / "agent.yaml").write_text(
+                "kind: AgentTemplate\nname: Compatibility\n"
+            )
+            root.solutions_dir.mkdir()
+            scaffold_mod.run_new(
+                "hello-world",
+                name=None,
+                tagline=None,
+                target_dir=root.solutions_dir,
+            )
+
             output_dir = root.tmp / "dist"
             pack_mod.run_pack("hello-world", output_dir)
 

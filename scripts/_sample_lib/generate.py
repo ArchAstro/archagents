@@ -42,6 +42,11 @@ def load_all_samples() -> list[dict[str, Any]]:
                 )
             yaml_path = sample_dir / "sample.yaml"
             if not yaml_path.exists():
+                # agents/ also carries compatibility template directories
+                # for onboarding. They intentionally have no sample.yaml and
+                # are not catalog samples; solutions/ remains strict.
+                if root.name == "agents":
+                    continue
                 raise SampleError(
                     f"{sample_dir.relative_to(REPO_ROOT)}: missing sample.yaml. "
                     f"Every sample directory must declare its version + DSL steps."
