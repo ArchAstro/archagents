@@ -1,0 +1,20 @@
+// Get the list of files changed in a pull request, with diff patches.
+// Calls GET /repos/{owner}/{repo}/pulls/{pull_number}/files
+
+let http = import("requests")
+let str = import("string")
+
+let owner = $.owner
+let repo = $.repo
+let pull_number = $.pull_number
+
+let url = "https://api.github.com/repos/" + owner + "/" + repo + "/pulls/" + str.toString(pull_number) + "/files"
+
+let resp = unwrap(http.get(url, {
+  headers: {
+    "Authorization": "Bearer " + env.GITHUB_TOKEN,
+    "Accept": "application/vnd.github+json"
+  }
+}))
+
+resp.body

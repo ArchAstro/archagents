@@ -1,0 +1,11 @@
+schema_version: 2
+version: v0.2.2
+name: "Platform Health Agent"
+tagline: "Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack."
+min_cli_version: "0.28.0"
+
+steps:
+  - type: upload_scripts
+    source_dir: scripts
+  - type: deploy_agent
+    template_file: agent.yaml

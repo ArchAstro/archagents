@@ -81,7 +81,7 @@ def _resolve_sample_dirs(slug: str | None) -> list[pathlib.Path]:
     if slug is not None:
         for root in SAMPLE_ROOTS:
             target = root / slug
-            if target.is_dir() and (target / "sample.yaml").is_file():
+            if target.is_dir():
                 return [target]
         roots = ", ".join(str(r.relative_to(REPO_ROOT)) for r in SAMPLE_ROOTS)
         print(
@@ -94,7 +94,7 @@ def _resolve_sample_dirs(slug: str | None) -> list[pathlib.Path]:
         for root in SAMPLE_ROOTS
         if root.is_dir()
         for d in sorted(root.iterdir())
-        if d.is_dir() and (d / "sample.yaml").is_file()
+        if d.is_dir()
     ]
 
 

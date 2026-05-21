@@ -1,0 +1,33 @@
+// Create a new branch in a GitHub repository from a base ref.
+// Calls POST /repos/{owner}/{repo}/git/refs
+
+let http = import("requests")
+
+let owner = $.owner
+let repo = $.repo
+let branch = $.branch
+let from_ref = if ($.from != null) { $.from } else { "main" }
+
+// 1. Get the SHA of the base ref
+let base_resp = unwrap(http.get("https://api.github.com/repos/" + owner + "/" + repo + "/git/ref/heads/" + from_ref, {
+  headers: {
+    "Authorization": "Bearer " + env.GITHUB_TOKEN,
+    "Accept": "application/vnd.github+json"
+  }
+}))
+
+let base_sha = base_resp.body.object.sha
+
+// 2. Create the new branch ref
+let create_resp = unwrap(http.post("https://api.github.com/repos/" + owner + "/" + repo + "/git/refs", {
+  headers: {
+    "Authorization": "Bearer " + env.GITHUB_TOKEN,
+    "Accept": "application/vnd.github+json"
+  },
+  body: {
+    "ref": "refs/heads/" + branch,
+    "sha": base_sha
+  }
+}))
+
+create_resp.body

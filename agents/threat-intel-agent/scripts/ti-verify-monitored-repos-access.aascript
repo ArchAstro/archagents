@@ -1,0 +1,53 @@
+// Verifier for the `ti-verify-monitored-repos-access` setup action.
+// Iterates MONITORED_REPOS (comma-separated owner/repo) and pings each
+// /repos/{owner}/{name} endpoint with GITHUB_TOKEN. Returns the
+// platform's expected verifier shape: { ok: bool, message: string }.
+//
+// Invoked by the platform with input.params (the action's params map)
+// and input.agent_id (the agent the action is scoped to).
+
+let arr = import("array")
+let str = import("string")
+
+let raw = if (env.MONITORED_REPOS != null) { env.MONITORED_REPOS } else { "" }
+let parts = str.split(raw, ",")
+
+let trimmed = arr.map(parts, fn(p) { str.trim(p) })
+let repos = arr.filter(trimmed, fn(p) { p != "" })
+
+if (arr.length(repos) == 0) {
+  { ok: false, message: "MONITORED_REPOS is empty — set the var first." }
+} else {
+  let failures = arr.filter(repos, fn(repo) {
+    let url = "https://api.github.com/repos/" + repo
+    let resp = import("requests").get(url, {
+      headers: {
+        "Authorization": "Bearer " + env.GITHUB_TOKEN,
+        "Accept": "application/vnd.github+json"
+      }
+    })
+    // unwrap with a default — a 404/403 is data, not a script error.
+    let body = unwrap(resp, null)
+    if (body == null) {
+      true
+    } else {
+      // Body is the response object; treat anything not 200 as a failure.
+      // (The requests library puts the HTTP status in `status`.)
+      let status = if (body.status != null) { body.status } else { 0 }
+      status != 200
+    }
+  })
+
+  if (arr.length(failures) == 0) {
+    {
+      ok: true,
+      message: "Bot can read all " + str.toString(arr.length(repos)) + " monitored repos."
+    }
+  } else {
+    {
+      ok: false,
+      message: "Bot can't read: " + arr.join(failures, ", ") +
+               ". Check GITHUB_TOKEN scope or add the bot as a collaborator."
+    }
+  }
+}

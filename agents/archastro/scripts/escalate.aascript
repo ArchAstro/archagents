@@ -1,0 +1,45 @@
+// Escalate a concierge request to a human Slack channel and optional email.
+
+let slack = import("slack")
+let email = import("email")
+let datetime = import("datetime")
+let log = import("log")
+
+let reason = $.reason
+let summary = $.summary
+let urgency = $.urgency || "normal"
+
+let channel = env.CONCIERGE_ESCALATION_CHANNEL
+let cc_email = env.CONCIERGE_ESCALATION_EMAIL
+
+let alert = "[concierge escalation - " + urgency + "]\n" +
+  "Reason: " + reason + "\n\n" +
+  summary + "\n\nTime: " + datetime.now()
+
+if (channel != null && channel != "") {
+  unwrap(slack.send({
+    channel: channel,
+    text: alert
+  }))
+
+  if (cc_email != null && cc_email != "") {
+    email.send({
+      to: cc_email,
+      subject: "[concierge escalation - " + urgency + "] " + reason,
+      text_body: alert
+    })
+  }
+
+  {
+    escalated: true,
+    target_channel: channel,
+    urgency: urgency
+  }
+} else {
+  log.warn("escalate: CONCIERGE_ESCALATION_CHANNEL is not set; cannot escalate")
+  {
+    escalated: false,
+    target_channel: null,
+    urgency: urgency
+  }
+}

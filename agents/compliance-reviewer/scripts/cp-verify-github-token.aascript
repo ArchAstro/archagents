@@ -1,0 +1,36 @@
+// Verifier for the `cp-verify-github-token` setup action.
+// Hits /user with GITHUB_TOKEN to confirm the PAT is valid and surfaces
+// the authenticated login. Returns the platform's expected verifier
+// shape: { ok: bool, message: string }.
+//
+// Invoked by the platform with input.params (the action's params map)
+// and input.agent_id (the agent the action is scoped to).
+
+let str = import("string")
+
+if (env.GITHUB_TOKEN == null || env.GITHUB_TOKEN == "") {
+  { ok: false, message: "GITHUB_TOKEN is not set." }
+} else {
+  let resp = import("requests").get("https://api.github.com/user", {
+    headers: {
+      "Authorization": "Bearer " + env.GITHUB_TOKEN,
+      "Accept": "application/vnd.github+json"
+    }
+  })
+  let body = unwrap(resp, null)
+  if (body == null) {
+    { ok: false, message: "Request to GitHub failed — check network/token." }
+  } else {
+    let status = if (body.status != null) { body.status } else { 0 }
+    if (status == 200) {
+      let login = if (body.login != null) { body.login } else { "(unknown)" }
+      { ok: true, message: "GITHUB_TOKEN authenticates as `" + login + "`." }
+    } else {
+      {
+        ok: false,
+        message: "GitHub returned status " + str.toString(status) +
+                 " for /user. Check that GITHUB_TOKEN is valid and has `repo` scope."
+      }
+    }
+  }
+}

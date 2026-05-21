@@ -1,0 +1,46 @@
+// Verifier for the `verify-merged-prs-readable` setup action.
+// Hits /repos/{REPO_OWNER}/{REPO_NAME}/pulls?state=closed&base={RELEASE_BRANCH}
+// with GITHUB_TOKEN. Returns the platform's expected verifier shape:
+// { ok: bool, message: string }.
+//
+// Invoked by the platform with input.params (the action's params map)
+// and input.agent_id (the agent the action is scoped to).
+
+let str = import("string")
+
+let owner = if (env.REPO_OWNER != null) { env.REPO_OWNER } else { "" }
+let repo = if (env.REPO_NAME != null) { env.REPO_NAME } else { "" }
+let branch = if (env.RELEASE_BRANCH != null) { env.RELEASE_BRANCH } else { "main" }
+
+if (owner == "" || repo == "") {
+  { ok: false, message: "REPO_OWNER and REPO_NAME must be set." }
+} else {
+  let url = "https://api.github.com/repos/" + owner + "/" + repo +
+            "/pulls?state=closed&base=" + branch + "&per_page=1"
+  let resp = import("requests").get(url, {
+    headers: {
+      "Authorization": "Bearer " + env.GITHUB_TOKEN,
+      "Accept": "application/vnd.github+json"
+    }
+  })
+  let body = unwrap(resp, null)
+  if (body == null) {
+    { ok: false, message: "Request to GitHub failed — check GITHUB_TOKEN." }
+  } else {
+    let status = if (body.status != null) { body.status } else { 0 }
+    if (status == 200) {
+      {
+        ok: true,
+        message: "Bot can list merged PRs on " + owner + "/" + repo +
+                 " (base: " + branch + ")."
+      }
+    } else {
+      {
+        ok: false,
+        message: "GitHub returned status " + str.toString(status) +
+                 " for " + owner + "/" + repo +
+                 ". Check REPO_OWNER, REPO_NAME, and that GITHUB_TOKEN has `repo` scope."
+      }
+    }
+  }
+}

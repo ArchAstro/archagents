@@ -1,0 +1,106 @@
+// Reacts to GitHub webhook events by prompting the agent in the
+// health-alerts thread. Memory-gated so only NEW problems alert and
+// only PREVIOUSLY-ALERTED issues get a "✅ resolved" follow-up.
+
+let threads = import("threads")
+let str = import("string")
+let storage = import("storage")
+
+let event = $.fields || {}
+let action = event.action
+let raw = $.raw_payload || {}
+let repo = (raw.repository || {}).full_name
+
+// Only process events from the monitored repo (the same GitHub App may
+// receive events for other repos in the org — silently ignore them).
+let monitored_repo = env.MONITORED_REPO
+
+if (repo != monitored_repo) {
+  // Differentiate "MONITORED_REPO not set" from "event from a different
+  // repo" so an unconfigured deployment doesn't look like a working one
+  // that just happens to never alert.
+  let reason = if (monitored_repo == null || monitored_repo == "") {
+    "MONITORED_REPO env var not set — script is a no-op until configured"
+  } else {
+    "wrong repo"
+  }
+  {status: "skipped", reason: reason, repo: repo}
+} else {
+
+let issue = raw.issue
+let pr = raw.pull_request
+let workflow = raw.workflow_run
+
+// For issue close/reopen events, pre-fetch the alert state from storage so the
+// agent doesn't need to do an extra tool call. Storage shares backing with
+// the working_memory_* LLM tools — agent's working_memory_set writes to the
+// same place this storage.get reads.
+let prefetched_issue_memory = if (issue != null && (action == "closed" || action == "reopened")) {
+  let entry = unwrap(storage.get("alerted_issue_" + str.toString(issue.number)), "")
+  if (entry != "") { entry } else { null }
+} else {
+  null
+}
+
+// Shared trailer applied to every prompt: tells the agent how to gate
+// notifications so the delivery script knows what to forward.
+let response_rules = " RESPONSE RULES: Your response controls whether a notification reaches Slack. If you are alerting (or posting a resolution update), respond with your analysis in 2-3 sentences of markdown, no preamble. If you are NOT alerting, your ENTIRE response must start with 'SKIP: ' followed by a brief reason. Keep outputs focused on the specific event; do not mention unrelated issues."
+
+// Anti-interpretation rule: agents have a tendency to over-claim severity
+// and extrapolate impact. Hold them to what the issue actually says.
+let anti_interp_rule = " DESCRIBE THE ISSUE IN ITS OWN FRAMING. Do not add severity labels (CRITICAL, P1, P2, etc.) that aren't already in the issue title or labels. Do not extrapolate impact beyond what the issue states."
+
+let new_problem_rules = response_rules + anti_interp_rule + " WORKING MEMORY WRITE: When you decide to alert on a new problem, call working_memory_set(key, value) where the key is EXACTLY 'alerted_issue_<N>' for issues (N = issue number) or 'alerted_ci_<workflow-name>_<branch>' for CI failures, and value is a short 1-line summary of why you alerted. This lets future closure events correctly post a '✅ resolved' update. SKIP if any of these apply: known flake, routine dependency bump, bot-generated issue, housekeeping, polish-only changes, cosmetic-only changes, OR items whose title/labels include P3/P4 combined with Enhancement, Polish, Cosmetic, Test Infrastructure, or Documentation. The combination is what's noise — a P3 alone or an Enhancement alone may still warrant alerting if title indicates security, data correctness, or production impact. Do NOT write to working memory when SKIPping."
+
+let resolution_rules_for_pr = response_rules + " For each linked issue number N you extract from the PR body, call working_memory_get(key='alerted_issue_<N>'). If you find a value, that means we previously alerted on this — post a concise '✅ resolved' update citing the PR/issue numbers, AND call working_memory_delete(key='alerted_issue_<N>') to clear the matched key so subsequent duplicate events self-suppress. If you find NO match for any linked issue, respond with 'SKIP: no prior alert for this closure'. This is the expected default for the majority of PR closures."
+
+// For issue close/reopen the script has already done the lookup; embed result.
+let prefetched_section = if (prefetched_issue_memory != null) {
+  " Memory state pre-checked: alerted_issue_" + str.toString(issue.number) + " = '" + prefetched_issue_memory + "'."
+} else {
+  if (issue != null && (action == "closed" || action == "reopened")) {
+    " Memory state pre-checked: alerted_issue_" + str.toString(issue.number) + " = null (no prior alert)."
+  } else {
+    ""
+  }
+}
+
+let resolution_rules_for_issue = response_rules + prefetched_section + " If the pre-checked memory value is null, respond with 'SKIP: no prior alert for this closure'. If a value is present, post a concise '✅ resolved' update citing the issue, AND call working_memory_delete(key='alerted_issue_" + (if (issue != null) { str.toString(issue.number) } else { "" }) + "') to clear the matched key."
+
+let prompt = if (issue != null && action == "opened") {
+  "A GitHub issue was just opened: #" + str.toString(issue.number) + " - " + issue.title + " (by " + (issue.user || {}).login + "). Categorize by severity and suggest an owner based on who has touched the relevant code recently." + new_problem_rules
+} else {
+  if (issue != null && action == "reopened") {
+    "A GitHub issue was just reopened: #" + str.toString(issue.number) + " - " + issue.title + " (by " + (issue.user || {}).login + ")." + (if (prefetched_issue_memory != null) { " A prior alert was found in memory — treat this as a re-escalation and alert." } else { " No prior alert was found in memory — treat this as a new problem." }) + new_problem_rules
+  } else {
+    if (issue != null && action == "closed") {
+      "A GitHub issue was just closed: #" + str.toString(issue.number) + " - " + issue.title + " (closed by " + (issue.user || {}).login + ")." + resolution_rules_for_issue
+    } else {
+      if (pr != null && action == "closed" && pr.merged) {
+        "A PR was just merged: #" + str.toString(pr.number) + " - " + pr.title + " (by " + (pr.user || {}).login + "). Scan the PR title and body for 'fixes #X' / 'closes #X' / 'resolves #X' references and extract the issue numbers." + resolution_rules_for_pr
+      } else {
+        if (workflow != null && action == "completed" && (workflow.conclusion == "failure" || workflow.conclusion == "timed_out")) {
+          "A CI workflow failed: " + (workflow.name || "unknown") + " on branch " + (workflow.head_branch || "unknown") + " (run #" + str.toString(workflow.run_number) + ", conclusion: " + workflow.conclusion + "). Alert if: (a) this is a failure on main, or (b) the same workflow has failed across multiple unrelated PRs recently (pattern failure). SKIP if this is an isolated single failure on a feature branch. Memory key format for this event: 'alerted_ci_" + (workflow.name || "unknown") + "_" + (workflow.head_branch || "unknown") + "'." + new_problem_rules
+        } else {
+          null
+        }
+      }
+    }
+  }
+}
+
+if (prompt != null) {
+  let thread = unwrap(threads.ensure_by_key({
+    key: "health-alerts",
+    title: "Health Alerts"
+  }))
+  unwrap(threads.send_message({
+    thread: thread.id,
+    content: prompt
+  }))
+  {status: "alerted", thread_id: thread.id, action: action, prefetched_memory: prefetched_issue_memory != null}
+} else {
+  {status: "skipped", reason: "unhandled event", action: action}
+}
+
+}

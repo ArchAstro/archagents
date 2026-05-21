@@ -1,0 +1,22 @@
+// Read a file from a GitHub repository.
+// Returns the JSON object from GitHub's contents API. The actual file
+// content is base64-encoded in `body.content`.
+
+let http = import("requests")
+
+let owner = $.owner
+let repo = $.repo
+let path = $.path
+let ref = if ($.ref != null) { $.ref } else { "" }
+
+let url = "https://api.github.com/repos/" + owner + "/" + repo + "/contents/" + path
+let url = if (ref != "") { url + "?ref=" + ref } else { url }
+
+let resp = unwrap(http.get(url, {
+  headers: {
+    "Authorization": "Bearer " + env.GITHUB_TOKEN,
+    "Accept": "application/vnd.github+json"
+  }
+}))
+
+resp.body
