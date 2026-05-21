@@ -6,6 +6,7 @@ name: Compliance Reviewer Sample
 description: Reviews pull requests against compliance rules — does not review style or bugs.
 category_keys:
 - sample
+- compliance
 tag_keys:
 - compliance
 - github

@@ -6,6 +6,7 @@ name: ArchAstro Onboarding Sample
 description: Guides a new user through setting up their first agent in ArchAstro.
 category_keys:
 - sample
+- onboarding
 tag_keys:
 - onboarding
 - docs

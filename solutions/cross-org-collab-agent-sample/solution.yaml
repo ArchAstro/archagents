@@ -6,6 +6,7 @@ name: Cross-Org Collaboration Agent Sample
 description: A code-aware engineering agent that participates in cross-org threads with field guards enforced.
 category_keys:
 - sample
+- engineering
 tag_keys:
 - collaboration
 - github

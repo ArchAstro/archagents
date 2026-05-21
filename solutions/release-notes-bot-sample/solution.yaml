@@ -6,6 +6,7 @@ name: Release Notes Bot Sample
 description: Drafts the weekly changelog by scanning merged PRs on a schedule.
 category_keys:
 - sample
+- engineering
 tag_keys:
 - release-notes
 - github

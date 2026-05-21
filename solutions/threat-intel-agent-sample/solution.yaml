@@ -6,6 +6,7 @@ name: Threat Intelligence Agent Sample
 description: A security intelligence analyst that produces daily threat briefs from monitored feeds.
 category_keys:
 - sample
+- security
 tag_keys:
 - threat-intel
 - github
