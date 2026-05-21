@@ -100,7 +100,12 @@ class _TmpAgentsRoot:
     def __enter__(self):
         self.agents_dir.mkdir()
         self.solutions_dir = self.tmp / "solutions"
-        sample_roots = (self.agents_dir, self.solutions_dir)
+        # Mirror paths.py: each entry is (root, kind) so loaders can
+        # stamp the manifest kind from the discovery directory.
+        sample_roots = (
+            (self.agents_dir, "agent"),
+            (self.solutions_dir, "solution"),
+        )
         # Patch every module that imported the constants. Because the
         # constants are bound at import time, each module that did
         # `from .paths import AGENTS_DIR` got its own binding — we
@@ -2542,6 +2547,7 @@ class RenderManifestTest(unittest.TestCase):
             "tagline": "An example.",
             "min_cli_version": "0.28.0",
             "steps": [{"type": "deploy_agent", "template_file": "agent.yaml"}],
+            "kind": "agent",
         }
         sample.update(overrides)
         return sample
@@ -2557,9 +2563,20 @@ class RenderManifestTest(unittest.TestCase):
         parsed = json.loads(body)
         self.assertEqual(parsed["$schema_version"], paths_mod.MANIFEST_SCHEMA_VERSION)
         entry = parsed["samples"][0]
-        for key in ("slug", "name", "tagline", "current_version", "min_cli_version"):
+        for key in ("slug", "name", "tagline", "current_version", "min_cli_version", "kind"):
             self.assertIn(key, entry)
         self.assertNotIn("steps", entry)
+
+    def test_manifest_carries_kind_through(self):
+        body = render_manifest(
+            [
+                self._sample("alpha", kind="agent"),
+                self._sample("beta", kind="solution"),
+            ]
+        )
+        parsed = json.loads(body)
+        kinds = {e["slug"]: e["kind"] for e in parsed["samples"]}
+        self.assertEqual(kinds, {"alpha": "agent", "beta": "solution"})
 
     def test_manifest_preserves_unicode(self):
         body = render_manifest([self._sample("alpha", tagline="A sample — with a dash.")])
@@ -2608,8 +2625,12 @@ class NewSampleTest(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertTrue((root.agents_dir / "hello-world" / ".aaignore").is_file())
             manifest = json.loads(root.manifest_path.read_text())
-            slugs = [s["slug"] for s in manifest["samples"]]
-            self.assertIn("hello-world", slugs)
+            by_slug = {s["slug"]: s for s in manifest["samples"]}
+            self.assertIn("hello-world", by_slug)
+            # Scaffold targets agents/, so the discovery root stamps
+            # `kind: "agent"`. Catches loader regressions that would
+            # drop the field or stamp it from the wrong root.
+            self.assertEqual(by_slug["hello-world"]["kind"], "agent")
 
     def test_new_refuses_existing_dir(self):
         with _TmpAgentsRoot() as root, self._redirect_stderr():

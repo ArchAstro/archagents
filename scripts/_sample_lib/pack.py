@@ -39,7 +39,7 @@ def _resolve_sample_dir(slug_or_path: str) -> tuple[str, pathlib.Path]:
     ):
         return cwd_candidate.name, cwd_candidate
 
-    for root in SAMPLE_ROOTS:
+    for root, _kind in SAMPLE_ROOTS:
         catalog_candidate = (root / slug_or_path).resolve()
         if catalog_candidate.exists():
             return catalog_candidate.name, catalog_candidate
