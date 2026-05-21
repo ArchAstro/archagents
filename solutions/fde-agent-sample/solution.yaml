@@ -6,6 +6,7 @@ name: FDE Agent Sample
 description: A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff.
 category_keys:
 - sample
+- developer-experience
 tag_keys:
 - developer-experience
 - implementation

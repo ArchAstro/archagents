@@ -29,8 +29,8 @@ description: A senior security engineer that triages vulnerabilities, fixes what
 # carries — lets Library viewers filter "show me reference samples"
 # from across capability shelves.
 category_keys:
-  - security
   - sample
+  - security
 tag_keys:
   - vulnerability-management
   - dependency-scanning
@@ -147,5 +147,5 @@ templates:
     readme_path: routines/pr-review.md
 
 metadata:
-  category: security
+  category: sample
   sample_slug: security-triage-agent-sample

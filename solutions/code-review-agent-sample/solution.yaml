@@ -6,6 +6,7 @@ name: Code Review Agent Sample
 description: A senior engineer that reviews every PR like it's going into production at 3am.
 category_keys:
 - sample
+- engineering
 tag_keys:
 - code-review
 - github

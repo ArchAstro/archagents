@@ -6,6 +6,7 @@ name: ArchAstro Sample
 description: The default ArchAstro project concierge.
 category_keys:
 - sample
+- general
 tag_keys:
 - concierge
 - support

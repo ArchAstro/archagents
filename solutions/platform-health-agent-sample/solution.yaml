@@ -6,6 +6,7 @@ name: Platform Health Agent Sample
 description: Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack.
 category_keys:
 - sample
+- operations
 tag_keys:
 - platform-health
 - github

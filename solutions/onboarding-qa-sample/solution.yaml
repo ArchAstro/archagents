@@ -6,6 +6,7 @@ name: Onboarding Q&A Sample
 description: Answers new-hire questions about how things work at the company.
 category_keys:
 - sample
+- onboarding
 tag_keys:
 - onboarding
 - knowledge
