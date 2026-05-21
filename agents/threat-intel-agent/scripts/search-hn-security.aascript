@@ -1,0 +1,30 @@
+// Search Hacker News for recent stories on a security topic.
+// Uses the public HN Algolia API. Returns metadata only — title, URL,
+// points, comments, dates. Does NOT scrape page content.
+//
+// Use to identify what's trending in security; deep-dive on relevant
+// items via web search or list_recent_advisories.
+
+let http = import("requests")
+let str = import("string")
+let dt = import("datetime")
+
+let query = if ($.query != null) { $.query } else { "security" }
+let hours_in: number = if ($.hours != null) { $.hours } else { 24 }
+let min_points_in: number = if ($.min_points != null) { $.min_points } else { 20 }
+let hits_per_page_in: number = if ($.hits_per_page != null) { $.hits_per_page } else { 30 }
+
+// Compute Unix timestamp for the cutoff
+let now_unix = dt.unix()
+let cutoff = now_unix - (hours_in * 3600)
+
+// %3E is URL-encoded ">"
+let numeric_filters = "created_at_i%3E" + str.toString(cutoff) + ",points%3E" + str.toString(min_points_in)
+
+let url = "https://hn.algolia.com/api/v1/search?query=" + query + "&tags=story&numericFilters=" + numeric_filters + "&hitsPerPage=" + str.toString(hits_per_page_in)
+
+let response = unwrap(http.get(url, {
+  headers: {"Accept": "application/json"}
+}))
+
+response.body

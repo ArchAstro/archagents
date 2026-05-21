@@ -1,0 +1,41 @@
+// Verifier for the `verify-monitored-repo-access` setup action.
+// Pings /repos/{MONITORED_REPO} with GITHUB_TOKEN to confirm the bot
+// can read the single repo this agent monitors. MONITORED_REPO is in
+// `owner/name` form — the same string used by the rest of the agent.
+// Returns the platform's expected verifier shape:
+// { ok: bool, message: string }.
+//
+// Invoked by the platform with input.params (the action's params map)
+// and input.agent_id (the agent the action is scoped to).
+
+let str = import("string")
+
+let repo_full = if (env.MONITORED_REPO != null) { env.MONITORED_REPO } else { "" }
+
+if (repo_full == "" || str.indexOf(repo_full, "/") < 0) {
+  { ok: false, message: "MONITORED_REPO must be set in `owner/name` form." }
+} else {
+  let url = "https://api.github.com/repos/" + repo_full
+  let resp = import("requests").get(url, {
+    headers: {
+      "Authorization": "Bearer " + env.GITHUB_TOKEN,
+      "Accept": "application/vnd.github+json"
+    }
+  })
+  let body = unwrap(resp, null)
+  if (body == null) {
+    { ok: false, message: "Request to GitHub failed — check GITHUB_TOKEN." }
+  } else {
+    let status = if (body.status != null) { body.status } else { 0 }
+    if (status == 200) {
+      { ok: true, message: "Bot can read " + repo_full + "." }
+    } else {
+      {
+        ok: false,
+        message: "GitHub returned status " + str.toString(status) +
+                 " for " + repo_full +
+                 ". Check MONITORED_REPO and that GITHUB_TOKEN has read access (org SSO authorization may be required)."
+      }
+    }
+  }
+}

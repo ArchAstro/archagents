@@ -1,1 +1,173 @@
-../../solutions/archastro-onboarding-sample/agents/archastro-onboarding-sample.yaml
+kind: AgentTemplate
+agent_key: archastro-onboarding
+name: ArchAstro Onboarding
+identity: |
+  You are the ArchAstro onboarding agent.
+
+  Your job is to help the user get their first agent set up and moving quickly.
+
+  You know ArchAgents setup, concepts, configs, scripts, workflows, skills,
+  deploys, chat testing, and troubleshooting. Use that knowledge to guide the
+  user through onboarding without turning the conversation into a docs tour.
+
+  ## How to start
+
+  - When a new conversation begins, first ask what the user is trying to
+    accomplish with their first agent.
+
+  ## Product constraints
+
+  - This app currently reuses the normal agent chat thread. Do not pretend
+    there is a special hidden onboarding surface.
+  - The user can type in chat, paste links, attach files, and use the
+    onboarding actions available in the product.
+  - The first real agent is created before this chat starts. Do not send
+    users back to a separate create flow.
+  - If the user wants to add knowledge, tell them to use the "Add context"
+    action. It can accept a docs link and relevant files inline.
+  - If the user wants to test the agent, tell them to use the "Chat with your
+    agent" action.
+
+  ## What you should help with
+
+  - Clarify the job the first agent should own.
+  - Tell the user what docs, notes, links, examples, and files would make the
+    agent better.
+  - Push toward testing and iteration once the first agent exists.
+  - When the user needs platform help, load the relevant bundled skill before
+    giving detailed ArchAgents guidance:
+    - `archastro-engagement-playbook` for scoping and rollout
+    - `archagent-concepts` for platform vocabulary
+    - `archagent-docs-map` before citing docs
+    - `archagent-integration-patterns` for trigger/handler choices
+    - `archagent-troubleshooting` when something is not working
+    - `archagent-install`, `archagent-auth`, `archagent-manage-configs`,
+      `archagent-author-agent`, `archagent-build-script`,
+      `archagent-build-workflow`, `archagent-build-skill`,
+      `archagent-deploy-agent`, `archagent-chat`, and
+      `archagent-embed` for the corresponding platform workflows
+
+  ## How to behave
+
+  - Keep replies concise, pragmatic, and operational.
+  - Do not invent customer names, company names, or technical context the user
+    has not provided.
+  - Be explicit when something is generic scaffolding versus user-specific
+    setup.
+  - Steer users toward adding concrete context first, then chatting with the
+    new agent.
+
+tools:
+  - tool_type: builtin
+    builtin_tool_key: skills
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: knowledge_search
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: long_term_memory
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: memory
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: search
+    status: active
+
+  - tool_type: custom
+    name: fetch_archagents_docs
+    description: Fetch a documentation page from docs.archagents.com as Markdown. Pass a path like "/docs/start-here/getting-started", a full URL, or the string "llms-full.txt" for the full machine-readable index.
+    parameters:
+      type: object
+      properties:
+        path:
+          type: string
+          description: "Path under docs.archagents.com, a full URL, or 'llms-full.txt' for the full docs index."
+      required: [path]
+    handler_type: script
+    config_ref: archastro-fetch-archagents-docs
+    status: active
+
+skills:
+  - config_ref: archastro-engagement-playbook
+    status: active
+    instruction: Load when scoping the user's first agent, planning rollout, or writing onboarding handoff notes.
+  - config_ref: archagent-concepts
+    status: active
+    instruction: Load when the user asks what a platform concept means or how two ArchAgents concepts differ.
+  - config_ref: archagent-docs-map
+    status: active
+    instruction: Load before citing a docs URL. Prefer canonical URLs from this skill.
+  - config_ref: archagent-integration-patterns
+    status: active
+    instruction: Load when the user describes an integration trigger such as GitHub, Slack, cron, inbound webhook, knowledge, memory, or cross-company collaboration.
+  - config_ref: archagent-troubleshooting
+    status: active
+    instruction: Load whenever onboarding hits a broken deploy, script validation error, routine not firing, config sync issue, or memory problem.
+  - config_ref: archagent-install
+    status: active
+    instruction: Load when installing or upgrading the archagent CLI, or diagnosing a version-skew error.
+  - config_ref: archagent-auth
+    status: active
+    instruction: Load when authenticating or re-authenticating with the platform, or when auth status is expired.
+  - config_ref: archagent-manage-configs
+    status: active
+    instruction: Load when the user needs to initialize a configs/ directory, sync server configs locally, or deploy a directory of configs.
+  - config_ref: archagent-author-agent
+    status: active
+    instruction: Load when authoring an AgentTemplate or Script config file.
+  - config_ref: archagent-build-script
+    status: active
+    instruction: Load when writing, validating, testing, or deploying a `.aascript` file.
+  - config_ref: archagent-build-workflow
+    status: active
+    instruction: Load when the handler needs branching, approvals, retries, or multi-step state.
+  - config_ref: archagent-build-skill
+    status: active
+    instruction: Load when creating or publishing a new SKILL.md bundle.
+  - config_ref: archagent-deploy-agent
+    status: active
+    instruction: Load before running deploy commands or helping the user verify an agent deploy.
+  - config_ref: archagent-chat
+    status: active
+    instruction: Load when sending messages to an agent, testing in a thread, or inspecting responses.
+  - config_ref: archagent-embed
+    status: active
+    instruction: Load when the user wants to install an agent's skill set into Claude Code, Codex, or OpenCode.
+
+routines:
+  - name: Participate in onboarding thread
+    description: The onboarding agent responds in the backing onboarding chat thread.
+    handler_type: preset
+    preset_name: participate
+    event_type: thread.session.join
+    event_config:
+      thread.session.join:
+        filters: {}
+    status: active
+
+  - name: Auto-capture onboarding memory
+    description: On session end, summarize and persist useful onboarding context.
+    handler_type: preset
+    preset_name: auto_memory_capture
+    event_type: thread.session.leave
+    event_config:
+      thread.session.leave:
+        filters:
+          subject_is_agent: true
+    status: active
+
+installations:
+  - install_type: memory/long-term
+    config: {}
+  - install_type: archastro/thread
+    config: {}
+  - install_type: archastro/files
+    config: {}
+
+metadata:
+  category: onboarding
+  version: "1.0"
+  description: Guides a new user through setting up their first agent in ArchAstro.
+  system_role: archastro_onboarding
+  onboarding_version: 1

@@ -1,0 +1,52 @@
+// Captures the trailing <summary>...</summary> block from agent responses
+// on monitored threads and writes it to storage with a 3-day TTL.
+//
+// Tomorrow's prompt-emitter reads the matching key as continuity context.
+// Branches by thread.key so one script handles both the daily report and
+// the 5xx digest — adding a new captured thread is one entry in the
+// thread_to_storage_key map below.
+
+let threads = import("threads")
+let storage = import("storage")
+let str = import("string")
+
+let thread_id = $.thread_id
+let message = $.message
+
+// Same gating as ph-deliver: only act on agent responses, not script-posted
+// prompts. Prompts have agent_user_id but no triggering_message_id.
+let is_agent = message.agent_user_id != null
+let has_trigger = (message.metadata || {}).triggering_message_id != null
+
+if (thread_id != null && message != null && is_agent && has_trigger) {
+  let thread = unwrap(threads.get({thread: thread_id}))
+  let key = thread.key
+
+  // thread.key → storage key for the captured summary. Adding a new captured
+  // thread = one new entry here.
+  let storage_key = if (key == "health-reports") {
+    "last_report_summary"
+  } else {
+    if (key == "5xx-digest") {
+      "last_5xx_digest_summary"
+    } else {
+      null
+    }
+  }
+
+  if (storage_key != null) {
+    // Regex match avoids the byte-vs-grapheme bug in str.indexOf +
+    // str.substring (see ph-deliver.aascript header comment, and
+    // ArchAstro/firstlanding#4434 for the platform fix).
+    let content = message.content || ""
+    let m = str.match(content, "<summary>([\\s\\S]*?)</summary>")
+    if (m != null) {
+      let summary = str.trim(m.groups[0])
+      if (str.length(summary) > 0) {
+        // 3-day TTL covers weekend gaps; if Friday's report is the latest one,
+        // Monday's prompt still has it.
+        storage.set(storage_key, summary, {remember_until: "3 days"})
+      }
+    }
+  }
+}

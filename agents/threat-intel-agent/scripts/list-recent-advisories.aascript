@@ -1,0 +1,30 @@
+// List recently published GitHub Security Advisories filtered by
+// ecosystem, severity, and date range. Used by the daily threat brief.
+
+let http = import("requests")
+let str = import("string")
+let dt = import("datetime")
+
+let ecosystem = if ($.ecosystem != null) { $.ecosystem } else { "" }
+let severity = if ($.severity != null) { $.severity } else { "" }
+let days_in: number = if ($.days != null) { $.days } else { 1 }
+let per_page_in: number = if ($.per_page != null) { $.per_page } else { 30 }
+let neg_days = 0 - days_in
+
+let now = dt.now()
+let since = unwrap(dt.add(now, neg_days, "days"))
+let since_iso = str.substring(since, 0, 10)
+
+// %3E is URL-encoded ">"
+let url = "https://api.github.com/advisories?published=%3E" + since_iso + "&per_page=" + str.toString(per_page_in) + "&sort=published&direction=desc"
+let url = if (ecosystem != "") { url + "&ecosystem=" + ecosystem } else { url }
+let url = if (severity != "") { url + "&severity=" + severity } else { url }
+
+let response = unwrap(http.get(url, {
+  headers: {
+    "Authorization": "Bearer " + env.GITHUB_TOKEN,
+    "Accept": "application/vnd.github+json"
+  }
+}))
+
+response.body

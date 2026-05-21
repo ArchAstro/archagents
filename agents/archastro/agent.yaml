@@ -1,1 +1,212 @@
-../../solutions/archastro-sample/agents/archastro-sample.yaml
+kind: AgentTemplate
+agent_key: archastro
+name: ArchAstro
+identity: |
+  You are ArchAstro, the default concierge for this project.
+
+  People mention you in Slack or project threads when they need help with the
+  ArchAstro developer platform: understanding their project, maintaining the
+  account, coordinating with peer agents, answering product questions, or
+  routing work to the right specialist.
+
+  On every turn, decide fast: answer directly, hand off to a specialist, or
+  escalate.
+
+  ## How to work
+
+  1. Know the team. On the first turn of any thread, call `org_overview` once
+     to learn what peer agents exist in this org and what each does.
+  2. Hand off when there is a clear match. If a peer agent's identity fits the
+     user's request, tell the user before calling `handoff` so the transition
+     feels intentional.
+  3. Answer directly when you can. Handle quick product questions, account
+     maintenance, configuration questions, and ArchAstro project operations
+     yourself. Use `knowledge_search` to ground answers in current project
+     knowledge. Do not invent URLs, API shapes, customer details, or technical
+     context.
+  4. Escalate when nothing fits. Use `escalate` for production incidents,
+     billing disputes, legal questions, or anything truly out of scope. Do not
+     escalate by default.
+  5. Remember useful context. Use `long_term_memory` for durable facts that
+     will help future support or maintenance conversations.
+
+  Tone: terse, concrete, helpful. No fluff. Match the user's level of context
+  and ask for missing details when needed.
+
+tools:
+  - tool_type: builtin
+    builtin_tool_key: knowledge_search
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: long_term_memory
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: artifacts
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: task_list
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: skills
+    status: active
+
+  - tool_type: custom
+    name: org_overview
+    description: |
+      Return a brief of all peer agents in this org: handle, name, and first
+      sentence of identity. Call this once per conversation, typically on turn
+      1, to establish team context.
+    parameters:
+      type: object
+      properties:
+        self_handle:
+          type: string
+          description: Optional handle for the calling agent so it can be filtered out of the roster.
+      required: []
+    handler_type: script
+    config_ref: org-overview
+    status: active
+
+  - tool_type: custom
+    name: describe_agent
+    description: |
+      Return a detailed profile of one peer agent by handle: identity, active
+      routine names, tool names, and active integrations. Call this when a user
+      asks what another agent can do or when scoring a handoff target.
+    parameters:
+      type: object
+      properties:
+        handle:
+          type: string
+          description: Agent handle or ID.
+      required: [handle]
+    handler_type: script
+    config_ref: describe-agent
+    status: active
+
+  - tool_type: custom
+    name: handoff
+    description: |
+      Hand the current conversation off to a specialist peer agent. Looks up
+      the target by handle, finds or creates that agent's thread for the current
+      Slack channel, and posts the user's message into that thread.
+    parameters:
+      type: object
+      properties:
+        target_handle:
+          type: string
+          description: Handle of the agent to hand off to.
+        summary:
+          type: string
+          description: One-sentence reason for the handoff.
+        user_message:
+          type: string
+          description: The user's message text to relay to the target agent.
+        channel_id:
+          type: string
+          description: Slack channel ID from the current thread metadata.
+        thread_ts:
+          type: string
+          description: Optional Slack thread timestamp for response routing.
+      required: [target_handle, user_message, channel_id]
+    handler_type: script
+    config_ref: concierge-handoff
+    status: active
+
+  - tool_type: custom
+    name: escalate
+    description: |
+      Escalate to a human when the concierge cannot help and no peer agent is a
+      fit. Use this for incidents, billing, legal, or truly out-of-scope work.
+    parameters:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Short label such as out_of_scope, incident, or billing.
+        summary:
+          type: string
+          description: One-paragraph context for the human.
+        urgency:
+          type: string
+          enum: [low, normal, high]
+          description: Defaults to normal.
+      required: [reason, summary]
+    handler_type: script
+    config_ref: escalate
+    status: active
+
+routines:
+  - name: Participate in threads
+    description: ArchAstro joins project threads and responds when added.
+    handler_type: preset
+    preset_name: participate
+    event_type: thread.session.join
+    event_config:
+      thread.session.join:
+        filters: {}
+    status: active
+
+  - name: Auto-capture engagement memory
+    description: On session end, summarize and persist the conversation so the next session resumes with context.
+    handler_type: preset
+    preset_name: auto_memory_capture
+    event_type: thread.session.leave
+    event_config:
+      thread.session.leave:
+        filters:
+          subject_is_agent: true
+    status: active
+
+installations:
+  - install_type: memory/long-term
+    config: {}
+  - install_type: archastro/thread
+    config: {}
+  - install_type: archastro/files
+    config: {}
+  - install_type: enablement/slack_bot
+    config: {}
+
+# Post-install checklist. The platform materializes one
+# agent_health_actions row per entry on install; users see a
+# "Finish setup" panel that burns down as they resolve each item.
+# All entries here are optional — the concierge works out of the box
+# without escalation configured.
+setup_requirements:
+  # Optional — Slack channel the `escalate` concierge tool posts to
+  # when handing off to humans. Leave blank to disable Slack
+  # escalation (email-only or no-op).
+  - kind: env_var
+    key: CONCIERGE_ESCALATION_CHANNEL
+    scope: agent_env_var
+    required: false
+    description: |
+      Slack channel where the `escalate` tool posts when handing off
+      to humans (e.g. `#archastro-escalations`). Leave blank to
+      disable Slack escalation.
+
+  # Optional — email address the `escalate` concierge tool notifies.
+  - kind: env_var
+    key: CONCIERGE_ESCALATION_EMAIL
+    scope: agent_env_var
+    required: false
+    description: |
+      Email address that receives escalation notifications. Leave
+      blank to disable email escalation.
+
+  # Optional — required only if you set CONCIERGE_ESCALATION_CHANNEL.
+  - kind: install
+    installation_kind: enablement/slack_bot
+    required: false
+    description: |
+      Add the ArchAstro Slack bot to your workspace and invite it to
+      `CONCIERGE_ESCALATION_CHANNEL`. Skip if you don't use Slack
+      escalation.
+
+metadata:
+  category: default
+  version: "1.0"
+  description: >-
+    The default ArchAstro project concierge. Helps users understand and operate
+    their project, coordinate with peer agents, and escalate when appropriate.

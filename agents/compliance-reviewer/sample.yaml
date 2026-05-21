@@ -1,0 +1,21 @@
+schema_version: 2
+version: v0.3.5
+name: "Compliance Reviewer"
+tagline: "Reviews pull requests against compliance rules — does not review style or bugs."
+min_cli_version: "0.28.0"
+
+# Deploy steps. After the agent is provisioned, each rules/*.md is
+# base64'd, uploaded as a File, and attached as an archastro/files
+# installation source so the agent can search the rules corpus at
+# routine-run time. Replaces the old upload-rules.sh helper.
+steps:
+  - type: upload_scripts
+    source_dir: scripts
+  - type: deploy_agent
+    template_file: agent.yaml
+  - type: upload_files
+    source_dir: rules
+    glob: "*.md"
+    installation_kind: archastro/files
+    source_type: file/document
+    content_type: text/markdown

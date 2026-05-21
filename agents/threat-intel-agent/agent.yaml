@@ -1,1 +1,302 @@
-../../solutions/threat-intel-agent-sample/agents/threat-intel-agent-sample.yaml
+kind: AgentTemplate
+agent_key: threat-intel-agent
+name: Threat Intelligence Agent
+identity: |
+  You are a security intelligence analyst. Your job is to read the
+  day's security news (HN, GitHub Advisories, vendor feeds) and tell
+  the team only what matters to OUR stack — no noise, no daily 50-CVE
+  dumps.
+
+  ## Your daily routine
+
+  Once a day at 07:00 UTC, produce a curated threat intelligence brief.
+
+  ## Workflow
+
+  1. **Scan Hacker News** — call `search_hn_security` with several queries:
+     "CVE", "vulnerability", "supply chain", "RCE", "zero day". Use
+     `hours=24` and `min_points=30`. Collect distinct stories.
+
+  2. **Scan GitHub Advisories** — call `list_recent_advisories` for each
+     ecosystem in our stack. Use `days=1`, `severity` in `[high, critical]`.
+
+  3. **Identify what's relevant** — for each story/advisory, ask: does
+     this affect a package, framework, or pattern we use? Our stack is
+     described in the STACK_DESCRIPTION env context.
+
+  4. **Deep-dive on relevant items** — for items that look relevant:
+     - Read the full advisory details from GitHub Advisories
+     - Check if we actually use the affected package via `get_repo_file`
+       on our `mix.exs` / `package.json` / `requirements.txt`
+     - Determine: are we exposed? Severity? Recommendation?
+
+  5. **Build the brief** — structured summary with these sections:
+     - **Top story of the day** — the one thing leadership should know
+     - **Direct exposures** — items where we use the affected package
+     - **Watch list** — items we should monitor but aren't directly affected
+     - **Patterns** — recurring themes from past briefs (memory_recall)
+     - **No action needed** — high-profile items confirmed not affecting us
+
+  6. **For each direct exposure** — call `create_github_issue` with the
+     standard format. Search existing issues first to avoid duplicates.
+
+  7. **Store the brief in memory** — `memory_store` with collection
+     `"threat_briefs"` and a date-based key. This builds the institutional
+     memory for cross-day pattern recognition.
+
+  8. **File the brief itself** as a GitHub issue in the BRIEF_REPO. Title:
+     `threat-brief: YYYY-MM-DD — N stories, M exposures`. Labels:
+     `[security, threat-brief]`.
+
+  9. **Post a Slack summary** to the SLACK_CHANNEL via `slack_post_message`.
+     Format:
+     ```
+     🛡️ Security Threat Brief — <date>
+     🔴 Top: <one sentence>
+     🚨 N exposures:
+     • <pkg> in <repo> → <action> (<issue>)
+     👀 Watching: <brief items>
+     Full brief: <link>
+     ```
+     Keep it under 15 lines. The detail lives in the GitHub issue.
+
+  ## Critical rules
+
+  - DO NOT just dump every CVE — be selective, signal over noise
+  - ALWAYS cite the source URL for each item
+  - ALWAYS check `memory_recall` for past threat briefs to identify patterns
+  - ALWAYS check existing issues before filing duplicates
+  - If nothing notable today: still file the brief saying so. Quiet days
+    are valuable signal too.
+  - Cite the patch management standard for severity classifications
+
+tools:
+  - tool_type: builtin
+    builtin_tool_key: knowledge_search
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: long_term_memory
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: memory
+    status: active
+  - tool_type: builtin
+    builtin_tool_key: search
+    status: active
+
+  - tool_type: custom
+    name: search_hn_security
+    description: Search Hacker News for recent security stories via the HN Algolia API. Returns metadata only (title, URL, points, comments, dates) — does NOT scrape content.
+    parameters:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 'Search query (e.g. "CVE", "vulnerability", "supply chain")'
+          default: "security"
+        hours:
+          type: integer
+          description: "How many hours back to look. Default 24."
+          default: 24
+        min_points:
+          type: integer
+          description: "Minimum HN points to filter signal. Default 20."
+          default: 20
+        hits_per_page:
+          type: integer
+          description: "Max stories to return. Default 30."
+          default: 30
+    handler_type: script
+    config_ref: search-hn-security
+    status: active
+
+  - tool_type: custom
+    name: list_recent_advisories
+    description: List recently published GitHub Security Advisories filtered by ecosystem and severity.
+    parameters:
+      type: object
+      properties:
+        ecosystem:
+          type: string
+          description: "Package ecosystem (npm, pip, hex, rubygems, etc.). Optional — leave blank for all."
+        severity:
+          type: string
+          description: "low, medium, high, critical"
+        days:
+          type: integer
+          description: "How many days back to look. Default 1."
+          default: 1
+        per_page:
+          type: integer
+          default: 30
+    handler_type: script
+    config_ref: list-recent-advisories
+    status: active
+
+  - tool_type: custom
+    name: get_repo_file
+    description: Read a file from a GitHub repository (e.g. mix.exs, package.json, requirements.txt) to check if a vulnerable package is in use.
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        path: { type: string }
+        ref: { type: string }
+      required: [owner, repo, path]
+    handler_type: script
+    config_ref: ti-get-repo-file
+    status: active
+
+  - tool_type: custom
+    name: create_github_issue
+    description: File a GitHub issue (used for both exposure issues and the daily brief itself)
+    parameters:
+      type: object
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        title: { type: string }
+        body: { type: string }
+        labels: { type: array, items: { type: string } }
+      required: [owner, repo, title, body]
+    handler_type: script
+    config_ref: ti-create-github-issue
+    status: active
+
+routines:
+  - name: Participate in conversations
+    description: Join threads when added so users can request ad hoc threat-intel lookups.
+    handler_type: preset
+    preset_name: participate
+    event_type: thread.session.join
+    event_config:
+      thread.session.join:
+        filters: {}
+    status: active
+
+  - name: daily-threat-brief
+    description: Daily threat intelligence brief at 07:00 UTC
+    handler_type: preset
+    preset_name: do_task
+    event_type: schedule.cron
+    schedule: "0 7 * * *"
+    preset_instructions: |
+      Generate the daily Security Threat Brief.
+
+      Follow the workflow in your identity:
+      1. Scan HN with multiple queries
+      2. Scan GitHub Advisories for our ecosystems
+      3. Cross-reference against our codebase via get_repo_file
+      4. memory_recall past briefs for pattern recognition
+      5. File issues for direct exposures
+      6. File the brief itself as a GitHub issue
+      7. Post a Slack summary
+
+      Be selective. If nothing's notable, say so explicitly.
+    status: active
+
+  - name: Auto-capture memories
+    handler_type: preset
+    preset_name: auto_memory_capture
+    event_type: thread.session.leave
+    event_config:
+      thread.session.leave:
+        filters:
+          subject_is_agent: true
+    status: active
+
+installations:
+  - install_type: memory/long-term
+    config: {}
+  - install_type: archastro/thread
+    config: {}
+  - install_type: integration/github
+    config: {}
+  - install_type: enablement/slack_bot
+    config: {}
+
+# Post-install checklist. The platform materializes one
+# agent_health_actions row per entry on install; users see a
+# "Finish setup" panel that burns down as they resolve each item.
+# Verifiers re-run on a daily sweep so a deleted secret or revoked
+# install transitions back to :degraded.
+setup_requirements:
+  # Required env vars — all stored on this specific agent. Per-agent
+  # scope is the only one bundle authors can declare: the user who
+  # installed the agent always has write access to its env vars,
+  # whereas org/app secret stores typically require admin permissions
+  # most installers don't have.
+  - kind: env_var
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    description: |
+      GitHub token used by this sample's custom scripts. Daily-brief
+      issues and exposure issues post as this account. Prefer a
+      fine-grained PAT with Contents: read, Issues: read/write, and
+      Metadata: read. A classic `repo` token also works but is broader.
+    example: "ghp_xxxxxxxxxxxx"
+
+  - kind: env_var
+    key: MONITORED_REPOS
+    scope: agent_env_var
+    description: |
+      Comma-separated `owner/repo` list of repos whose dependencies the
+      brief should check for direct exposure.
+      Example: `acme/api,acme/web,acme/infra`.
+
+  - kind: env_var
+    key: BRIEF_REPO
+    scope: agent_env_var
+    description: |
+      `owner/repo` where the daily brief and exposure issues should be
+      filed. Often a security-only repo (e.g. `acme/security-briefs`).
+
+  - kind: env_var
+    key: STACK_DESCRIPTION
+    scope: agent_env_var
+    description: |
+      One-line description of your stack. Used in the agent's identity
+      prompt to decide which threats are relevant.
+      Example: `Python/Django backend, React frontend, AWS infra`.
+
+  - kind: env_var
+    key: SLACK_CHANNEL
+    scope: agent_env_var
+    description: |
+      Channel where the daily summary should post. Include the leading
+      `#` (e.g. `#security`).
+
+  # Required installs — both the GitHub App (for repo access + posting
+  # issues) and the Slack bot (for daily summaries).
+  - kind: install
+    installation_kind: integration/github
+    description: |
+      Install the ArchAstro GitHub App on every repo in
+      MONITORED_REPOS and on BRIEF_REPO. Without this, the brief
+      can't read manifests and exposure issues can't be filed.
+
+  - kind: install
+    installation_kind: enablement/slack_bot
+    description: |
+      Add the ArchAstro Slack bot to your workspace and the channel
+      named in SLACK_CHANNEL.
+
+  # Custom verifier — confirms the bot actually has read access to
+  # every repo in MONITORED_REPOS. Catches the common "I made the
+  # bot but forgot to add it as a collaborator" failure mode.
+  - kind: custom
+    id: ti-verify-monitored-repos-access
+    title: "Verify the bot can read every monitored repo"
+    description: |
+      Iterates `MONITORED_REPOS` and hits each repo's
+      `/repos/{owner}/{name}` endpoint with `GITHUB_TOKEN` to
+      confirm access. Surfaces any repos the bot can't see.
+    verify:
+      script_ref: ti-verify-monitored-repos-access
+    depends_on: [GITHUB_TOKEN, MONITORED_REPOS]
+
+metadata:
+  category: security
+  version: "1.0"

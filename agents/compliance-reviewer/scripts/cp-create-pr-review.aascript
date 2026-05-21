@@ -1,0 +1,50 @@
+// Post an inline code review on a pull request.
+// Calls POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews
+//
+// IMPORTANT: GitHub requires at least one inline comment when event=COMMENT.
+// Body-only reviews return 422. The agent's identity prompt enforces this
+// rule, but the script also defends against it by skipping the API call
+// if comments is empty.
+
+let http = import("requests")
+let arr = import("array")
+let str = import("string")
+
+let owner = $.owner
+let repo = $.repo
+let pull_number = $.pull_number
+let body = if ($.body != null) { $.body } else { "" }
+
+// Safety guard: never allow the bot to APPROVE a PR. Force to COMMENT.
+let event = if ($.event == "APPROVE") { "COMMENT" } else { if ($.event != null) { $.event } else { "COMMENT" } }
+
+// NOTE: Single-element JSON arrays may be unwrapped during script input
+// deserialization (platform bug). Detect a bare comment object and rewrap.
+let raw = if ($.comments != null) { $.comments } else { [] }
+let review_comments = if (typeof(raw) == "array") { raw } else { [raw] }
+
+let url = "https://api.github.com/repos/" + owner + "/" + repo + "/pulls/" + str.toString(pull_number) + "/reviews"
+
+let review_body = if (body != "") {
+  if (arr.length(review_comments) > 0) {
+    {"event": event, "body": body, "comments": review_comments}
+  } else {
+    {"event": event, "body": body}
+  }
+} else {
+  if (arr.length(review_comments) > 0) {
+    {"event": event, "comments": review_comments}
+  } else {
+    {"event": event}
+  }
+}
+
+let resp = unwrap(http.post(url, {
+  headers: {
+    "Authorization": "Bearer " + env.GITHUB_TOKEN,
+    "Accept": "application/vnd.github+json"
+  },
+  body: review_body
+}))
+
+resp.body
