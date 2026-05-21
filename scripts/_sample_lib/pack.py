@@ -41,7 +41,7 @@ def _resolve_sample_dir(slug_or_path: str) -> tuple[str, pathlib.Path]:
 
     for root in SAMPLE_ROOTS:
         catalog_candidate = (root / slug_or_path).resolve()
-        if catalog_candidate.exists():
+        if catalog_candidate.exists() and (catalog_candidate / "sample.yaml").is_file():
             return catalog_candidate.name, catalog_candidate
 
     expanded = cwd_candidate
