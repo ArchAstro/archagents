@@ -1,0 +1,10 @@
+schema_version: 2
+version: v0.3.5
+name: Threat Intelligence Agent Sample
+tagline: A security intelligence analyst that produces daily threat briefs from monitored feeds.
+min_cli_version: 0.28.0
+steps:
+- type: upload_scripts
+  source_dir: scripts
+- type: deploy_solution
+  solution_file: solution.yaml

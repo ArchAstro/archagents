@@ -1,0 +1,53 @@
+kind: Solution
+lookup_key: threat-intel-agent-sample-solution
+solution_id: ad2b4836-0847-4b07-b603-fdc3b4f817b5
+solution_version: v0.3.5
+name: Threat Intelligence Agent Sample
+description: A security intelligence analyst that produces daily threat briefs from monitored feeds.
+category_keys:
+- security
+- sample
+tag_keys:
+- threat-intel
+- github
+- slack
+- sample
+readme: |-
+  # Threat Intelligence Agent Sample
+
+  A security intelligence analyst that produces daily threat briefs from monitored feeds.
+
+  ## Architecture
+
+  ![Architecture overview](diagrams/architecture.svg)
+
+  ## What it ships
+
+  - Deployable agent template under `agents/threat-intel-agent-sample.yaml`
+  - 4 standalone custom tool template(s) under `tools/`
+  - 1 standalone routine template(s) under `routines/`
+  - Setup actions embedded directly on the agent and atomic templates
+
+  ## Validate/import
+
+  ```sh
+  uv run scripts/sample_tool.py pack solutions/threat-intel-agent-sample
+  ```
+assets:
+- asset_path: diagrams/architecture.svg
+templates:
+- template_path: agents/threat-intel-agent-sample.yaml
+  readme_path: agents/threat-intel-agent-sample.md
+- template_path: tools/search-hn-security.yaml
+  readme_path: tools/search-hn-security.md
+- template_path: tools/list-recent-advisories.yaml
+  readme_path: tools/list-recent-advisories.md
+- template_path: tools/get-repo-file.yaml
+  readme_path: tools/get-repo-file.md
+- template_path: tools/create-github-issue.yaml
+  readme_path: tools/create-github-issue.md
+- template_path: routines/daily-threat-brief.yaml
+  readme_path: routines/daily-threat-brief.md
+metadata:
+  category: security
+  sample_slug: threat-intel-agent-sample

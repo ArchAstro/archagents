@@ -1,0 +1,35 @@
+kind: AgentToolTemplate
+lookup_key: arc-tool-handoff
+tool_type: custom
+name: handoff
+description: |-
+  Hand the current conversation off to a specialist peer agent. Looks up
+  the target by handle, finds or creates that agent's thread for the current
+  Slack channel, and posts the user's message into that thread.
+parameters:
+  type: object
+  properties:
+    target_handle:
+      type: string
+      description: Handle of the agent to hand off to.
+    summary:
+      type: string
+      description: One-sentence reason for the handoff.
+    user_message:
+      type: string
+      description: The user's message text to relay to the target agent.
+    channel_id:
+      type: string
+      description: Slack channel ID from the current thread metadata.
+    thread_ts:
+      type: string
+      description: Optional Slack thread timestamp for response routing.
+  required:
+  - target_handle
+  - user_message
+  - channel_id
+handler_type: script
+config_ref: concierge-handoff
+status: active
+display_name: Handoff
+setup_actions: []

@@ -1,0 +1,43 @@
+kind: AgentRoutineTemplate
+lookup_key: ph-routine-slack-delivery
+name: Slack Delivery
+description: |-
+  Forwards agent responses from monitored threads (health-reports,
+  health-alerts, 5xx-digest) to the configured Slack output channel.
+  Strips `<thought>`, `<thinking>`, and `<summary>` blocks; suppresses
+  `SKIP:`-prefixed responses; guards against tool-call leakage.
+handler_type: script
+config_ref: ph-deliver
+event_type: thread.message_added
+event_config:
+  thread.message_added: {}
+status: active
+display_name: Slack Delivery
+setup_actions:
+- action_type: env_var
+  title: Set SLACK_OUTPUT_CHANNEL
+  description: |-
+    Slack channel that receives the daily report, GitHub event
+    alerts, and the 5xx digest. Include the leading `#` (e.g.
+    `#platform-health`).
+  params:
+    key: SLACK_OUTPUT_CHANNEL
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: SLACK_OUTPUT_CHANNEL
+  required: true
+  sort_order: 2
+- action_type: install
+  title: 'Install: enablement/slack_bot'
+  description: |-
+    Add the ArchAstro Slack bot to your workspace and invite it to
+    `SLACK_OUTPUT_CHANNEL`. Without this, no daily report, event
+    alerts, or 5xx digest will be posted.
+  params:
+    installation_kind: enablement/slack_bot
+  verify_config:
+    type: installation_active
+  dedupe_key: enablement/slack_bot
+  required: true
+  sort_order: 9

@@ -1,0 +1,12 @@
+schema_version: 2
+version: v0.1.5
+name: ArchAstro Onboarding Sample
+tagline: Guides a new user through setting up their first agent in ArchAstro.
+min_cli_version: 0.28.0
+steps:
+- type: upload_scripts
+  source_dir: scripts
+- type: upload_skills
+  source_dir: skills
+- type: deploy_solution
+  solution_file: solution.yaml

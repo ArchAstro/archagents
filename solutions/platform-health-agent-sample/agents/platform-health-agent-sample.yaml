@@ -1,0 +1,244 @@
+kind: AgentTemplate
+name: Platform Health Agent Sample
+identity: |-
+  You are Platform Health, a monitoring agent for a single GitHub repository
+  configured via the `MONITORED_REPO` environment variable.
+
+  Your responsibilities:
+  1. Track open GitHub issues and surface new or critical ones
+  2. Monitor CI/CD pipeline failures from GitHub Actions
+  3. Provide concise daily summaries of repository health
+  4. Categorize and prioritize issues by severity and theme
+  5. Track patterns across issues (e.g., recurring failures, issue spikes, unassigned items)
+  6. Cross-reference open issues against merged PRs to identify issues that may already be resolved
+  7. For unassigned issues, suggest an owner based on who has authored related PRs or owns the relevant code area
+
+  When evaluating whether an open issue might be resolved:
+  - Check if the issue links to or mentions a PR, and whether that PR has been merged
+  - Read comments on linked PRs for signals like "this fixes #X" or "once #Y merges, this should be green"
+  - Verify the issue is still OPEN on GitHub before listing — if it's already CLOSED, skip (there's nothing to suggest).
+  - DO NOT close the issue. Instead, post a comment on the issue summarizing the resolution evidence using `github_create_issue_comment` (auto-exposed by the `integrations` builtin via the `enablement/github_app` install — auth uses the GitHub App's installation token, not the read-only `GITHUB_TOKEN` PAT).
+  - Before commenting, check working memory for `commented_on_issue_<N>` (KV, not vector-search). If a marker is set, skip — you've already posted. After commenting, set `commented_on_issue_<N>` so you don't duplicate the comment tomorrow.
+
+  Communication style:
+  - Lead with what needs attention — failures and new issues first
+  - Be concise — use bullet points and short summaries
+  - Include links to issues and failed runs so they're easy to follow up on
+  - Flag patterns (e.g., recurring failures, issue spikes, items without assignees)
+  - When asked for a health report, group issues by category and note trends
+  - For unassigned issues, suggest who should own them with a brief rationale
+tools:
+- tool_type: builtin
+  builtin_tool_key: search
+  status: active
+- tool_type: builtin
+  builtin_tool_key: knowledge_search
+  status: active
+- tool_type: builtin
+  builtin_tool_key: long_term_memory
+  status: active
+- tool_type: builtin
+  builtin_tool_key: memory
+  status: active
+- tool_type: builtin
+  builtin_tool_key: artifacts
+  status: active
+- tool_type: builtin
+  builtin_tool_key: skills
+  status: active
+- tool_type: builtin
+  builtin_tool_key: integrations
+  status: active
+routines:
+- name: Participate in conversations
+  description: Join monitored threads and generate responses to script-posted prompts
+  handler_type: preset
+  preset_name: participate
+  event_type: thread.session.join
+  event_config:
+    thread.session.join: {}
+  status: active
+- template_path: routines/daily-health-report-prompt.yaml
+- template_path: routines/github-event-alert.yaml
+- template_path: routines/5xx-daily-digest.yaml
+- template_path: routines/slack-delivery.yaml
+- template_path: routines/continuity-capture.yaml
+- name: Auto-capture memories
+  description: Automatically extract and store key facts after conversations
+  handler_type: preset
+  preset_name: auto_memory_capture
+  event_type: thread.session.leave
+  event_config:
+    thread.session.leave:
+      subject_is_agent: true
+  status: active
+installations:
+- install_type: memory/long-term
+  config: {}
+- install_type: archastro/thread
+  config: {}
+- install_type: enablement/github_app
+  config: {}
+- install_type: enablement/slack_bot
+  config: {}
+metadata:
+  category: devops
+  version: '1.0'
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    PAT used to read issues, PRs, and PR comments. The sample does
+    not write to GitHub — for strict minimum privilege, prefer a
+    fine-grained PAT (`github_pat_*`) with read-only access to
+    Issues, Pull requests, and Metadata. A classic `repo`-scoped
+    PAT (`ghp_*`) also works.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: env_var
+  title: Set MONITORED_REPO
+  description: |-
+    The repo to monitor in `owner/name` format. The agent only acts
+    on events from this repo; other repos receiving events from the
+    same GitHub App install are silently ignored.
+  params:
+    key: MONITORED_REPO
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: MONITORED_REPO
+  required: true
+  sort_order: 1
+- action_type: env_var
+  title: Set SLACK_OUTPUT_CHANNEL
+  description: |-
+    Slack channel that receives the daily report, GitHub event
+    alerts, and the 5xx digest. Include the leading `#` (e.g.
+    `#platform-health`).
+  params:
+    key: SLACK_OUTPUT_CHANNEL
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: SLACK_OUTPUT_CHANNEL
+  required: true
+  sort_order: 2
+- action_type: env_var
+  title: Set GCLOUD_PROJECT_ID
+  description: |-
+    GCP project ID hosting the namespace whose logs the digest
+    should scan. Required for the 5xx digest.
+  params:
+    key: GCLOUD_PROJECT_ID
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: GCLOUD_PROJECT_ID
+  required: true
+  sort_order: 3
+- action_type: env_var
+  title: Set LOG_NAMESPACE
+  description: |-
+    Kubernetes namespace whose ERROR-severity logs the digest
+    scans. Required for the 5xx digest.
+  params:
+    key: LOG_NAMESPACE
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: LOG_NAMESPACE
+  required: true
+  sort_order: 4
+- action_type: env_var
+  title: Set GCLOUD_SA_CLIENT_EMAIL
+  description: |-
+    Service account `client_email` from the SA JSON key. Used to
+    mint a Cloud Logging access token via JWT-bearer grant on every
+    run. Required for the 5xx digest.
+  params:
+    key: GCLOUD_SA_CLIENT_EMAIL
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: GCLOUD_SA_CLIENT_EMAIL
+  required: true
+  sort_order: 5
+- action_type: env_var
+  title: Set GCLOUD_SA_PRIVATE_KEY
+  description: |-
+    Service account `private_key` (PEM) from the SA JSON key. Escape
+    newlines as literal `\n`. Required for the 5xx digest. SA needs
+    `logging.viewer` (read-only) on `GCLOUD_PROJECT_ID`.
+  params:
+    key: GCLOUD_SA_PRIVATE_KEY
+    scope: agent_env_var
+    secret: true
+  verify_config:
+    type: secret_present
+  dedupe_key: GCLOUD_SA_PRIVATE_KEY
+  required: true
+  sort_order: 6
+- action_type: env_var
+  title: Set LOG_CONTAINERS
+  description: |-
+    Comma-separated K8s container names to scope the 5xx digest to
+    (e.g. `app,admin-app`). Empty/unset = no container filter.
+    Strongly recommended for production namespaces.
+  params:
+    key: LOG_CONTAINERS
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: LOG_CONTAINERS
+  required: false
+  sort_order: 7
+- action_type: install
+  title: 'Install: enablement/github_app'
+  description: |-
+    Install the ArchAstro GitHub App on the `MONITORED_REPO`.
+    Without this, the agent receives no GitHub events and can't
+    post resolution comments.
+  params:
+    installation_kind: enablement/github_app
+  verify_config:
+    type: installation_active
+  dedupe_key: enablement/github_app
+  required: true
+  sort_order: 8
+- action_type: install
+  title: 'Install: enablement/slack_bot'
+  description: |-
+    Add the ArchAstro Slack bot to your workspace and invite it to
+    `SLACK_OUTPUT_CHANNEL`. Without this, no daily report, event
+    alerts, or 5xx digest will be posted.
+  params:
+    installation_kind: enablement/slack_bot
+  verify_config:
+    type: installation_active
+  dedupe_key: enablement/slack_bot
+  required: true
+  sort_order: 9
+- action_type: custom
+  title: Verify the bot can read the monitored repo
+  description: |-
+    Hits `/repos/{MONITORED_REPO}` with `GITHUB_TOKEN` to confirm
+    the bot has read access. Surfaces the exact HTTP status if not.
+  params:
+    id: verify-monitored-repo-access
+  verify_config:
+    type: script_ref
+    script_ref: verify-monitored-repo-access
+  dedupe_key: verify-monitored-repo-access
+  required: true
+  sort_order: 10
+  depends_on:
+  - GITHUB_TOKEN
+  - MONITORED_REPO

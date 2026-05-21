@@ -12,7 +12,7 @@ Paste this into Claude Code, Codex, or any AI coding assistant:
 ```
 Validate and import the Security Triage Agent Sample Solution from this repo.
 
-1) Read solutions/security-triage-agent-sample/agents/security-triage-agent-sample.yaml — the `setup_requirements:` block lists everything you'll need.
+1) Read solutions/security-triage-agent-sample/agents/security-triage-agent-sample.yaml — the `setup_actions:` block lists the agent-level setup, and each atomic tool/routine template carries its own setup actions.
 2) Pack it: uv run scripts/sample_tool.py pack solutions/security-triage-agent-sample
 3) Upload the generated tarball through the Solution import flow.
 4) After import, confirm the wrapped template and setup actions are present.
@@ -83,8 +83,8 @@ uv run scripts/sample_tool.py pack solutions/security-triage-agent-sample
 ```
 
 Upload the generated tarball through the Solution import flow. The
-imported Solution carries setup actions populated from
-`setup_requirements:` in `agents/security-triage-agent-sample.yaml`:
+imported Solution carries setup actions from the deployable
+AgentTemplate and from each standalone tool/routine template:
 
 - **Env vars** are stored per-agent (`scope: agent_env_var`), so the
   installer always has write access without needing org admin rights.

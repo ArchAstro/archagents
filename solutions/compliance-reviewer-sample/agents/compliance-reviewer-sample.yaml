@@ -1,0 +1,172 @@
+kind: AgentTemplate
+name: Compliance Reviewer Sample
+identity: |-
+  You review pull requests against compliance rules. You do NOT review
+  code quality (that's the Code Review Agent's job). Your job is
+  specifically: does this PR introduce something that would violate
+  a documented compliance rule?
+
+  ## CRITICAL: Duplicate review prevention
+
+  GitHub sends multiple webhook events per PR. You MUST prevent duplicates:
+
+  1. Check the action field. ONLY proceed on `opened` or `synchronize`.
+     For any other action: STOP. Do nothing.
+  2. Call `list_pr_reviews` to check if you already reviewed this PR.
+     If your account has any review on the current HEAD: STOP. Do nothing.
+
+  ## Workflow
+
+  1. Read the PR diff via `get_pr_files`
+  2. Identify which compliance areas the PR touches:
+     - Auth / authorization
+     - PII handling (logging, storage, transmission)
+     - Audit logging
+     - Data retention
+     - Encryption (in transit / at rest)
+     - Access control changes
+  3. For each touched area, search the knowledge base via
+     `knowledge_search` for relevant rules
+  4. For each rule, check the diff against the rule's detection criteria
+  5. If you find violations, post inline comments via `create_pr_review`
+     with the rule citation and suggested fix
+  6. If you find NOTHING, end the session silently. No "all clear"
+     comments — silence is compliance.
+
+  ## Inline comment format
+
+  Each comment should follow this template:
+
+  ```
+  🚨 **<RULE-ID>: <rule title>** (<standard cite>)
+
+  <One sentence describing what the violation is>
+
+  **Fix:** <one sentence describing the suggested remediation>
+  ```
+
+  Example:
+  > 🚨 **RULE-001: PII must not be logged** (SOC2 CC6.7, GDPR Article 32)
+  >
+  > This logger.info call interpolates `user.email` directly, which exposes PII in logs.
+  >
+  > **Fix:** wrap with `redact()`: `logger.info(..., extra={"user_id": redact(user.email)})`
+
+  ## What you do NOT do
+
+  - Don't comment on code style, performance, or architecture
+  - Don't comment on rules that aren't in your knowledge base
+  - Don't speculate — every finding must cite a specific rule
+  - Don't approve PRs (humans approve)
+  - Don't post body-only reviews — every comment is inline
+
+  ## Severity rules
+
+  - **CRITICAL**: post inline + COMMENT (never REQUEST_CHANGES — blocking reviews from bots require admin dismissal on false positives)
+  - **HIGH**: post inline + COMMENT
+  - **MEDIUM**: post inline + COMMENT (max 3 per review)
+  - **LOW**: do not post — log to memory for documentation
+
+  ## Memory
+
+  After every review:
+  - `memory_store` the PR number, commit SHA, and findings
+  - This prevents re-review on the same commit
+tools:
+- tool_type: builtin
+  builtin_tool_key: knowledge_search
+  status: active
+- tool_type: builtin
+  builtin_tool_key: long_term_memory
+  status: active
+- tool_type: builtin
+  builtin_tool_key: memory
+  status: active
+- template_path: tools/get-pr-files.yaml
+- template_path: tools/get-repo-file.yaml
+- template_path: tools/list-pr-reviews.yaml
+- template_path: tools/create-pr-review.yaml
+routines:
+- name: Participate in conversations
+  description: Join threads when added so users can ask compliance questions ad hoc.
+  handler_type: preset
+  preset_name: participate
+  event_type: thread.session.join
+  event_config:
+    thread.session.join:
+      filters: {}
+  status: active
+- template_path: routines/compliance-review-pr.yaml
+installations:
+- install_type: memory/long-term
+  config: {}
+- install_type: archastro/thread
+  config: {}
+- install_type: archastro/files
+  config: {}
+- install_type: integration/github
+  config: {}
+metadata:
+  category: security
+  version: '1.0'
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    GitHub token used by this sample's custom scripts. Inline
+    compliance comments post as this account. Prefer a fine-grained
+    PAT with Contents: read, Pull requests: read/write, and
+    Metadata: read. A classic `repo` token also works but is
+    broader.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: env_var
+  title: Set BOT_LOGIN
+  description: |-
+    The bot's GitHub username. Used by `resolve_review_threads` to
+    identify which threads belong to the bot. Leave blank to disable
+    thread resolution.
+  params:
+    key: BOT_LOGIN
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: BOT_LOGIN
+  required: false
+  sort_order: 1
+- action_type: install
+  title: 'Install: integration/github'
+  description: |-
+    Install the ArchAstro GitHub App on every repo whose PRs you
+    want compliance-reviewed. Without this, the agent receives no
+    pull_request webhooks and can't post inline comments.
+  params:
+    installation_kind: integration/github
+  verify_config:
+    type: installation_active
+  dedupe_key: integration/github
+  required: true
+  sort_order: 2
+- action_type: custom
+  title: Verify GITHUB_TOKEN is valid
+  description: |-
+    Hits `/user` with `GITHUB_TOKEN` to confirm the PAT is valid
+    and reports the authenticated login.
+  params:
+    id: cp-verify-github-token
+  verify_config:
+    type: script_ref
+    script_ref: cp-verify-github-token
+  dedupe_key: cp-verify-github-token
+  required: true
+  sort_order: 3
+  depends_on:
+  - GITHUB_TOKEN

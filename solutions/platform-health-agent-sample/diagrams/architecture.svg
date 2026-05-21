@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+  <title id="title">Platform Health Agent Sample architecture</title>
+  <desc id="desc">Solution bundle with setup actions, agent template, tools, routines, and outputs.</desc>
+  <rect width="960" height="420" fill="#f8fafc"/>
+  <rect x="42" y="42" width="876" height="336" rx="18" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="80" y="92" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#111827">Platform Health Agent Sample</text>
+  <text x="80" y="124" font-family="Inter, Arial, sans-serif" font-size="15" fill="#475569">Catalog Solution bundle</text>
+  <g font-family="Inter, Arial, sans-serif" font-size="16" fill="#111827">
+    <rect x="80" y="172" width="200" height="92" rx="10" fill="#ecfeff" stroke="#0891b2"/>
+    <text x="108" y="212" font-weight="700">Setup actions</text>
+    <text x="108" y="238" fill="#475569">env vars, installs, checks</text>
+    <rect x="380" y="152" width="220" height="132" rx="10" fill="#f0fdf4" stroke="#16a34a"/>
+    <text x="416" y="202" font-weight="700">AgentTemplate</text>
+    <text x="416" y="228" fill="#475569">agents/platform-health-agent-sample.yaml</text>
+    <rect x="700" y="132" width="180" height="76" rx="10" fill="#fff7ed" stroke="#ea580c"/>
+    <text x="728" y="164" font-weight="700">builtin tools</text>
+    <text x="728" y="188" fill="#475569">standalone library rows</text>
+    <rect x="700" y="246" width="180" height="76" rx="10" fill="#f5f3ff" stroke="#7c3aed"/>
+    <text x="728" y="278" font-weight="700">5 routine templates</text>
+    <text x="728" y="302" fill="#475569">event handlers</text>
+  </g>
+  <g stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)">
+    <path d="M280 218 H372"/>
+    <path d="M600 198 C638 184 652 170 690 170"/>
+    <path d="M600 238 C638 252 652 284 690 284"/>
+  </g>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+  </defs>
+</svg>

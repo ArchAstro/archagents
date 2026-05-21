@@ -1,0 +1,59 @@
+kind: AgentToolTemplate
+lookup_key: rn-tool-list-merged-prs
+tool_type: custom
+name: list_merged_prs
+description: List PRs merged into a base branch in the last N days
+parameters:
+  type: object
+  properties:
+    owner:
+      type: string
+    repo:
+      type: string
+    base:
+      type: string
+      default: main
+    days:
+      type: integer
+      default: 7
+    per_page:
+      type: integer
+      default: 50
+  required:
+  - owner
+  - repo
+handler_type: script
+config_ref: list-merged-prs
+status: active
+display_name: List Merged PRs
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    GitHub token used by this sample's custom scripts to list merged
+    PRs and create draft issues. Prefer a fine-grained PAT with Pull
+    requests: read, Issues: read/write, and Metadata: read. A
+    classic `repo` token also works but is broader.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: install
+  title: 'Install: integration/github'
+  description: |-
+    Install the ArchAstro GitHub App on `REPO_OWNER/REPO_NAME`.
+    Without this, the repo is not enabled for ArchAgents GitHub
+    integration events and tools.
+  params:
+    installation_kind: integration/github
+  verify_config:
+    type: installation_active
+  dedupe_key: integration/github
+  required: true
+  sort_order: 4

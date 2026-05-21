@@ -1,0 +1,56 @@
+kind: AgentToolTemplate
+lookup_key: coc-tool-get-repo-file
+tool_type: custom
+name: get_repo_file
+description: Read a file from your private GitHub repository (internal use only — content goes into your reasoning context, not the chat)
+parameters:
+  type: object
+  properties:
+    owner:
+      type: string
+    repo:
+      type: string
+    path:
+      type: string
+    ref:
+      type: string
+  required:
+  - owner
+  - repo
+  - path
+handler_type: script
+config_ref: cx-get-repo-file
+status: active
+display_name: Get Repo File
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    GitHub token used by this sample's custom scripts to read code,
+    create branches, commit files, and open PRs. Prefer a
+    fine-grained PAT with Contents: read/write, Pull requests:
+    read/write, and Metadata: read. A classic `repo` token also
+    works but is broader.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: install
+  title: 'Install: integration/github'
+  description: |-
+    Install the ArchAstro GitHub App on `REPO_OWNER/REPO_NAME`.
+    Without this, the agent can't read the source it's supposed to
+    collaborate on or open PRs with implementation.
+  params:
+    installation_kind: integration/github
+  verify_config:
+    type: installation_active
+  dedupe_key: integration/github
+  required: true
+  sort_order: 4

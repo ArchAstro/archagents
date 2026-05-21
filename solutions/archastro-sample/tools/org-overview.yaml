@@ -1,0 +1,20 @@
+kind: AgentToolTemplate
+lookup_key: arc-tool-org-overview
+tool_type: custom
+name: org_overview
+description: |-
+  Return a brief of all peer agents in this org: handle, name, and first
+  sentence of identity. Call this once per conversation, typically on turn
+  1, to establish team context.
+parameters:
+  type: object
+  properties:
+    self_handle:
+      type: string
+      description: Optional handle for the calling agent so it can be filtered out of the roster.
+  required: []
+handler_type: script
+config_ref: org-overview
+status: active
+display_name: Org Overview
+setup_actions: []

@@ -1,0 +1,62 @@
+kind: AgentToolTemplate
+lookup_key: coc-tool-create-pull-request
+tool_type: custom
+name: create_pull_request
+description: Open a pull request from a branch
+parameters:
+  type: object
+  properties:
+    owner:
+      type: string
+    repo:
+      type: string
+    title:
+      type: string
+    body:
+      type: string
+    head:
+      type: string
+    base:
+      type: string
+      default: main
+  required:
+  - owner
+  - repo
+  - title
+  - head
+handler_type: script
+config_ref: cx-create-pull-request
+status: active
+display_name: Create Pull Request
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    GitHub token used by this sample's custom scripts to read code,
+    create branches, commit files, and open PRs. Prefer a
+    fine-grained PAT with Contents: read/write, Pull requests:
+    read/write, and Metadata: read. A classic `repo` token also
+    works but is broader.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: install
+  title: 'Install: integration/github'
+  description: |-
+    Install the ArchAstro GitHub App on `REPO_OWNER/REPO_NAME`.
+    Without this, the agent can't read the source it's supposed to
+    collaborate on or open PRs with implementation.
+  params:
+    installation_kind: integration/github
+  verify_config:
+    type: installation_active
+  dedupe_key: integration/github
+  required: true
+  sort_order: 4

@@ -1,0 +1,50 @@
+kind: Solution
+lookup_key: cross-org-collab-agent-sample-solution
+solution_id: 5e456ce8-870f-4a97-b95b-0e38ebf0537e
+solution_version: v0.3.3
+name: Cross-Org Collaboration Agent Sample
+description: A code-aware engineering agent that participates in cross-org threads with field guards enforced.
+category_keys:
+- engineering
+- sample
+tag_keys:
+- collaboration
+- github
+- field-guards
+- sample
+readme: |-
+  # Cross-Org Collaboration Agent Sample
+
+  A code-aware engineering agent that participates in cross-org threads with field guards enforced.
+
+  ## Architecture
+
+  ![Architecture overview](diagrams/architecture.svg)
+
+  ## What it ships
+
+  - Deployable agent template under `agents/cross-org-collab-agent-sample.yaml`
+  - 4 standalone custom tool template(s) under `tools/`
+  - Setup actions embedded directly on the agent and atomic templates
+
+  ## Validate/import
+
+  ```sh
+  uv run scripts/sample_tool.py pack solutions/cross-org-collab-agent-sample
+  ```
+assets:
+- asset_path: diagrams/architecture.svg
+templates:
+- template_path: agents/cross-org-collab-agent-sample.yaml
+  readme_path: agents/cross-org-collab-agent-sample.md
+- template_path: tools/get-repo-file.yaml
+  readme_path: tools/get-repo-file.md
+- template_path: tools/create-branch.yaml
+  readme_path: tools/create-branch.md
+- template_path: tools/commit-file.yaml
+  readme_path: tools/commit-file.md
+- template_path: tools/create-pull-request.yaml
+  readme_path: tools/create-pull-request.md
+metadata:
+  category: engineering
+  sample_slug: cross-org-collab-agent-sample

@@ -1,0 +1,49 @@
+kind: Solution
+lookup_key: release-notes-bot-sample-solution
+solution_id: 9cce8e4e-6137-453f-bb5d-89dac45ec67d
+solution_version: v0.3.4
+name: Release Notes Bot Sample
+description: Drafts the weekly changelog by scanning merged PRs on a schedule.
+category_keys:
+- engineering
+- sample
+tag_keys:
+- release-notes
+- github
+- changelog
+- sample
+readme: |-
+  # Release Notes Bot Sample
+
+  Drafts the weekly changelog by scanning merged PRs on a schedule.
+
+  ## Architecture
+
+  ![Architecture overview](diagrams/architecture.svg)
+
+  ## What it ships
+
+  - Deployable agent template under `agents/release-notes-bot-sample.yaml`
+  - 2 standalone custom tool template(s) under `tools/`
+  - 1 standalone routine template(s) under `routines/`
+  - Setup actions embedded directly on the agent and atomic templates
+
+  ## Validate/import
+
+  ```sh
+  uv run scripts/sample_tool.py pack solutions/release-notes-bot-sample
+  ```
+assets:
+- asset_path: diagrams/architecture.svg
+templates:
+- template_path: agents/release-notes-bot-sample.yaml
+  readme_path: agents/release-notes-bot-sample.md
+- template_path: tools/list-merged-prs.yaml
+  readme_path: tools/list-merged-prs.md
+- template_path: tools/create-github-issue.yaml
+  readme_path: tools/create-github-issue.md
+- template_path: routines/weekly-release-notes.yaml
+  readme_path: routines/weekly-release-notes.md
+metadata:
+  category: engineering
+  sample_slug: release-notes-bot-sample

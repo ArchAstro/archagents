@@ -1,0 +1,100 @@
+kind: AgentRoutineTemplate
+lookup_key: rn-routine-weekly-release-notes
+name: weekly-release-notes
+description: Draft a weekly changelog from merged PRs
+handler_type: preset
+preset_name: do_task
+event_type: schedule.cron
+schedule: 0 10 * * 1
+preset_instructions: |-
+  Generate this week's release notes draft.
+
+  1. Call list_merged_prs with days=7
+  2. Group and categorize per the workflow in your identity
+  3. File the draft via create_github_issue with labels [release-notes, draft]
+  4. memory_store the date range
+status: active
+display_name: Weekly Release Notes
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    GitHub token used by this sample's custom scripts to list merged
+    PRs and create draft issues. Prefer a fine-grained PAT with Pull
+    requests: read, Issues: read/write, and Metadata: read. A
+    classic `repo` token also works but is broader.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: env_var
+  title: Set REPO_OWNER
+  description: GitHub org/user that owns the repo to draft notes for.
+  params:
+    key: REPO_OWNER
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: REPO_OWNER
+  required: true
+  sort_order: 1
+- action_type: env_var
+  title: Set REPO_NAME
+  description: Repo name to scan for merged PRs and to file the draft issue in.
+  params:
+    key: REPO_NAME
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: REPO_NAME
+  required: true
+  sort_order: 2
+- action_type: env_var
+  title: Set RELEASE_BRANCH
+  description: |-
+    Branch to track for "merged" PRs. Defaults to `main` if unset.
+  params:
+    key: RELEASE_BRANCH
+    scope: agent_env_var
+  verify_config:
+    type: secret_present
+  dedupe_key: RELEASE_BRANCH
+  required: true
+  sort_order: 3
+- action_type: install
+  title: 'Install: integration/github'
+  description: |-
+    Install the ArchAstro GitHub App on `REPO_OWNER/REPO_NAME`.
+    Without this, the repo is not enabled for ArchAgents GitHub
+    integration events and tools.
+  params:
+    installation_kind: integration/github
+  verify_config:
+    type: installation_active
+  dedupe_key: integration/github
+  required: true
+  sort_order: 4
+- action_type: custom
+  title: Verify the bot can read merged PRs
+  description: |-
+    Hits `/repos/{REPO_OWNER}/{REPO_NAME}/pulls?state=closed&base={RELEASE_BRANCH}`
+    with `GITHUB_TOKEN` to confirm the bot can list merged PRs on
+    the configured branch.
+  params:
+    id: verify-merged-prs-readable
+  verify_config:
+    type: script_ref
+    script_ref: verify-merged-prs-readable
+  dedupe_key: verify-merged-prs-readable
+  required: true
+  sort_order: 5
+  depends_on:
+  - GITHUB_TOKEN
+  - REPO_OWNER
+  - REPO_NAME

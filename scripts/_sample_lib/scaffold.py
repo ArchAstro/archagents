@@ -141,7 +141,7 @@ def _agent_yaml(slug: str, name: str, with_solution: bool = False) -> str:
         "\n"
         "# Post-install checklist. Drop entries in here as you add env vars,\n"
         "# integrations, or custom verifier scripts the user must wire up\n"
-        "# before the agent can run. See agents/code-review-agent/agent.yaml\n"
+        "# before the agent can run. See solutions/code-review-agent-sample/agents/code-review-agent-sample.yaml\n"
         "# for env_var / install / custom examples.\n"
         "setup_requirements: []\n"
         "\n"

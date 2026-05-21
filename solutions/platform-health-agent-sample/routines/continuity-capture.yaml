@@ -1,0 +1,17 @@
+kind: AgentRoutineTemplate
+lookup_key: ph-routine-continuity-capture
+name: Continuity Capture
+description: |-
+  Captures the trailing `<summary>...</summary>` block from agent
+  responses on monitored threads and writes it to `storage` (3-day TTL)
+  under a per-thread key. Tomorrow's prompter reads the matching key
+  as continuity context. Branches by `thread.key` so the daily report
+  and 5xx digest share one capture script.
+handler_type: script
+config_ref: ph-capture
+event_type: thread.message_added
+event_config:
+  thread.message_added: {}
+status: active
+display_name: Continuity Capture
+setup_actions: []

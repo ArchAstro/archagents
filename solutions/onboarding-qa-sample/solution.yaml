@@ -1,0 +1,41 @@
+kind: Solution
+lookup_key: onboarding-qa-sample-solution
+solution_id: 2f2b08cf-8258-4d3c-a231-0debcb174cbb
+solution_version: v0.3.2
+name: Onboarding Q&A Sample
+description: Answers new-hire questions about how things work at the company.
+category_keys:
+- onboarding
+- sample
+tag_keys:
+- onboarding
+- knowledge
+- qa
+- sample
+readme: |-
+  # Onboarding Q&A Sample
+
+  Answers new-hire questions about how things work at the company.
+
+  ## Architecture
+
+  ![Architecture overview](diagrams/architecture.svg)
+
+  ## What it ships
+
+  - Deployable agent template under `agents/onboarding-qa-sample.yaml`
+  - Setup actions embedded directly on the agent and atomic templates
+
+  ## Validate/import
+
+  ```sh
+  uv run scripts/sample_tool.py pack solutions/onboarding-qa-sample
+  ```
+assets:
+- asset_path: diagrams/architecture.svg
+templates:
+- template_path: agents/onboarding-qa-sample.yaml
+  readme_path: agents/onboarding-qa-sample.md
+metadata:
+  category: onboarding
+  sample_slug: onboarding-qa-sample

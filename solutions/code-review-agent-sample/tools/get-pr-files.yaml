@@ -1,0 +1,68 @@
+kind: AgentToolTemplate
+lookup_key: cr-tool-get-pr-files
+tool_type: custom
+name: get_pr_files
+description: Get the list of files changed in a pull request with diff patches
+parameters:
+  type: object
+  properties:
+    owner:
+      type: string
+    repo:
+      type: string
+    pull_number:
+      type: integer
+  required:
+  - owner
+  - repo
+  - pull_number
+handler_type: script
+config_ref: cr-get-pr-files
+status: active
+display_name: Get PR Files
+setup_actions:
+- action_type: env_var
+  title: Set GITHUB_TOKEN
+  description: |-
+    GitHub token used by this sample's custom scripts. Inline
+    review comments post as this account. Prefer a fine-grained PAT
+    with Contents: read, Pull requests: read/write, and Metadata:
+    read. A classic `repo` token also works but is broader.
+  params:
+    key: GITHUB_TOKEN
+    scope: agent_env_var
+    secret: true
+    example: ghp_xxxxxxxxxxxx
+  verify_config:
+    type: secret_present
+  dedupe_key: GITHUB_TOKEN
+  required: true
+  sort_order: 0
+- action_type: install
+  title: 'Install: integration/github'
+  description: |-
+    Install the ArchAstro GitHub App on every repo whose PRs you
+    want reviewed. Without this, the agent receives no pull_request
+    webhooks and can't post inline comments.
+  params:
+    installation_kind: integration/github
+  verify_config:
+    type: installation_active
+  dedupe_key: integration/github
+  required: true
+  sort_order: 2
+- action_type: custom
+  title: Verify GITHUB_TOKEN is valid
+  description: |-
+    Hits `/user` with `GITHUB_TOKEN` to confirm the PAT is valid
+    and reports the authenticated login.
+  params:
+    id: cr-verify-github-token
+  verify_config:
+    type: script_ref
+    script_ref: cr-verify-github-token
+  dedupe_key: cr-verify-github-token
+  required: true
+  sort_order: 3
+  depends_on:
+  - GITHUB_TOKEN
