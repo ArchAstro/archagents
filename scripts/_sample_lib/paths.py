@@ -164,6 +164,15 @@ SETUP_ACTIONS_KINDS = frozenset(
 # which loses acronym casing.
 DISPLAY_NAME_REQUIRED_KINDS = frozenset({"AgentToolTemplate", "AgentRoutineTemplate"})
 
+# Template kinds that should carry their own catalog-facing summary.
+# Tool and routine templates already ship descriptions as part of
+# their standalone library rows; AgentTemplate now follows the same
+# rule so onboarding/library views can explain the specific agent
+# before a user opens the full prompt.
+TEMPLATE_DESCRIPTION_REQUIRED_KINDS = frozenset(
+    {"AgentTemplate", "AgentToolTemplate", "AgentRoutineTemplate"}
+)
+
 
 def display_path(path: pathlib.Path) -> str:
     """Render `path` relative to REPO_ROOT when possible (cleaner errors in CI)."""

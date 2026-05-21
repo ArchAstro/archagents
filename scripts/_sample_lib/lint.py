@@ -12,6 +12,9 @@ Warnings cover:
   * solution.yaml `description` (catalog tagline) and either inline
     `readme:` or per-template `readme_path:` so the inspector renders
     long-form copy instead of a fallback placeholder.
+  * AgentTemplate / AgentToolTemplate / AgentRoutineTemplate
+    `description` so every standalone library row explains what that
+    specific template does.
   * Sample dir root README.md so the GitHub view + the sample-source
     explorer have something to render.
 
@@ -27,7 +30,12 @@ from typing import Any
 
 import yaml
 
-from .paths import REPO_ROOT, SAMPLE_ROOTS, display_path
+from .paths import (
+    REPO_ROOT,
+    SAMPLE_ROOTS,
+    TEMPLATE_DESCRIPTION_REQUIRED_KINDS,
+    display_path,
+)
 
 
 @dataclass(frozen=True)
@@ -116,7 +124,35 @@ def _lint_sample(sample_dir: pathlib.Path) -> list[LintWarning]:
     sol_path = sample_dir / "solution.yaml"
     if sol_path.is_file():
         warnings.extend(_lint_solution(slug, sample_dir, sol_path))
+    warnings.extend(_lint_deploy_agent_template(slug, sample_dir))
 
+    return warnings
+
+
+def _lint_deploy_agent_template(
+    slug: str, sample_dir: pathlib.Path
+) -> list[LintWarning]:
+    sample_yaml = sample_dir / "sample.yaml"
+    try:
+        raw = yaml.safe_load(sample_yaml.read_text())
+    except (OSError, yaml.YAMLError):
+        return []
+    if not isinstance(raw, dict):
+        return []
+
+    warnings: list[LintWarning] = []
+    steps = raw.get("steps")
+    if not isinstance(steps, list):
+        return warnings
+    for step in steps:
+        if not isinstance(step, dict) or step.get("type") != "deploy_agent":
+            continue
+        template_file = step.get("template_file")
+        if not isinstance(template_file, str) or not template_file.strip():
+            continue
+        template_path = sample_dir / template_file
+        if template_path.is_file():
+            warnings.extend(_lint_template_description(slug, template_path))
     return warnings
 
 
@@ -206,6 +242,11 @@ def _lint_solution(
                 )
             )
 
+    for entry in template_entries:
+        template_path = _resolve_template_entry(sample_dir, entry)
+        if template_path is not None:
+            warnings.extend(_lint_template_description(slug, template_path))
+
     return warnings
 
 
@@ -224,6 +265,56 @@ def _entry_has_readme(entry: Any) -> bool:
     if not isinstance(entry, dict):
         return False
     return _has_non_empty_string(entry.get("readme_path"))
+
+
+def _resolve_template_entry(
+    sample_dir: pathlib.Path, entry: Any
+) -> pathlib.Path | None:
+    if not isinstance(entry, dict):
+        return None
+    template_path = entry.get("template_path")
+    if isinstance(template_path, str) and template_path.strip():
+        candidate = sample_dir / template_path
+        return candidate if candidate.is_file() else None
+
+    template_ref = entry.get("template_ref")
+    if isinstance(template_ref, str) and template_ref.strip():
+        agents_dir = sample_dir / "agents"
+        if not agents_dir.is_dir():
+            return None
+        matches = [
+            path
+            for path in agents_dir.rglob("*.yaml")
+            if path.stem == template_ref
+        ]
+        if len(matches) == 1:
+            return matches[0]
+    return None
+
+
+def _lint_template_description(
+    slug: str, template_path: pathlib.Path
+) -> list[LintWarning]:
+    try:
+        raw = yaml.safe_load(template_path.read_text())
+    except yaml.YAMLError:
+        return []
+    if not isinstance(raw, dict):
+        return []
+
+    kind = raw.get("kind")
+    if kind not in TEMPLATE_DESCRIPTION_REQUIRED_KINDS:
+        return []
+    if _has_non_empty_string(raw.get("description")):
+        return []
+    return [
+        LintWarning(
+            slug,
+            display_path(template_path),
+            f"`description:` is empty or missing — {kind} templates "
+            f"need a concise summary of what that specific template does.",
+        )
+    ]
 
 
 def _has_non_empty_list(value: Any) -> bool:
