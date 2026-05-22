@@ -17,15 +17,13 @@ Deploy the Cross-Org Collaboration Agent from this repo.
 8) Show me the result.
 ```
 
-> 🛡️ **Privacy by construction.** A code-aware engineering agent that
+> **Privacy by construction.** A code-aware engineering agent that
 > can collaborate with external partners across organization boundaries
 > WITHOUT leaking your source code, secrets, or implementation details.
 
-This is the showpiece sample. It demonstrates the strongest privacy
-pattern available on the ArchAgents platform: a single agent that
-participates directly in cross-org threads, with **multi-layer field
-guards** that block leakage at the model output level — no separate
-gateway, no message relay, no post-hoc scanning.
+A single agent that participates directly in cross-org threads, with
+**multi-layer field guards** that block leakage at the model output
+level — no separate gateway, no message relay, no post-hoc scanning.
 
 ## What it does
 
@@ -49,7 +47,8 @@ But it **cannot** share:
 ## How the privacy enforcement works
 
 The agent's responses are constrained by an `AgentMessageSchema` with
-**5 layers of field guards**:
+**a 6-step output pipeline — one structuring step plus five active
+field guards**:
 
 ```
 Agent generates response
@@ -114,8 +113,8 @@ The two LLM judges intentionally use **different model families**:
 
 A prompt injection that exploits Claude's specific quirks won't
 generalize to GPT, and vice versa. To bypass the agent, an attacker
-would need to simultaneously fool the agent's primary model AND
-both judges from different vendors. Significantly harder than
+would need to simultaneously fool the agent's primary model and
+both judges from different vendors — significantly harder than
 fooling a single model.
 
 ## Setup
@@ -197,7 +196,7 @@ cross-org-collab-agent/
 ├── agent.yaml
 ├── env.example
 ├── schemas/
-│   └── cross-org-hardened.yaml      # The 5-layer field guard schema
+│   └── cross-org-hardened.yaml      # Structured-output schema + 5 field guards
 ├── scripts/
 │   ├── get_repo_file.aascript
 │   ├── create_branch.aascript

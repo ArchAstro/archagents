@@ -14,11 +14,11 @@ command installs the whole thing.
 | [code-review-agent](code-review-agent) | Reviews every PR, posts inline comments anchored to specific lines |
 | [compliance-reviewer](compliance-reviewer) | Reviews PRs against SOC2 / GDPR / your custom compliance rules |
 | [cross-org-collab-agent](cross-org-collab-agent) | Privacy by construction — multi-layer field guards for cross-org threads |
-| [fde-agent](fde-agent) | Generic Forward Deployed Engineer base agent for customers to specialize with their own docs and knowledge |
+| [fde-agent](fde-agent) | Forward Deployed Engineer agent — runs a discovery → implementation → validation → handoff playbook, specialized with your project knowledge |
 | [onboarding-qa](onboarding-qa) | Answers new-hire questions from your knowledge base |
 | [platform-health-agent](platform-health-agent) | Daily report on repo health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack |
 | [release-notes-bot](release-notes-bot) | Watches merged PRs weekly, drafts changelog as a GitHub issue |
-| [security-triage-agent](security-triage-agent) | Daily dependency scan, auto-fix simple CVEs, escalate the rest |
+| [security-triage-agent-sample](../solutions/security-triage-agent-sample) | Daily dependency scan, auto-fix simple CVEs, escalate the rest (ships as a Solution bundle — see `solutions/`) |
 | [threat-intel-agent](threat-intel-agent) | Daily security brief from HN + GitHub Advisories + your dependency exposure |
 
 ## Quick start
@@ -35,10 +35,10 @@ archagent install agentsample code-review-agent
 ```
 
 `install agentsample <slug>` fetches the sample's release tarball,
-parses its `sample.yaml`'s `steps:` block, and runs every step
+reads the `steps:` block from its `sample.yaml`, and runs every step
 (scripts upload, skills upload, agent create, knowledge ingest) in
-one pass. Nothing lands on your disk — the sample deploys straight
-to your app.
+one pass. The sample deploys directly to your app; nothing is written
+to disk.
 
 Most samples have a few setup actions to finish after install
 (agent-scoped env vars, GitHub App installs, Slack bot installs,
@@ -66,14 +66,14 @@ Every sample follows the same layout:
 ```
 agent-name/
   README.md        — what it does, how to configure it
-  agent.yaml       — the AgentTemplate (identity, tools, routines, installations)
-  sample.yaml      — catalog metadata + the `steps:` block that drives deploy
-  env.example      — local reference for required agent environment variables
-  scripts/         — custom ArchAstro scripts, including GitHub API calls
+  agent.yaml       — the agent config (identity, tools, routines, integrations)
+  sample.yaml      — catalog metadata + install steps
+  env.example      — required env vars
+  scripts/         — custom scripts (GitHub API calls and similar)
   skills/          — (some samples) markdown skills the agent loads on demand
-  schemas/         — (some samples) message-schema configs referenced by agent.yaml
-  rules/           — (compliance-reviewer) markdown rules uploaded as knowledge
-  knowledge/       — (onboarding-qa) markdown docs seeded into the knowledge base
+  schemas/         — (some samples) message schemas referenced by agent.yaml
+  rules/           — (compliance-reviewer) markdown rules used as knowledge
+  knowledge/       — (onboarding-qa) seed markdown docs
   examples/        — sample output so you know what to expect
 ```
 
@@ -105,7 +105,7 @@ and action.
 
 ```bash
 archagent install agentsample threat-intel-agent
-archagent install agentsample security-triage-agent
+archagent install agentsample security-triage-agent-sample
 # Daily brief at 07:00 UTC, dependency scan at 08:00 UTC
 ```
 

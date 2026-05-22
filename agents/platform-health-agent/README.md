@@ -17,7 +17,7 @@ Deploy the Platform Health Agent from this repo.
 8) Show me the result.
 ```
 
-> 🩺 **A scheduled monitoring agent that runs your daily standup, alerts on
+> **A scheduled monitoring agent that runs your daily standup, alerts on
 > GitHub events, and digests production 5xx errors — all to one Slack channel.**
 
 Three signals, one channel:
@@ -43,7 +43,7 @@ The sample makes trust assumptions you should verify before deploying:
 
 - **GitHub issue and PR titles from `MONITORED_REPO` flow into agent prompts** (event alerts, daily report, 5xx digest), whose responses are forwarded to Slack. The sample assumes contributors to the monitored repo are trusted. Public repos with anonymous issue creation are outside this model — a crafted title could attempt prompt injection. The anti-interpretation rules in the prompts are LLM-level guards, not deterministic filters.
 - **`SLACK_OUTPUT_CHANNEL` audience** sees issue titles, PR titles, exception class signatures, and PR author handles unredacted. Pick a channel whose audience matches.
-- **GitHub auth — two paths.** **Reads** (issue/PR fetching by scripts) use the `GITHUB_TOKEN` PAT. Recommend a fine-grained PAT (`github_pat_*`) with **read-only** access to Issues, Pull requests, and Metadata — that's all the scripts need. **Writes** (the agent posting resolution comments via `github_create_issue_comment`) go through the `enablement/github_app` install, authenticating as the ArchAstro GitHub App's installation token on `MONITORED_REPO`. The App's permissions are managed at install time on the repo. Same write path Calvin uses for PR review comments.
+- **GitHub auth — two paths.** **Reads** (issue/PR fetching by scripts) use the `GITHUB_TOKEN` PAT. Recommend a fine-grained PAT (`github_pat_*`) with **read-only** access to Issues, Pull requests, and Metadata — that's all the scripts need. **Writes** (the agent posting resolution comments via `github_create_issue_comment`) go through the `enablement/github_app` install, authenticating as the ArchAstro GitHub App's installation token on `MONITORED_REPO`. The App's permissions are managed at install time on the repo.
 - **`GCLOUD_SA_*`** needs only `roles/logging.viewer` for the 5xx digest's read-only Cloud Logging access.
 
 ## Setup
@@ -71,7 +71,7 @@ drives the rest:
 
 | Variable | What it is |
 |---|---|
-| `GITHUB_TOKEN` | Read-only PAT for script-level issue/PR fetches (a fine-grained `github_pat_*` with Issues + PRs + Metadata read access is sufficient). The agent's *write* path — posting resolution comments — goes through the `enablement/github_app` install, not this PAT. |
+| `GITHUB_TOKEN` | Read-only PAT for script-level issue/PR fetches. A fine-grained `github_pat_*` with Issues + PRs + Metadata read access is sufficient. The agent's *write* path — posting resolution comments — goes through the `enablement/github_app` install, not this PAT. |
 | `MONITORED_REPO` | `owner/name` of the repo to monitor. Webhook events from other repos are silently ignored. |
 | `SLACK_OUTPUT_CHANNEL` | Slack channel for delivery. Include the leading `#`. |
 | `GCLOUD_PROJECT_ID` | GCP project hosting the K8s cluster whose logs to scan. |
@@ -161,18 +161,16 @@ add new branches in the if/else chain that builds `prompt`.
 - **GitHub commenting via `enablement/github_app` + `integrations` builtin** —
   the `github_create_issue_comment` tool is auto-exposed at runtime when
   both are present, authenticating as the GitHub App's installation token
-  (broad write capability) instead of a PAT. Same path Calvin uses for PR
-  review comments. Avoids the PAT-scope-pitfall where read-only tokens 403
-  on every comment attempt.
+  (broad write capability) instead of a PAT. Avoids the PAT-scope-pitfall
+  where read-only tokens 403 on every comment attempt.
 - **Cloud Logging API integration via JWT-bearer SA auth** — sign a JWT,
   exchange for an access token, query `entries:list`. Same pattern as
   the security-triage-agent sample.
 - **Defensive output stripping** — `<thought>`/`<thinking>`/`<summary>` blocks
   filtered before Slack delivery; tool-call fragments and bare memory-key
   responses trigger SKIP rather than leak.
-- **Multi-routine, multi-script agent** — 7 routines (1 participate,
-  2 cron, 1 webhook, 2 thread-listener, 1 auto-memory-capture) sharing
-  5 scripts.
+- **Multi-routine, multi-script agent** — 2 cron, 1 webhook, 2
+  thread-listener routines, sharing 5 custom scripts.
 
 ## Files
 

@@ -1,7 +1,8 @@
 # FDE Agent
 
-> A production Forward Deployed Engineer agent for discovery, implementation,
-> validation, and handoff inside an agent network.
+> A Forward Deployed Engineer agent that runs a discovery → implementation
+> → validation → handoff playbook on customer threads, grounded in your
+> project's knowledge base and memory.
 
 ## Deploy with your coding agent
 
@@ -22,11 +23,28 @@ Deploy the FDE Agent from this repo.
 6) Show me the result
 ```
 
+## How it triggers
+
+The FDE agent uses a `participate` routine and joins any thread it
+is added to. Start a session with:
+
+```bash
+archagent create agentsession \
+  --agent fde-agent \
+  --instructions "Help me scope my first engagement." \
+  --wait
+```
+
+The agent has no cron routines and is not webhook-triggered.
+
 ## What this agent is
 
-This is a production Forward Deployed Engineer agent for scoped technical work
-inside an agent network. It works from the configured project context available
-in the thread, memory, knowledge base, tools, and integrations.
+An FDE agent for scoped technical engagements — discovery, implementation,
+validation, and handoff. The agent works from the project context in the
+thread, long-term memory, the knowledge base, and any configured tools and
+integrations. Specialize it for a customer by attaching their docs as
+knowledge sources; the engagement playbook is generic enough to apply to
+most workflows.
 
 ## What it does
 
@@ -71,7 +89,7 @@ first engagement.
 
 ## What this demonstrates
 
-- **Production FDE templates** - an operational agent pattern for embedded
+- **FDE engagement template** - an operational agent pattern for embedded
   discovery, implementation, and handoff work
 - **Knowledge-grounded FDE work** - configured project context is the source of truth
 - **Long-term engagement memory** - context, decisions, and handoffs

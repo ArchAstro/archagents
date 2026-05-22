@@ -1,32 +1,69 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
-  <title id="title">Release Notes Bot Sample architecture</title>
-  <desc id="desc">Solution bundle with setup actions, agent template, tools, routines, and outputs.</desc>
-  <rect width="960" height="420" fill="#f8fafc"/>
-  <rect x="42" y="42" width="876" height="336" rx="18" fill="#ffffff" stroke="#cbd5e1"/>
-  <text x="80" y="92" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#111827">Release Notes Bot Sample</text>
-  <text x="80" y="124" font-family="Inter, Arial, sans-serif" font-size="15" fill="#475569">Catalog Solution bundle</text>
-  <g font-family="Inter, Arial, sans-serif" font-size="16" fill="#111827">
-    <rect x="80" y="172" width="200" height="92" rx="10" fill="#ecfeff" stroke="#0891b2"/>
-    <text x="108" y="212" font-weight="700">Setup actions</text>
-    <text x="108" y="238" fill="#475569">env vars, installs, checks</text>
-    <rect x="380" y="152" width="220" height="132" rx="10" fill="#f0fdf4" stroke="#16a34a"/>
-    <text x="416" y="202" font-weight="700">AgentTemplate</text>
-    <text x="416" y="228" fill="#475569">agents/release-notes-bot-sample.yaml</text>
-    <rect x="700" y="132" width="180" height="76" rx="10" fill="#fff7ed" stroke="#ea580c"/>
-    <text x="728" y="164" font-weight="700">2 tool templates</text>
-    <text x="728" y="188" fill="#475569">standalone library rows</text>
-    <rect x="700" y="246" width="180" height="76" rx="10" fill="#f5f3ff" stroke="#7c3aed"/>
-    <text x="728" y="278" font-weight="700">1 routine templates</text>
-    <text x="728" y="302" fill="#475569">event handlers</text>
-  </g>
-  <g stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)">
-    <path d="M280 218 H372"/>
-    <path d="M600 198 C638 184 652 170 690 170"/>
-    <path d="M600 238 C638 252 652 284 690 284"/>
-  </g>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="-apple-system, system-ui, sans-serif" font-size="13" role="img" aria-labelledby="title desc">
+  <title id="title">Release Notes Bot Sample — Architecture</title>
+  <desc id="desc">A weekly cron routine (default Mondays at 10:00 UTC) lists merged PRs from RELEASE_BRANCH for the last 7 days, asks the agent to draft a categorized changelog, and files the draft as a GitHub issue labeled [release-notes, draft].</desc>
+  <style>
+    .box { fill: #ffffff; stroke: #4b5563; stroke-width: 1.5; rx: 6; ry: 6; }
+    .input { fill: #ecfdf5; stroke: #047857; }
+    .agent { fill: #eff6ff; stroke: #1d4ed8; }
+    .output { fill: #fef3c7; stroke: #b45309; }
+    .label { fill: #111827; }
+    .sublabel { fill: #4b5563; font-size: 11px; }
+    .arrow { fill: none; stroke: #6b7280; stroke-width: 1.5; marker-end: url(#a); }
+    .arrow-label { fill: #4b5563; font-size: 11px; font-style: italic; }
+    .title { font-size: 16px; font-weight: 600; fill: #111827; }
+    .legend-label { fill: #4b5563; font-size: 11px; }
+  </style>
   <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
     </marker>
   </defs>
+
+  <text x="360" y="28" text-anchor="middle" class="title">Release Notes Bot Sample — Architecture</text>
+
+  <rect class="box input" x="30" y="80" width="180" height="60"/>
+  <text x="120" y="105" text-anchor="middle" class="label" font-weight="600">Weekly cron</text>
+  <text x="120" y="124" text-anchor="middle" class="sublabel">0 10 * * 1 (Mondays 10:00 UTC)</text>
+
+  <rect class="box input" x="30" y="160" width="180" height="60"/>
+  <text x="120" y="185" text-anchor="middle" class="label" font-weight="600">Merged PRs</text>
+  <text x="120" y="204" text-anchor="middle" class="sublabel">last 7 days on RELEASE_BRANCH</text>
+
+  <rect class="box input" x="30" y="240" width="180" height="60"/>
+  <text x="120" y="265" text-anchor="middle" class="label" font-weight="600">Long-term memory</text>
+  <text x="120" y="284" text-anchor="middle" class="sublabel">last-run date</text>
+
+  <rect class="box agent" x="270" y="130" width="180" height="100"/>
+  <text x="360" y="158" text-anchor="middle" class="label" font-weight="600">Release Notes Bot</text>
+  <text x="360" y="180" text-anchor="middle" class="sublabel">2 tools:</text>
+  <text x="360" y="196" text-anchor="middle" class="sublabel">list_merged_prs,</text>
+  <text x="360" y="212" text-anchor="middle" class="sublabel">create_github_issue</text>
+
+  <rect class="box output" x="510" y="130" width="180" height="100"/>
+  <text x="600" y="160" text-anchor="middle" class="label" font-weight="600">Draft changelog issue</text>
+  <text x="600" y="182" text-anchor="middle" class="sublabel">categorized: features, fixes,</text>
+  <text x="600" y="198" text-anchor="middle" class="sublabel">breaking, internal</text>
+  <text x="600" y="216" text-anchor="middle" class="sublabel">labels: release-notes, draft</text>
+
+  <path class="arrow" d="M210 110 C 240 110, 240 160, 270 160"/>
+  <text x="234" y="130" class="arrow-label">fire</text>
+
+  <path class="arrow" d="M210 190 L 270 188"/>
+  <text x="240" y="180" class="arrow-label">list_merged_prs</text>
+
+  <path class="arrow" d="M210 270 C 240 270, 240 215, 270 215"/>
+  <text x="234" y="260" class="arrow-label">recall last run</text>
+
+  <path class="arrow" d="M450 180 L 510 180"/>
+  <text x="480" y="172" text-anchor="middle" class="arrow-label">file issue</text>
+
+  <g transform="translate(30, 320)">
+    <rect class="box input" x="0" y="0" width="14" height="14"/>
+    <text x="22" y="11" class="legend-label">trigger / source</text>
+    <rect class="box agent" x="130" y="0" width="14" height="14"/>
+    <text x="152" y="11" class="legend-label">agent</text>
+    <rect class="box output" x="220" y="0" width="14" height="14"/>
+    <text x="242" y="11" class="legend-label">output</text>
+  </g>
 </svg>

@@ -17,7 +17,7 @@ Deploy the Release Notes Bot from this repo.
 8) Show me the result.
 ```
 
-> 📝 **Drafts your weekly changelog from the merged PRs.**
+> **Drafts your weekly changelog from the merged PRs.**
 
 A scheduled agent that watches your merged PRs and writes a clean,
 human-readable changelog entry every week. Groups changes by type
@@ -39,7 +39,7 @@ Every Monday at 10:00 UTC:
    - Breaking changes
    - Internal/maintenance
 5. **Files the draft as a GitHub issue** with `[release-notes, draft]` labels
-6. **Stores the date range in memory** so the next run picks up where this one left off
+6. **Stores the last-run date in long-term memory** so the next run picks up where this one left off. On first run with no stored date, defaults to the previous 7 days.
 
 ## Why this beats `git log`
 

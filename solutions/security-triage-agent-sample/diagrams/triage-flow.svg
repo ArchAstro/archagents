@@ -56,12 +56,9 @@
   <path class="arrow" d="M360 198 L 360 232"/>
   <text x="378" y="220" class="arrow-label">yes</text>
 
-  <path class="arrow" d="M240 268 L 210 332"/>
-  <text x="190" y="304" text-anchor="middle" class="arrow-label">no, big change</text>
-
   <path class="arrow" d="M480 268 L 580 332"/>
-  <text x="544" y="302" text-anchor="middle" class="arrow-label">no, needs judgment</text>
+  <text x="544" y="302" text-anchor="middle" class="arrow-label">no — big change or needs judgment</text>
 
-  <path class="arrow" d="M360 288 L 360 332 L 210 372"/>
-  <text x="290" y="320" text-anchor="middle" class="arrow-label">yes</text>
+  <path class="arrow" d="M240 268 L 210 372"/>
+  <text x="200" y="320" text-anchor="middle" class="arrow-label">yes</text>
 </svg>

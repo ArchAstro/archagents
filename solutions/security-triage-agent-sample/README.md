@@ -1,30 +1,11 @@
 # Security Triage Agent Sample
 
-> This bundle lives under `solutions/security-triage-agent-sample/`.
-> The `-sample` suffix is the convention for every entry under
-> `solutions/` so the catalog makes clear "this is reference code,
-> copy + tailor it." See the top-level README for the convention.
-
-## Validate/import with your coding agent
-
-Paste this into Claude Code, Codex, or any AI coding assistant:
-
-```
-Validate and import the Security Triage Agent Sample Solution from this repo.
-
-1) Read solutions/security-triage-agent-sample/agents/security-triage-agent-sample.yaml — the `setup_actions:` block lists the agent-level setup, and each atomic tool/routine template carries its own setup actions.
-2) Pack it: uv run scripts/sample_tool.py pack solutions/security-triage-agent-sample
-3) Upload the generated tarball through the Solution import flow.
-4) After import, confirm the wrapped template and setup actions are present.
-5) Walk me through the setup actions: ask for the values they need, install integrations on prompt, and confirm each verifier turns green.
-```
-
-> 🛡️ **A senior security engineer that triages vulnerabilities, fixes what it can, and escalates the rest.**
-
-Runs daily dependency scans, classifies findings into three explicit
-outcomes (mitigated, auto-fixable, needs human attention), opens fix
-PRs for the easy ones, and files GitHub issues for everything else
-with full triage reasoning.
+Runs a daily dependency scan across your monitored repos, queries
+OSV.dev and the GitHub Advisory Database for known CVEs, and triages
+every finding into one of three explicit outcomes: an auto-fix PR, a
+GitHub issue with full reasoning, or a recorded "noise" decision in
+long-term memory. Grounds severity and remediation timelines in your
+uploaded security policies via `knowledge_search`.
 
 ## Architecture
 
@@ -76,26 +57,29 @@ classification and remediation timelines instead of guessing.
 past decisions on the same package and existing GitHub issues for the
 same CVE — so it doesn't re-file the same finding every day.
 
-## Validate/import
+## Install
 
 ```bash
 uv run scripts/sample_tool.py pack solutions/security-triage-agent-sample
 ```
 
-Upload the generated tarball through the Solution import flow. The
-imported Solution carries setup actions from the deployable
-AgentTemplate and from each standalone tool/routine template:
+Upload the generated tarball through the catalog. After install, open
+the agent in the developer portal and finish setup — fill in the env
+vars (below), install the GitHub App and Slack bot when prompted, and
+upload your security policies as knowledge sources (next section).
 
-- **Env vars** are stored per-agent (`scope: agent_env_var`), so the
-  installer always has write access without needing org admin rights.
-- **Integration installs** (GitHub App, Slack bot) link out to the
-  right install URLs.
-- **Custom verifiers** (e.g. confirming the bot can read every
-  `MONITORED_REPOS` entry) re-run on a daily sweep, so a deleted
-  secret or revoked install transitions back to `:degraded` until
-  you fix it.
+## Install with an AI coding assistant
 
-Then upload your security policy documents (see "Knowledge base setup" below).
+Paste this into Claude Code, Codex, or any AI coding assistant:
+
+```
+Install the Security Triage Agent Sample from this repo.
+
+1) Pack it: uv run scripts/sample_tool.py pack solutions/security-triage-agent-sample
+2) Upload the generated tarball through the catalog.
+3) Open the agent in the developer portal.
+4) Walk me through the "Finish setup" panel: ask for env var values, install integrations on prompt, and confirm each verifier turns green.
+```
 
 ## Required env vars
 
@@ -117,9 +101,9 @@ Optional:
 
 ## Knowledge base setup
 
-After deploying, upload your security policies via the platform's
-standard knowledge-ingestion flow. The agent's `knowledge_search`
-will index them and reference them during triage.
+After installing the agent, upload your security policies as knowledge
+sources. The agent searches them during triage and cites the relevant
+policy in its decisions.
 
 ```bash
 INSTALLATION=$(archagent list agentinstallations --agent security-triage-agent-sample -o json \
@@ -198,12 +182,12 @@ Opus. Cheaper models will produce more false positives.
 ```
 security-triage-agent-sample/
 ├── README.md
-├── sample.yaml                              # install DSL (upload_scripts + deploy_solution)
-├── solution.yaml                            # catalog wrapper (templates + assets + readme)
+├── sample.yaml                              # install steps
+├── solution.yaml                            # catalog metadata
 ├── agents/
-│   ├── security-triage-agent-sample.yaml    # deployable AgentTemplate
-│   └── security-triage-agent-sample.md      # per-template README rendered in Library inspector
-├── tools/                                   # standalone-installable AgentToolTemplate library rows
+│   ├── security-triage-agent-sample.yaml    # the agent config
+│   └── security-triage-agent-sample.md      # in-product README
+├── tools/                                   # 9 tool definitions
 │   ├── query-osv.{yaml,md}
 │   ├── query-github-advisories.{yaml,md}
 │   ├── scan-dependencies.{yaml,md}
@@ -213,11 +197,11 @@ security-triage-agent-sample/
 │   ├── create-pull-request.{yaml,md}
 │   ├── create-github-issue.{yaml,md}
 │   └── query-gcloud-logs.{yaml,md}
-├── routines/                                # standalone-installable AgentRoutineTemplate library rows
+├── routines/                                # 3 routines
 │   ├── daily-dependency-scan.{yaml,md}
 │   ├── hourly-log-analysis.{yaml,md}
 │   └── pr-review.{yaml,md}
-├── scripts/                                 # st-* prefixed to disambiguate from tool lookup_keys
+├── scripts/                                 # tool implementations
 │   ├── st-query-osv.aascript
 │   ├── st-query-github-advisories.aascript
 │   ├── st-scan-dependencies.aascript
@@ -229,8 +213,8 @@ security-triage-agent-sample/
 │   ├── st-query-gcloud-logs.aascript
 │   └── st-verify-monitored-repos-access.aascript
 ├── diagrams/
-│   ├── architecture.svg                     # rendered in README + Solution catalog
-│   └── triage-flow.svg                      # solution.yaml refs both via asset_path
+│   ├── architecture.svg
+│   └── triage-flow.svg
 ├── env.example
 ├── examples/
 │   └── sample-scan.md

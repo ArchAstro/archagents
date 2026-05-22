@@ -17,7 +17,7 @@ Deploy the Compliance Reviewer Agent from this repo.
 8) Show me the result.
 ```
 
-> ⚖️ **Reviews every PR against your compliance rules.** SOC2, GDPR,
+> **Reviews every PR against your compliance rules.** SOC2, GDPR,
 > HIPAA, internal data handling policies — define the rules once,
 > the agent enforces them on every change.
 
@@ -55,8 +55,8 @@ When a PR opens:
 - **Different model** — strict rule-following benefits from a
   smaller, faster model than open-ended code review
 
-You run BOTH on the same PRs. your code-review bot reviews the code, the Compliance
-Reviewer reviews the rules.
+Deploy both on the same repo. The Code Review Agent reviews code
+quality; the Compliance Reviewer checks the rules.
 
 ## Setup
 

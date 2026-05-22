@@ -17,11 +17,17 @@ Deploy the Onboarding Q&A Agent from this repo.
 8) Show me the result.
 ```
 
-> 🎓 **The new-hire question answerer that doesn't get tired.**
+> Answers new-hire questions from a knowledge base of your company's
+> docs, runbooks, and policies. Searches semantically via
+> `knowledge_search`, cites the source doc on every answer, and
+> admits when it doesn't know.
 
-Drops your company's docs, runbooks, and policies into a knowledge
-base and answers new employees' questions about how things work.
-Searches semantically, cites sources, and admits when it doesn't know.
+## How it triggers
+
+The agent runs a `participate` routine and joins any thread it is
+added to. To enable Slack delivery, install `integration/slack_bot`
+and add a routine that fires on `webhook.slack.app_mention` (see
+Customization below).
 
 ## What it does
 
@@ -138,9 +144,10 @@ To make this a Slack bot, install the `integration/slack_bot` and add
 a routine that fires on `webhook.slack.app_mention`.
 
 ### Different knowledge sources
-The shipped agent uses uploaded files. You can also add `web/site`
-sources to ingest live docs (Confluence, Notion, GitHub wiki) when
-the platform's web ingestion is more reliable.
+The shipped agent uses uploaded files. To ingest live docs from
+Confluence, Notion, or a GitHub wiki, add a `web/site` source. File
+upload is the recommended path for production rollouts; the web
+ingestion path is in beta.
 
 ## What this demonstrates
 

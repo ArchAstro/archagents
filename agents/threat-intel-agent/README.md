@@ -17,7 +17,9 @@ Deploy the Threat Intelligence Agent from this repo.
 8) Show me the result.
 ```
 
-> 📰 **Your daily security analyst.** Reads HN, GitHub Advisories, and the major CVE feeds every morning. Tells you only what matters to YOUR stack.
+> **A daily security brief from monitored feeds.** Reads HN, GitHub
+> Advisories, and the major CVE feeds every morning, then cross-
+> references against your stack so you only see what matters.
 
 A focused agent that runs once a day and produces a curated threat
 intelligence brief. No noise, no daily 50-CVE dumps — just the things
@@ -51,7 +53,7 @@ Most teams learn about security incidents the wrong way:
 The Threat Intel Agent solves this by being **selective and contextual**:
 
 - **Selective** — uses HN points + GitHub severity to filter signal from noise
-- **Contextual** — reads YOUR lockfiles to determine if you're actually exposed
+- **Contextual** — reads YOUR dependency manifests to determine if you're actually exposed
 - **Persistent** — past decisions live in long-term memory, so day 30 says
   "this is the 4th SSRF in the LLM proxy ecosystem this quarter"
 - **Actionable** — every direct exposure becomes a GitHub issue with recommendations
@@ -131,9 +133,18 @@ Full brief: https://github.com/your-org/your-repo/issues/3606
 ## Customization
 
 ### Different ecosystems
-The shipped agent watches `hex` and `npm`. To add more, edit the
-`daily-threat-brief` routine instructions to call `list_recent_advisories`
-with your ecosystem (`pip`, `RubyGems`, `Maven`, etc.).
+The shipped scripts query `hex` and `npm` advisories by default —
+that's the ecosystem coverage you get out of the box. The
+`STACK_DESCRIPTION` env var is free text describing your full stack
+and is fed into the agent's identity prompt to bias relevance
+filtering; it does NOT change which ecosystems are queried.
+
+To add another ecosystem (`pip`, `RubyGems`, `Maven`, `Go`,
+`NuGet`), edit the `daily-threat-brief` routine instructions in
+`agent.yaml` to call `list_recent_advisories` with that ecosystem,
+and update the `get_repo_file` calls to also read the matching
+lockfile (`requirements.txt`, `Gemfile.lock`, `pom.xml`, `go.sum`,
+`packages.lock.json`).
 
 ### Different time
 Change the cron schedule in `agent.yaml`. Default is `0 7 * * *` (07:00 UTC).
