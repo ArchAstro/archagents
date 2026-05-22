@@ -267,6 +267,14 @@ def validate_steps(slug: str, steps: Any, source: pathlib.Path) -> None:
     # passes validate is also a bundle the import endpoint will accept.
     _validate_bundle_lookup_key_uniqueness(steps, sample_dir, source)
 
+    # Cross-reference every ref string in every wrapped template body
+    # against the bundle's actual lookup_keys. Catches the failure mode
+    # where a tool's `config_ref: foo` points at no shipped script /
+    # template — the platform's rehydrate walks these refs strict during
+    # `POST /solutions/:s/install` and bails with
+    # `config_ref not found: sol-<uuid>-foo` partway through provisioning.
+    _validate_template_body_refs(steps, sample_dir, source, script_lookup_keys)
+
 
 def _validate_bundle_lookup_key_uniqueness(
     steps: list[dict[str, Any]],
@@ -359,6 +367,322 @@ def _validate_bundle_lookup_key_uniqueness(
                 # so .relative_to() doesn't trip over that rewrite.
                 rel = template_path.resolve().relative_to(sample_root).as_posix()
                 _register_template_lookup_key(template_path, rel, register)
+
+
+def _validate_template_body_refs(
+    steps: list[dict[str, Any]],
+    sample_dir: pathlib.Path,
+    source: pathlib.Path,
+    script_lookup_keys: set[str],
+) -> None:
+    """
+    Walks every wrapped template body in this bundle and asserts every
+    ref string inside it resolves to an artifact the bundle actually
+    ships. Mirrors the platform's RefWalker
+    (firstlanding `src/elixir/core/lib/agents/agent_provisioner/ref_walker.ex`):
+
+      * `tools[].{template_ref, config_ref, parameters_config_ref}`
+      * `routines[].{template_ref, config_ref}`
+      * `routines[].structured_message_template_refs[]`
+      * `routines[].preset_config.structured_message_template_refs[]`
+      * `routines[].steps[].config_ref`
+      * `routines[].steps[].preset_config.structured_message_template_refs[]`
+      * `skills[].config_ref`
+      * `computers[].template_ref`
+      * `setup_actions[].verify_config.script_ref` (only when
+        `verify_config.type == "script_ref"`)
+
+    When the top-level template kind is itself `AgentToolTemplate` or
+    `AgentRoutineTemplate`, the same fields are walked at the root of
+    the body (matching `RefWalker.fold_template_refs/3`'s kind-dispatch).
+
+    `system:` refs and id-form refs (UUIDs, `cfg_…` public ids) pass
+    through unchecked — the platform routes them differently
+    (filesystem-shipped configs and pre-resolved ids respectively).
+
+    Any other ref that doesn't appear in the bundle's union of script
+    + template lookup_keys raises SampleError. This catches the failure
+    mode where a tool's `config_ref:` points at a script the bundle
+    forgot to rename in lockstep — the platform's rehydrate would
+    otherwise discover the drift partway through
+    `POST /solutions/:s/install` and bail with
+    `config_ref not found: sol-<uuid>-<key>`.
+    """
+    template_lookup_keys: set[str] = set()
+    skill_lookup_keys: set[str] = set()
+    upload_config_lookup_keys: set[str] = set()
+    template_bodies: list[tuple[str, dict[str, Any]]] = []
+    where = display_path(source)
+
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        verb = step.get("type")
+        if verb == "deploy_agent":
+            template_file = step.get("template_file")
+            if isinstance(template_file, str):
+                _collect_template_body(
+                    sample_dir / template_file,
+                    template_file,
+                    template_lookup_keys,
+                    template_bodies,
+                )
+        elif verb == "deploy_solution":
+            sample_root = sample_dir.resolve()
+            for template_path in _resolve_wrapped_templates(sample_dir, step):
+                rel = template_path.resolve().relative_to(sample_root).as_posix()
+                _collect_template_body(
+                    template_path, rel, template_lookup_keys, template_bodies
+                )
+        elif verb == "upload_skills":
+            skill_lookup_keys.update(_skill_lookup_keys(sample_dir, step))
+        elif verb == "upload_configs":
+            upload_config_lookup_keys.update(_upload_config_lookup_keys(sample_dir, step))
+
+    if not template_bodies:
+        return
+
+    known_keys = (
+        template_lookup_keys
+        | script_lookup_keys
+        | skill_lookup_keys
+        | upload_config_lookup_keys
+    )
+
+    for label, body in template_bodies:
+        for ref_field, ref_value in _walk_template_body_refs(body):
+            if not isinstance(ref_value, str):
+                continue
+            stripped = ref_value.strip()
+            if not stripped or _is_passthrough_ref(stripped):
+                continue
+            if stripped not in known_keys:
+                raise SampleError(
+                    f"{where}: wrapped template {label!r} {ref_field} "
+                    f"{stripped!r} does not match any lookup_key shipped "
+                    f"by this bundle. The platform's install rehydrate "
+                    f"strict-resolves every ref in a template body; a "
+                    f"drift between a tool's `config_ref:` and the "
+                    f"corresponding script's filename (e.g. tools/foo.yaml "
+                    f"declares `config_ref: foo` while the script ships as "
+                    f"`scripts/agent-foo.aascript`) surfaces at install "
+                    f"time as `config_ref not found: sol-<uuid>-{stripped}`. "
+                    f"Fix by either renaming the artifact whose key is "
+                    f"actually being referenced or correcting the ref in "
+                    f"the template body. "
+                    f"Bundle-known keys: {sorted(known_keys)}."
+                )
+
+
+def _skill_lookup_keys(sample_dir: pathlib.Path, step: dict[str, Any]) -> set[str]:
+    """Enumerate the lookup_keys an `upload_skills` step would produce.
+    Each immediate subdirectory of `source_dir` carrying a `SKILL.md` is
+    one skill — the subdir's name is the lookup_key (matches
+    samples-catalog's skill ingestion convention)."""
+    source_dir = sample_dir / step["source_dir"]
+    if not source_dir.is_dir():
+        return set()
+    keys: set[str] = set()
+    for child in source_dir.iterdir():
+        if not child.is_dir():
+            continue
+        # SKILL.md is the canonical marker; tolerate skill.md too since a
+        # few historical samples carried the lowercase form.
+        if (child / "SKILL.md").is_file() or (child / "skill.md").is_file():
+            keys.add(child.name)
+    return keys
+
+
+def _upload_config_lookup_keys(
+    sample_dir: pathlib.Path, step: dict[str, Any]
+) -> set[str]:
+    """Enumerate the lookup_keys an `upload_configs` step would produce.
+    The samples-catalog executor mirrors the platform's
+    `derive_lookup_key`: a config body's explicit `lookup_key:` wins,
+    else the filename stem. Failures to parse fall back to the stem so
+    the dedicated body validators surface the real shape errors with
+    kinder messages."""
+    source_dir = sample_dir / step["source_dir"]
+    if not source_dir.is_dir():
+        return set()
+    keys: set[str] = set()
+    for child in source_dir.rglob("*"):
+        if not child.is_file():
+            continue
+        if child.suffix.lower() not in {".yaml", ".yml", ".json"}:
+            continue
+        declared: str | None = None
+        try:
+            raw = yaml.safe_load(child.read_text())
+        except (OSError, yaml.YAMLError):
+            raw = None
+        if isinstance(raw, dict):
+            candidate = raw.get("lookup_key")
+            if isinstance(candidate, str) and candidate.strip():
+                declared = candidate.strip()
+        keys.add(declared or child.stem)
+    return keys
+
+
+def _collect_template_body(
+    template_path: pathlib.Path,
+    label: str,
+    template_lookup_keys: set[str],
+    template_bodies: list[tuple[str, dict[str, Any]]],
+) -> None:
+    """Parse a wrapped template body, register its lookup_key, and stash
+    the body for the ref-walk pass. Parse failures are swallowed — the
+    YAML validator surfaces those errors separately; here we just skip
+    the deeper walk so we don't mask the real failure with a
+    NoneType-on-dict crash."""
+    try:
+        raw = yaml.safe_load(template_path.read_text())
+    except (OSError, yaml.YAMLError):
+        return
+    if not isinstance(raw, dict):
+        return
+
+    declared = raw.get("lookup_key")
+    key = (
+        declared.strip()
+        if isinstance(declared, str) and declared.strip()
+        else template_path.stem
+    )
+    template_lookup_keys.add(key)
+    template_bodies.append((label, raw))
+
+
+def _is_passthrough_ref(ref: str) -> bool:
+    """`system:` refs and id-form refs (raw UUIDs, `cfg_…` public ids)
+    pass straight through the platform's RefRewriter unchanged — the
+    validator follows the same rule so it never false-positives on
+    deliberately filesystem-shipped or pre-resolved refs."""
+    if ref.startswith("system:"):
+        return True
+    if ref.startswith("cfg_"):
+        return True
+    if _UUID_RE.match(ref):
+        return True
+    return False
+
+
+def _walk_template_body_refs(
+    body: dict[str, Any],
+) -> list[tuple[str, Any]]:
+    """
+    Returns `(field_path, ref_value)` pairs for every ref string the
+    platform's RefWalker would collect from this template body. Mirrors
+    `RefWalker.fold_template_refs/3`'s kind-dispatch: AgentToolTemplate /
+    AgentRoutineTemplate top-level bodies walk their own fields directly;
+    everything else (AgentTemplate, etc.) walks the `tools[]` /
+    `routines[]` / `skills[]` / `computers[]` sections. `setup_actions[]`
+    is walked at the top level for every template kind that supports
+    inline setup actions.
+    """
+    refs: list[tuple[str, Any]] = []
+    kind = body.get("kind") if isinstance(body, dict) else None
+
+    if kind == "AgentToolTemplate":
+        refs.extend(_walk_tool_entry("", body))
+    elif kind == "AgentRoutineTemplate":
+        refs.extend(_walk_routine_entry("", body))
+    elif kind == "AgentComputerTemplate":
+        # `RefWalker.fold_template_refs/3` returns top-level computer
+        # bodies untouched — no refs to walk.
+        pass
+    else:
+        for idx, tool in enumerate(_safe_list(body, "tools")):
+            if isinstance(tool, dict):
+                refs.extend(_walk_tool_entry(f"tools[{idx}].", tool))
+        for idx, routine in enumerate(_safe_list(body, "routines")):
+            if isinstance(routine, dict):
+                refs.extend(_walk_routine_entry(f"routines[{idx}].", routine))
+        for idx, skill in enumerate(_safe_list(body, "skills")):
+            if isinstance(skill, dict):
+                refs.append((f"skills[{idx}].config_ref", skill.get("config_ref")))
+        for idx, computer in enumerate(_safe_list(body, "computers")):
+            if isinstance(computer, dict):
+                refs.append(
+                    (f"computers[{idx}].template_ref", computer.get("template_ref"))
+                )
+
+    # setup_actions[].verify_config.script_ref is collected from every
+    # template kind that supports inline setup_actions (mirrors
+    # `RefWalker.fold_setup_action_script_refs/3`, which is called at
+    # the top level regardless of the kind dispatch above).
+    for idx, action in enumerate(_safe_list(body, "setup_actions")):
+        if not isinstance(action, dict):
+            continue
+        verify = action.get("verify_config")
+        if not isinstance(verify, dict):
+            continue
+        if verify.get("type") != "script_ref":
+            continue
+        refs.append(
+            (f"setup_actions[{idx}].verify_config.script_ref", verify.get("script_ref"))
+        )
+
+    return [(field, value) for field, value in refs if value is not None]
+
+
+def _walk_tool_entry(prefix: str, tool: dict[str, Any]) -> list[tuple[str, Any]]:
+    """Mirrors `RefWalker.fold_tool/3`: template_ref + config_ref +
+    parameters_config_ref. `template_path` is path-mode (resolved against
+    on-disk files, not lookup_keys) so it's intentionally skipped."""
+    return [
+        (f"{prefix}template_ref", tool.get("template_ref")),
+        (f"{prefix}config_ref", tool.get("config_ref")),
+        (f"{prefix}parameters_config_ref", tool.get("parameters_config_ref")),
+    ]
+
+
+def _walk_routine_entry(prefix: str, routine: dict[str, Any]) -> list[tuple[str, Any]]:
+    """Mirrors `RefWalker.fold_routine/3`."""
+    refs: list[tuple[str, Any]] = [
+        (f"{prefix}template_ref", routine.get("template_ref")),
+        (f"{prefix}config_ref", routine.get("config_ref")),
+    ]
+    for idx, ref in enumerate(_safe_list(routine, "structured_message_template_refs")):
+        refs.append((f"{prefix}structured_message_template_refs[{idx}]", ref))
+    preset = routine.get("preset_config")
+    if isinstance(preset, dict):
+        for idx, ref in enumerate(
+            _safe_list(preset, "structured_message_template_refs")
+        ):
+            refs.append(
+                (
+                    f"{prefix}preset_config.structured_message_template_refs[{idx}]",
+                    ref,
+                )
+            )
+    for s_idx, step in enumerate(_safe_list(routine, "steps")):
+        if not isinstance(step, dict):
+            continue
+        refs.append((f"{prefix}steps[{s_idx}].config_ref", step.get("config_ref")))
+        step_preset = step.get("preset_config")
+        if isinstance(step_preset, dict):
+            for r_idx, ref in enumerate(
+                _safe_list(step_preset, "structured_message_template_refs")
+            ):
+                refs.append(
+                    (
+                        f"{prefix}steps[{s_idx}].preset_config."
+                        f"structured_message_template_refs[{r_idx}]",
+                        ref,
+                    )
+                )
+    return refs
+
+
+def _safe_list(map_: dict[str, Any], key: str) -> list[Any]:
+    """Return `map_[key]` when it's a list, else `[]`. Defensive against
+    YAMLs that ship the field as `null`, a string, or a single-mapping
+    misuse — the dedicated body validators surface those shape errors
+    with kinder messages, so here we just degrade to an empty walk."""
+    value = map_.get(key)
+    if isinstance(value, list):
+        return value
+    return []
 
 
 def _register_template_lookup_key(
