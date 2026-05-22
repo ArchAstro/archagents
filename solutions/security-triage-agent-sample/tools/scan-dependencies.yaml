@@ -18,7 +18,7 @@ parameters:
     path: { type: string, description: "Optional path to lockfile" }
   required: [owner, repo, ecosystem]
 handler_type: script
-config_ref: scan-dependencies
+config_ref: st-scan-dependencies
 status: active
 
 setup_actions:

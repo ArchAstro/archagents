@@ -27,7 +27,7 @@ parameters:
     version: { type: string, description: "Specific version to check" }
   required: [package_name, ecosystem, version]
 handler_type: script
-config_ref: query-osv
+config_ref: st-query-osv
 status: active
 
 # OSV.dev is public — no env vars or installations required.

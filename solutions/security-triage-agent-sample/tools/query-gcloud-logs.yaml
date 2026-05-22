@@ -19,7 +19,7 @@ parameters:
     - project_id
     - log_filter
 handler_type: script
-config_ref: query-gcloud-logs
+config_ref: st-query-gcloud-logs
 status: active
 setup_actions:
   - action_type: env_var

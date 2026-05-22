@@ -3309,6 +3309,185 @@ class ValidateScriptsTest(unittest.TestCase):
         self.assertIn("agents/alpha/scripts/slow.aascript", stderr.getvalue())
 
 
+class ValidateTemplateBodyRefsTest(unittest.TestCase):
+    """
+    The platform's install rehydrate strict-resolves every ref string in
+    a template body (`RefWalker.collect_template_refs`). A drift between
+    a tool's `config_ref:` value and the actual script's lookup_key bites
+    at install time — the validator runs the same walk locally so the
+    drift is caught at `validate`/`pack` time instead.
+    """
+
+    _MINIMAL_SOLUTION_HEADER = textwrap.dedent("""\
+        kind: Solution
+        lookup_key: x-solution
+        solution_id: 7a1c4f10-1e2b-4d6f-9a8d-2b71f2c6a103
+        solution_version: v0.1.0
+        name: X
+        description: X
+    """)
+
+    def _make_solution_sample_dir(self) -> Path:
+        tmp = Path(tempfile.mkdtemp())
+        sample_dir = tmp / "solutions" / "x"
+        sample_dir.mkdir(parents=True)
+        (sample_dir / "scripts").mkdir()
+        (sample_dir / "agents").mkdir()
+        (sample_dir / "agents" / "x.yaml").write_text(
+            "kind: AgentTemplate\nname: X\n"
+            "description: X does Y. It returns Z.\n"
+        )
+        (sample_dir / "sample.yaml").write_text(textwrap.dedent("""\
+            schema_version: 2
+            version: v0.1.0
+            name: X
+            tagline: A sample.
+            min_cli_version: "0.28.0"
+            steps:
+              - type: upload_scripts
+                source_dir: scripts
+              - type: deploy_solution
+                solution_file: solution.yaml
+        """))
+        return sample_dir
+
+    def _validate(self, sample_dir: Path) -> None:
+        validate_sample("x", _parsed(sample_dir), sample_dir / "sample.yaml")
+
+    def test_top_level_tool_template_config_ref_resolves_to_bundled_script(self):
+        # Exact production failure mode: tools/query-osv.yaml's
+        # `config_ref:` points at a script that ships under a different
+        # filename (security-triage's `st-` prefix migration left the
+        # tool YAML's ref stale).
+        sample_dir = self._make_solution_sample_dir()
+        (sample_dir / "scripts" / "st-query-osv.aascript").write_text("// stub\n")
+        (sample_dir / "tools").mkdir()
+        (sample_dir / "tools" / "query-osv.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            lookup_key: st-tool-query-osv
+            tool_type: custom
+            display_name: Query OSV
+            name: query_osv
+            description: stub does X.
+            handler_type: script
+            config_ref: query-osv
+        """))
+        (sample_dir / "solution.yaml").write_text(
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: tools/query-osv.yaml
+            """)
+        )
+        with self.assertRaisesRegex(
+            SampleError,
+            r"tools/query-osv\.yaml' config_ref 'query-osv' does not match "
+            r"any lookup_key shipped by this bundle",
+        ):
+            self._validate(sample_dir)
+
+    def test_top_level_tool_template_config_ref_matching_bundled_script_passes(self):
+        # The corrected form of the previous test — script filename and
+        # config_ref both carry the `st-` prefix.
+        sample_dir = self._make_solution_sample_dir()
+        (sample_dir / "scripts" / "st-query-osv.aascript").write_text("// stub\n")
+        (sample_dir / "tools").mkdir()
+        (sample_dir / "tools" / "query-osv.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            lookup_key: st-tool-query-osv
+            tool_type: custom
+            display_name: Query OSV
+            name: query_osv
+            description: stub does X.
+            handler_type: script
+            config_ref: st-query-osv
+        """))
+        (sample_dir / "solution.yaml").write_text(
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: tools/query-osv.yaml
+            """)
+        )
+        self._validate(sample_dir)  # no raise
+
+    def test_agent_template_skill_config_ref_resolved_against_uploaded_skills(self):
+        # `upload_skills` brings each immediate subdir under source_dir
+        # into the bundle's lookup_key set (subdir name == lookup_key).
+        # A skills[].config_ref pointing at a missing subdir is a typo
+        # the platform's rehydrate would catch at install time.
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "scripts").mkdir()
+        (tmp / "skills").mkdir()
+        (tmp / "skills" / "engagement-playbook").mkdir()
+        (tmp / "skills" / "engagement-playbook" / "SKILL.md").write_text("# stub\n")
+        (tmp / "agent.yaml").write_text(textwrap.dedent("""\
+            kind: AgentTemplate
+            name: X
+            description: X does Y. It returns Z.
+            skills:
+              - config_ref: engagement-playbook
+              - config_ref: missing-skill
+        """))
+        (tmp / "sample.yaml").write_text(textwrap.dedent("""\
+            schema_version: 2
+            version: v0.1.0
+            name: X
+            tagline: A sample.
+            min_cli_version: "0.28.0"
+            steps:
+              - type: upload_scripts
+                source_dir: scripts
+              - type: upload_skills
+                source_dir: skills
+              - type: deploy_agent
+                template_file: agent.yaml
+        """))
+        with self.assertRaisesRegex(
+            SampleError,
+            r"skills\[1\]\.config_ref 'missing-skill' does not match",
+        ):
+            validate_sample("x", _parsed(tmp), tmp / "sample.yaml")
+
+    def test_system_and_id_form_refs_pass_through(self):
+        # `system:` refs target filesystem-shipped configs and `cfg_…`
+        # public ids / raw UUIDs are pre-resolved — the platform's
+        # RefRewriter skips namespacing on both, so the validator must
+        # not flag them as dangling.
+        sample_dir = self._make_solution_sample_dir()
+        (sample_dir / "tools").mkdir()
+        (sample_dir / "tools" / "passthrough.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            tool_type: custom
+            display_name: Passthrough
+            name: passthrough
+            description: stub does X.
+            handler_type: script
+            config_ref: system:archastro/builtin-script
+        """))
+        (sample_dir / "tools" / "uuid-ref.yaml").write_text(textwrap.dedent("""\
+            kind: AgentToolTemplate
+            tool_type: custom
+            display_name: UUID Ref
+            name: uuid_ref
+            description: stub does X.
+            handler_type: script
+            config_ref: cfg_033KsTBFvXpoMbW8J6fB5c
+        """))
+        (sample_dir / "solution.yaml").write_text(
+            self._MINIMAL_SOLUTION_HEADER
+            + textwrap.dedent("""\
+                templates:
+                  - template_path: agents/x.yaml
+                  - template_path: tools/passthrough.yaml
+                  - template_path: tools/uuid-ref.yaml
+            """)
+        )
+        self._validate(sample_dir)  # no raise
+
+
 # --- support --------------------------------------------------------------
 
 

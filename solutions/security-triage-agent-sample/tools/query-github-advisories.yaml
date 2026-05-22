@@ -19,7 +19,7 @@ parameters:
     severity: { type: string, description: "low, medium, high, critical" }
   required: [ecosystem, package_name]
 handler_type: script
-config_ref: query-github-advisories
+config_ref: st-query-github-advisories
 status: active
 
 # Native inline wire shape — multi-template Solutions ship
