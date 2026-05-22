@@ -1,32 +1,73 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
-  <title id="title">FDE Agent Sample architecture</title>
-  <desc id="desc">Solution bundle with setup actions, agent template, tools, routines, and outputs.</desc>
-  <rect width="960" height="420" fill="#f8fafc"/>
-  <rect x="42" y="42" width="876" height="336" rx="18" fill="#ffffff" stroke="#cbd5e1"/>
-  <text x="80" y="92" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#111827">FDE Agent Sample</text>
-  <text x="80" y="124" font-family="Inter, Arial, sans-serif" font-size="15" fill="#475569">Catalog Solution bundle</text>
-  <g font-family="Inter, Arial, sans-serif" font-size="16" fill="#111827">
-    <rect x="80" y="172" width="200" height="92" rx="10" fill="#ecfeff" stroke="#0891b2"/>
-    <text x="108" y="212" font-weight="700">Setup actions</text>
-    <text x="108" y="238" fill="#475569">env vars, installs, checks</text>
-    <rect x="380" y="152" width="220" height="132" rx="10" fill="#f0fdf4" stroke="#16a34a"/>
-    <text x="416" y="202" font-weight="700">AgentTemplate</text>
-    <text x="416" y="228" fill="#475569">agents/fde-agent-sample.yaml</text>
-    <rect x="700" y="132" width="180" height="76" rx="10" fill="#fff7ed" stroke="#ea580c"/>
-    <text x="728" y="164" font-weight="700">builtin tools</text>
-    <text x="728" y="188" fill="#475569">standalone library rows</text>
-    <rect x="700" y="246" width="180" height="76" rx="10" fill="#f5f3ff" stroke="#7c3aed"/>
-    <text x="728" y="278" font-weight="700">conversation routines</text>
-    <text x="728" y="302" fill="#475569">event handlers</text>
-  </g>
-  <g stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)">
-    <path d="M280 218 H372"/>
-    <path d="M600 198 C638 184 652 170 690 170"/>
-    <path d="M600 238 C638 252 652 284 690 284"/>
-  </g>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" font-family="-apple-system, system-ui, sans-serif" font-size="13" role="img" aria-labelledby="title desc">
+  <title id="title">FDE Agent Sample — Architecture</title>
+  <desc id="desc">A user starts an FDE session in a thread. The agent loads the engagement playbook skill and runs a four-phase lifecycle — discovery, implementation, validation, handoff — grounded in knowledge_search and long-term memory.</desc>
+  <style>
+    .box { fill: #ffffff; stroke: #4b5563; stroke-width: 1.5; rx: 6; ry: 6; }
+    .input { fill: #ecfdf5; stroke: #047857; }
+    .agent { fill: #eff6ff; stroke: #1d4ed8; }
+    .phase { fill: #f5f3ff; stroke: #7c3aed; }
+    .output { fill: #fef3c7; stroke: #b45309; }
+    .label { fill: #111827; }
+    .sublabel { fill: #4b5563; font-size: 11px; }
+    .arrow { fill: none; stroke: #6b7280; stroke-width: 1.5; marker-end: url(#a); }
+    .arrow-label { fill: #4b5563; font-size: 11px; font-style: italic; }
+    .title { font-size: 16px; font-weight: 600; fill: #111827; }
+    .legend-label { fill: #4b5563; font-size: 11px; }
+  </style>
   <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
     </marker>
   </defs>
+
+  <text x="380" y="28" text-anchor="middle" class="title">FDE Agent Sample — Architecture</text>
+
+  <rect class="box input" x="30" y="90" width="180" height="60"/>
+  <text x="120" y="115" text-anchor="middle" class="label" font-weight="600">FDE session</text>
+  <text x="120" y="134" text-anchor="middle" class="sublabel">archagent create agentsession</text>
+
+  <rect class="box input" x="30" y="200" width="180" height="60"/>
+  <text x="120" y="225" text-anchor="middle" class="label" font-weight="600">Project knowledge</text>
+  <text x="120" y="244" text-anchor="middle" class="sublabel">knowledge_search + memory</text>
+
+  <rect class="box agent" x="270" y="140" width="180" height="80"/>
+  <text x="360" y="168" text-anchor="middle" class="label" font-weight="600">FDE Agent</text>
+  <text x="360" y="190" text-anchor="middle" class="sublabel">fde-engagement-playbook</text>
+  <text x="360" y="206" text-anchor="middle" class="sublabel">skill loaded on demand</text>
+
+  <rect class="box phase" x="510" y="60" width="220" height="48"/>
+  <text x="620" y="82" text-anchor="middle" class="label">1. Discovery</text>
+  <text x="620" y="98" text-anchor="middle" class="sublabel">scoping conversation</text>
+
+  <rect class="box phase" x="510" y="128" width="220" height="48"/>
+  <text x="620" y="150" text-anchor="middle" class="label">2. Implementation</text>
+  <text x="620" y="166" text-anchor="middle" class="sublabel">thin-slice plan + artifacts</text>
+
+  <rect class="box phase" x="510" y="196" width="220" height="48"/>
+  <text x="620" y="218" text-anchor="middle" class="label">3. Validation</text>
+  <text x="620" y="234" text-anchor="middle" class="sublabel">acceptance check</text>
+
+  <rect class="box output" x="510" y="264" width="220" height="48"/>
+  <text x="620" y="286" text-anchor="middle" class="label" font-weight="600">4. Handoff</text>
+  <text x="620" y="302" text-anchor="middle" class="sublabel">notes persisted to memory</text>
+
+  <path class="arrow" d="M210 120 C 240 120, 240 170, 270 170"/>
+  <path class="arrow" d="M210 230 C 240 230, 240 190, 270 190"/>
+
+  <path class="arrow" d="M450 160 C 480 160, 480 84, 510 84"/>
+  <path class="arrow" d="M450 175 C 480 175, 480 152, 510 152"/>
+  <path class="arrow" d="M450 195 C 480 195, 480 220, 510 220"/>
+  <path class="arrow" d="M450 210 C 480 210, 480 288, 510 288"/>
+
+  <g transform="translate(30, 320)">
+    <rect class="box input" x="0" y="0" width="14" height="14"/>
+    <text x="22" y="11" class="legend-label">trigger / source</text>
+    <rect class="box agent" x="130" y="0" width="14" height="14"/>
+    <text x="152" y="11" class="legend-label">agent</text>
+    <rect class="box phase" x="220" y="0" width="14" height="14"/>
+    <text x="242" y="11" class="legend-label">lifecycle phase</text>
+    <rect class="box output" x="340" y="0" width="14" height="14"/>
+    <text x="362" y="11" class="legend-label">output</text>
+  </g>
 </svg>

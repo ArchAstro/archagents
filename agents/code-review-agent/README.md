@@ -1,5 +1,10 @@
 # Code Review Agent
 
+> Posts inline review comments anchored to specific files and lines
+> on every PR opened in your repo. Reads the actual called code, not
+> just the diff, and only flags real issues — never speculation,
+> never style nits.
+
 ## Deploy with your coding agent
 
 Paste this into Claude Code, Codex, or any AI coding assistant:
@@ -16,13 +21,6 @@ Deploy the Code Review Agent from this repo.
 7) Test it: create an agent session and ask it to review the most recent open PR in ArchAstro/archagents.
 8) Show me the result.
 ```
-
-> 🤖 **Reviews every pull request like a senior engineer who actually cares.**
-
-Posts inline review comments anchored to specific files and lines on
-every PR opened in your repo. Reads the actual code being changed,
-verifies findings against the surrounding context, and only flags real
-issues — never speculation, never style nits.
 
 ## What it does
 
@@ -106,11 +104,12 @@ update the example references in the identity to match.
 
 Change the `default_model` in your portal or via:
 ```bash
-archagent update agents code-review-agent --default-model openrouter/anthropic/claude-sonnet-latest
+archagent update agent code-review-agent --default-model openrouter/anthropic/claude-sonnet-latest
 ```
 
-We've tested this agent on Claude Opus 4, Claude Sonnet, and GPT-5.
-Sonnet is the recommended default — strong reasoning at low cost.
+Tested on Claude Opus 4 and Claude Sonnet 4. Sonnet offers the best
+cost-to-reasoning tradeoff for this workload and is the recommended
+default.
 
 ## Example output
 

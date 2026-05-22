@@ -1,14 +1,22 @@
 # ArchAstro
 
-The default ArchAstro project concierge.
-
-This template is based on the production ArchAstro concierge. It helps users
-understand and operate their ArchAstro project, keeps account-maintenance
-questions moving, checks what peer agents exist in the org, and hands off or
-escalates when another agent or a human is the better owner.
+The default ArchAstro project concierge. Answers project and
+account-maintenance questions on direct user messages, lists peer
+agents in the org, hands off to a specialist when one is a better
+owner, and escalates to a human (Slack or email) when nothing else
+fits.
 
 The ArchAgents onboarding and setup skill bundle lives in
 [ArchAstro Onboarding](../archastro-onboarding).
+
+## How it triggers
+
+The agent runs a `participate` routine and joins any thread it is
+added to. Start a session with:
+
+```bash
+archagent create agentsession --agent archastro --wait
+```
 
 ## Deploy
 
@@ -16,11 +24,9 @@ The ArchAgents onboarding and setup skill bundle lives in
 archagent install agentsample archastro
 ```
 
-The agent works out of the box. If you want the `escalate` tool to
-post to Slack or email, open the agent in the developer portal and
-resolve the optional entries in its "Finish setup" panel
-(`CONCIERGE_ESCALATION_CHANNEL`, `CONCIERGE_ESCALATION_EMAIL`, and the
-Slack bot install).
+No required env vars. To enable Slack or email escalation, set
+`CONCIERGE_ESCALATION_CHANNEL` and `CONCIERGE_ESCALATION_EMAIL` in
+the agent's "Finish setup" panel and install the Slack bot.
 
 ## Identity
 
