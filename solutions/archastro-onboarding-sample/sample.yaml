@@ -1,5 +1,5 @@
 schema_version: 2
-version: v0.1.5
+version: v0.1.6
 name: ArchAstro Onboarding Sample
 tagline: Guides a new user through setting up their first agent in ArchAstro.
 min_cli_version: 0.28.0
