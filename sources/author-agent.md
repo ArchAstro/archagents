@@ -49,6 +49,7 @@ If the user doesn't have a `configs/` directory set up yet, route to the `manage
    - Script logic lives in `kind: Script` configs.
    - Agent behavior lives in an `AgentTemplate`.
    - Custom tools should use `kind: custom`, `handler_type: script`, and `config_ref` pointing at Script configs.
+   - MCP server tools should use the builtin `mcp_server` tool with `builtin_tool_config.mcp_server_ref` or `builtin_tool_config.integration_id`. Do not put `kind: MCPServer` directly in the agent's `tools:` list.
    - When creating configs outside a project directory, use `-f` to read from a file:
      ```
      archagent create config -k AgentTemplate -f configs/agents/my-agent.yaml
@@ -116,6 +117,61 @@ live under `steps:` in the template and each needs a unique `name`.
 
 - Prefer human-readable `config_ref` values that match deployed config lookup keys.
 - Do not convert refs to raw `cfg_...` IDs unless explicitly debugging a broken environment.
+
+### MCP server tools
+
+Use MCP when the agent needs a remote MCP-compatible tool server such as Atlassian, Linear, Stripe, or an internal MCP server. MCP tools are attached as the builtin `mcp_server` tool; the MCP server itself is referenced by config lookup key, virtual path, config ID, or existing integration ID.
+
+For a system MCP server such as Atlassian:
+
+```yaml
+tools:
+  - tool_type: builtin
+    builtin_tool_key: mcp_server
+    builtin_tool_config:
+      mcp_server_ref: mcp-atlassian
+    status: active
+```
+
+For a custom MCP server, define a separate `MCPServer` config and then reference it from the agent:
+
+```yaml
+kind: MCPServer
+key: internal-tools
+name: Internal Tools
+url: https://mcp.example.com/mcp
+auth:
+  type: bearer
+  token:
+    secret_value!: <encrypted>
+```
+
+```yaml
+tools:
+  - tool_type: builtin
+    builtin_tool_key: mcp_server
+    builtin_tool_config:
+      mcp_server_ref: internal-tools
+    status: active
+```
+
+For OAuth-backed system servers, the tool config is not enough by itself; the matching integration credential must be connected. For Atlassian, use provider `mcp:system:mcp-atlassian` and let the platform discover OAuth from `https://mcp.atlassian.com`. Do not configure Atlassian MCP with `auth.atlassian.com` credentials.
+
+```bash
+archagent list integrations --provider mcp:system:mcp-atlassian
+archagent authorize integration <integration_id>
+```
+
+If no integration exists yet:
+
+```bash
+archagent create integration \
+  --provider mcp:system:mcp-atlassian \
+  --auth-type oauth \
+  --org <org_id>
+
+archagent authorize integration <integration_id>
+```
 
 ### Environment variables
 
