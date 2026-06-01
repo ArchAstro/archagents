@@ -146,7 +146,7 @@ tools:
     status: active
 ```
 
-For a custom MCP server, define a separate `MCPServer` config and then reference it from the agent. If the server uses a static bearer token, get the encrypted `secret_value!` with `archagent create configsecret <token>`; do not paste plaintext tokens into config YAML.
+For a custom MCP server, define a separate `MCPServer` config and then reference it from the agent. If the server uses a static bearer token, store it as an org environment variable with `archagent create orgenvvar --org <org_id> --key INTERNAL_MCP_TOKEN --value "<token>"`, then reference it with `secret_env!`. Do not paste plaintext tokens into config YAML. Use `secret_value!` only for intentional embedded ciphertext; `archagent create configsecret <token>` calls the platform encryption API and prints the ciphertext for that field.
 
 ```yaml
 kind: MCPServer
@@ -156,7 +156,7 @@ url: https://mcp.example.com/mcp
 auth:
   type: bearer
   token:
-    secret_value!: <encrypted>
+    secret_env!: INTERNAL_MCP_TOKEN
 ```
 
 ```yaml
