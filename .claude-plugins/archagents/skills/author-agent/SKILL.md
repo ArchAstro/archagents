@@ -146,7 +146,7 @@ tools:
     status: active
 ```
 
-For a custom MCP server, define a separate `MCPServer` config and then reference it from the agent:
+For a custom MCP server, define a separate `MCPServer` config and then reference it from the agent. If the server uses a static bearer token, get the encrypted `secret_value!` with `archagent create configsecret <token>`; do not paste plaintext tokens into config YAML.
 
 ```yaml
 kind: MCPServer
