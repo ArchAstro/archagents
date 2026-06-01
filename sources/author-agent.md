@@ -120,16 +120,34 @@ live under `steps:` in the template and each needs a unique `name`.
 
 ### MCP server tools
 
-Use MCP when the agent needs a remote MCP-compatible tool server such as Atlassian, Linear, Stripe, or an internal MCP server. MCP tools are attached as the builtin `mcp_server` tool; the MCP server itself is referenced by config lookup key, virtual path, config ID, or existing integration ID.
+Use MCP when the agent needs a remote MCP-compatible tool server such as Atlassian, Linear, Stripe, or an internal MCP server. MCP tools are attached as the builtin `mcp_server` tool; system MCP servers are attached by existing integration ID, while custom MCP servers are referenced by config lookup key, virtual path, or config ID.
 
-For a system MCP server such as Atlassian:
+For OAuth-backed system servers, the matching integration credential must be connected before the tool config can reference it. For Atlassian, use provider `mcp:system:mcp-atlassian` and let the platform discover OAuth from `https://mcp.atlassian.com`. Do not configure Atlassian MCP with `auth.atlassian.com` credentials.
+
+```bash
+archagent list integrations --provider mcp:system:mcp-atlassian
+archagent authorize integration <integration_id>
+```
+
+If no integration exists yet:
+
+```bash
+archagent create integration \
+  --provider mcp:system:mcp-atlassian \
+  --auth-type oauth \
+  --org <org_id>
+
+archagent authorize integration <integration_id>
+```
+
+Then copy the connected integration ID into the agent tool config:
 
 ```yaml
 tools:
   - tool_type: builtin
     builtin_tool_key: mcp_server
     builtin_tool_config:
-      mcp_server_ref: mcp-atlassian
+      integration_id: <integration_id>
     status: active
 ```
 
@@ -153,24 +171,6 @@ tools:
     builtin_tool_config:
       mcp_server_ref: internal-tools
     status: active
-```
-
-For OAuth-backed system servers, the tool config is not enough by itself; the matching integration credential must be connected. For Atlassian, use provider `mcp:system:mcp-atlassian` and let the platform discover OAuth from `https://mcp.atlassian.com`. Do not configure Atlassian MCP with `auth.atlassian.com` credentials.
-
-```bash
-archagent list integrations --provider mcp:system:mcp-atlassian
-archagent authorize integration <integration_id>
-```
-
-If no integration exists yet:
-
-```bash
-archagent create integration \
-  --provider mcp:system:mcp-atlassian \
-  --auth-type oauth \
-  --org <org_id>
-
-archagent authorize integration <integration_id>
 ```
 
 ### Environment variables
