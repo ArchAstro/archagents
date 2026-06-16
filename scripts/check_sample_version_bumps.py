@@ -161,7 +161,7 @@ def main() -> int:
             f"  {root}/{slug}: files changed but version: unchanged at {version}.\n"
             f"    Bump version: in {root}/{slug}/sample.yaml so release-samples.yml\n"
             f"    cuts a new tarball with your changes (and remember to regenerate\n"
-            f"    samples.json via `uv run scripts/sample_tool.py generate`).",
+            f"    samples.json via `archastro create solutionmanifest`).",
             file=sys.stderr,
         )
         print("", file=sys.stderr)
