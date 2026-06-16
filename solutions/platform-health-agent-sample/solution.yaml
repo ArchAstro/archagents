@@ -1,7 +1,7 @@
 kind: Solution
 lookup_key: platform-health-agent-sample-solution
 solution_id: 4560e6eb-4135-4fec-bf83-db47ca9cc245
-solution_version: v0.2.2
+solution_version: v0.2.4
 name: Platform Health Agent Sample
 description: Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack.
 category_keys:

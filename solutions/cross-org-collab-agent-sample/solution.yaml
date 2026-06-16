@@ -1,7 +1,7 @@
 kind: Solution
 lookup_key: cross-org-collab-agent-sample-solution
 solution_id: 5e456ce8-870f-4a97-b95b-0e38ebf0537e
-solution_version: v0.3.3
+solution_version: v0.3.5
 name: Cross-Org Collaboration Agent Sample
 description: A code-aware engineering agent that participates in cross-org threads with field guards enforced.
 category_keys:

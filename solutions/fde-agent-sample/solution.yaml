@@ -1,7 +1,7 @@
 kind: Solution
 lookup_key: fde-agent-sample-solution
 solution_id: 6adf74ce-cad2-438f-b0d7-e07255f80488
-solution_version: v0.1.2
+solution_version: v0.1.4
 name: FDE Agent Sample
 description: A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff.
 category_keys:

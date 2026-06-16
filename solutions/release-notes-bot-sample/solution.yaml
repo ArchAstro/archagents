@@ -1,7 +1,7 @@
 kind: Solution
 lookup_key: release-notes-bot-sample-solution
 solution_id: 9cce8e4e-6137-453f-bb5d-89dac45ec67d
-solution_version: v0.3.4
+solution_version: v0.3.6
 name: Release Notes Bot Sample
 description: Drafts the weekly changelog by scanning merged PRs on a schedule.
 category_keys:
