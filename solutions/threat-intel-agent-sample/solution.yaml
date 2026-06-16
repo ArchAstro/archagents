@@ -1,7 +1,7 @@
 kind: Solution
 lookup_key: threat-intel-agent-sample-solution
 solution_id: ad2b4836-0847-4b07-b603-fdc3b4f817b5
-solution_version: v0.3.5
+solution_version: v0.3.7
 name: Threat Intelligence Agent Sample
 description: A security intelligence analyst that produces daily threat briefs from monitored feeds.
 category_keys:

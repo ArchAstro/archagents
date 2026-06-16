@@ -1,5 +1,5 @@
 schema_version: 2
-version: v0.3.6
+version: v0.3.7
 name: Threat Intelligence Agent Sample
 tagline: A security intelligence analyst that produces daily threat briefs from monitored feeds.
 min_cli_version: 0.28.0
