@@ -1,4 +1,5 @@
 // Read a file from a GitHub repository.
+// (no-op CI probe: comment-only touch, no behavior change)
 // Returns the JSON object from GitHub's contents API. The actual file
 // content is base64-encoded in `body.content`.
 

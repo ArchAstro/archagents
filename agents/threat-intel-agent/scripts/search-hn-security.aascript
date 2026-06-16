@@ -1,4 +1,5 @@
 // Search Hacker News for recent stories on a security topic.
+// (no-op CI probe: comment-only touch, no behavior change)
 // Uses the public HN Algolia API. Returns metadata only — title, URL,
 // points, comments, dates. Does NOT scrape page content.
 //
