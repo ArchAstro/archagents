@@ -9,7 +9,7 @@
 #
 # Use this to:
 #   - smoke-test the catalog flow locally with
-#     `archastro install sample ./releases/<root>/<slug>-<version>.tar.gz`,
+#     `archagent import solution ./releases/<root>/<slug>-<version>.tar.gz`,
 #   - regenerate every tarball after a version-bump sweep,
 #   - confirm `pack` is green across the whole catalog before pushing.
 #
@@ -23,7 +23,7 @@
 # Exit codes:
 #   0 — all samples packed successfully (or skipped via --skip-existing)
 #   1 — usage / arg error
-#   non-zero — `sample_tool.py pack` failed for at least one sample
+#   non-zero — `archastro package solution` failed for at least one sample
 
 set -euo pipefail
 
@@ -87,7 +87,7 @@ fi
 cd "$REPO_ROOT"
 
 declare -a PLAN=()
-# Mirror SAMPLE_ROOTS in scripts/_sample_lib/paths.py: agents/ + solutions/.
+# Catalog roots: agents/ (agent-mode samples) + solutions/ (Solution bundles).
 for root in agents solutions; do
   [[ -d "$root" ]] || continue
   for sample_dir in "$root"/*/; do
@@ -138,7 +138,7 @@ for sample_path in "${PLAN[@]}"; do
   fi
 
   echo "→ $sample_path → ${tarball#$REPO_ROOT/}"
-  if uv run scripts/sample_tool.py pack "$sample_path" --output-dir "$target_dir" >/dev/null; then
+  if archastro package solution "$sample_path" --output-dir "$target_dir" >/dev/null; then
     packed=$((packed + 1))
   else
     echo "✗ $sample_path: pack failed" >&2
