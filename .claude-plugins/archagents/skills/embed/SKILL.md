@@ -47,11 +47,7 @@ Then route based on the combination of current state and user intent.
 
 Read the `identity_file` path from the returned state. Open and read that file. Adopt the identity for the current Claude Code session while retaining your normal capabilities.
 
-After adoption, check `state.skills`. If the agent has linked skills, tell the user what's available and offer to install them:
-
-```
-archagent embed list skills --json
-```
+After adoption, report what was installed. `embed start` automatically installs every linked skill into this harness (and any other harness it detects), so read `state.loaded_skills` for the installed set and tell the user which skills are now available and how to invoke them (for example `/incident-review`). Their invocation commands are also written into the identity file.
 
 ### Active + user asks about status (or no specific intent)
 
@@ -103,15 +99,13 @@ archagent embed run tool <tool-name> --input '<json>' --json
 
 ### Active + user asks about skills
 
-List available skills:
+Skills are installed automatically by `embed start` and refreshed by `embed sync`, so `state.loaded_skills` already holds the installed set with their invocation commands. List the agent's linked skills with:
 
 ```
 archagent embed list skills --json
 ```
 
-Show what's available vs what's already installed (from `state.loaded_skills`).
-
-To install a skill:
+You normally do not need to install skills by hand. Re-install a single skill — for example to add another harness or scope — with:
 
 ```
 archagent embed install skill <skill-id-or-slug>
@@ -119,7 +113,7 @@ archagent embed install skill <skill-id-or-slug>
 
 After install, report the invocation command (e.g., `/<skill-name>`) so the user knows how to use it.
 
-For Codex or OpenCode targets:
+For Codex, Cursor, or Rovo Dev targets:
 
 ```
 archagent embed install skill <id> --harness codex --install-scope project
@@ -151,7 +145,7 @@ After `stop`, fully drop the persona and return to your normal behavior.
 - After `start` or `sync`, always read the identity file and adopt it as described above
 - After `stop`, always drop the identity and revert to normal behavior
 - When showing status, always include loaded skill invocations so the user knows what commands are available
-- When skills are available but not installed, proactively mention them
+- Skills are installed automatically on `start`/`sync`; surface the installed skills and their invocation commands when reporting status
 
 ## Response Rules
 
