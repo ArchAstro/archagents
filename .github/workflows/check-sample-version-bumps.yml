@@ -1,12 +1,7 @@
 name: check-sample-version-bumps
 
-# Two jobs:
-#   - tests: runs the check's unit tests
-#   - check: runs scripts/check_sample_version_bumps.py against the PR's
-#     diff vs the base branch. Fails if any <root>/<slug>/ has changes
-#     without a corresponding `version:` bump in sample.yaml — without
-#     which release-samples.yml silently skips re-releasing. <root> is
-#     `agents/` or `solutions/`; both are watched.
+# Fails PRs where an existing sample under agents/ or solutions/ changed
+# without a corresponding version bump in <root>/<slug>/sample.yaml.
 
 on:
   pull_request:
@@ -14,46 +9,20 @@ on:
     paths:
       - "agents/**"
       - "solutions/**"
-      - "scripts/check_sample_version_bumps.py"
-      - "scripts/test_check_sample_version_bumps.py"
       - ".github/workflows/check-sample-version-bumps.yml"
 
+permissions:
+  contents: read
+
 jobs:
-  tests:
-    runs-on: ubuntu-latest
-    steps:
-      # SHA-pinned to defend against tag mutability — match the convention
-      # used by check-sample-artifacts.yml. Bump deliberately.
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          enable-cache: true
-
-      - name: Run unit tests
-        run: uv run scripts/test_check_sample_version_bumps.py
-
   check:
     runs-on: ubuntu-latest
-    needs: tests
     steps:
+      # SHA-pinned to match this repo's checkout convention.
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          # Need history to diff agents/ vs the base branch.
           fetch-depth: 0
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - uses: ArchAstro/archastro-github-actions/check-version-bumps@v1
         with:
-          enable-cache: true
-
-      - name: Check version bumps for changed samples
-        # Route github.base_ref through env: rather than interpolating
-        # directly into the run: body. Inside double-quotes, bash still
-        # expands $(...) and backticks, so a context value spliced into
-        # the script line could execute on the runner. Routing through
-        # env: makes the value visible to the shell as data, not code.
-        env:
-          BASE_REF: ${{ github.base_ref }}
-        run: uv run scripts/check_sample_version_bumps.py "origin/${BASE_REF}"
+          solution-roots: agents,solutions

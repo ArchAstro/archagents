@@ -1,18 +1,8 @@
 name: release-samples
 
-# For every sample under agents/ or solutions/, if the version declared in
-# <root>/<slug>/sample.yaml does not yet have a corresponding GitHub
-# Release, cut one with the whole sample directory packaged as
-# <slug>-<version>.tar.gz.
-#
-# Runs on every push to main. Idempotent: re-running with no version bumps
-# is a no-op (the release-exists check short-circuits).
-#
-# Packaging is done by the archastro CLI (`package solution`) — the developer
-# CLI used across the sample CI; it runs offline (no credentials). Consumers
-# import the released tarball via `archagent import solution ./<tarball>`;
-# both share the same bundle format, so the artifacts match. Requires a CLI
-# release that ships `archastro package solution`.
+# Agent-mode samples under agents/ are still released for legacy
+# `install agentsample` consumers. Solution samples under solutions/ are
+# released and deployed with the reusable ArchAstro action.
 
 on:
   push:
@@ -22,66 +12,61 @@ on:
       - "solutions/**"
       - ".github/workflows/release-samples.yml"
   workflow_dispatch:
+    inputs:
+      solution:
+        description: Solution sample slug to release/deploy, comma-separated slugs, or "all"
+        type: string
+        default: all
+      dry_run:
+        description: Preview upgrade diffs for manual deployment
+        type: boolean
+        default: true
+      allow_downgrade:
+        description: Allow solution downgrades during deployment
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  release-agent-samples:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Install archastro CLI
-        run: |
-          set -euo pipefail
-          mkdir -p "${{ runner.temp }}/bin"
-          curl -fsSL -o "${{ runner.temp }}/archastro.tar.gz" \
-            "https://github.com/ArchAstro/archastro/releases/latest/download/archastro-linux-x64.tar.gz"
-          tar -xzf "${{ runner.temp }}/archastro.tar.gz" -C "${{ runner.temp }}/bin"
-          chmod +x "${{ runner.temp }}/bin/archastro"
-          echo "${{ runner.temp }}/bin" >> "$GITHUB_PATH"
+      - uses: ArchAstro/archastro-github-actions/setup-archagent@v1
 
-      - name: Cut releases for any new sample versions
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
+      - uses: ArchAstro/archastro-github-actions/release-solutions@v1
+        with:
+          solution-roots: agents
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-          for sample in agents/*/sample.yaml solutions/*/sample.yaml; do
-            dir="$(dirname "$sample")"          # e.g. solutions/security-triage-agent-sample
-            slug="$(basename "$dir")"           # tarball + tag name from basename only
+  release-and-deploy-solution-samples:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-            version="$(grep -E '^version:' "$sample" | head -1 \
-              | sed -E 's/^version:[[:space:]]*"?([^"[:space:]]+)"?.*$/\1/')"
-            if [ -z "$version" ]; then
-              echo "::warning::$dir has no version: in sample.yaml, skipping"
-              continue
-            fi
+      - uses: ArchAstro/archastro-github-actions/release-and-deploy-solutions@v1
+        with:
+          solution-roots: solutions
+          dry-run: "false"
+          archastro-system-user-token: ${{ secrets.ARCHASTRO_CI_ACCESS_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-            tag="${slug}-${version}"
-            tarball="${slug}-${version}.tar.gz"
+  manual-release-and-deploy-solution-samples:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-            if gh release view "$tag" >/dev/null 2>&1; then
-              echo "✓ $tag already released, skipping"
-              continue
-            fi
-
-            echo "→ cutting release $tag from $dir"
-            # `package solution` validates the sample, then writes the
-            # tarball into --output-dir. Works for both agent-mode
-            # (agents/) and solution-mode (solutions/) bundles. Offline —
-            # no credentials needed.
-            archastro package solution "$dir" --output-dir .
-
-            # --latest=false is load-bearing: without it `gh release create`
-            # auto-promotes each new release to "Latest", stealing the flag
-            # from the CLI's own vX.Y.Z release that install.sh resolves.
-            gh release create "$tag" "$tarball" \
-              --title "$slug $version" \
-              --notes "Released from sample.yaml in commit ${GITHUB_SHA}." \
-              --latest=false
-
-            rm -f "$tarball"
-          done
+      - uses: ArchAstro/archastro-github-actions/release-and-deploy-solutions@v1
+        with:
+          solution-roots: solutions
+          solution: ${{ inputs.solution }}
+          dry-run: ${{ inputs.dry_run }}
+          allow-downgrade: ${{ inputs.allow_downgrade }}
+          archastro-system-user-token: ${{ secrets.ARCHASTRO_CI_ACCESS_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

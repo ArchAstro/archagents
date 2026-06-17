@@ -1,28 +1,8 @@
 name: validate-sample-scripts
 
-# Validates every sample under agents/ + solutions/ with the ArchAstro CLIs.
-#
-# Two binaries, on purpose:
-#   - The offline `schema` job uses `archagent` (no auth, no platform call).
-#   - The credentialed `validate` job uses `archastro`, the developer CLI.
-#     `archagent` >=0.34 forces an org session (auth/resolve.ts modeFor), which
-#     a CI system-user token (access-token + app-id, no org) can't satisfy;
-#     `archastro` runs in developer mode and uses that token directly.
-#
-# FORK-SAFETY (preserved — do not collapse these jobs together):
-#
-#   - The privileged `validate` job holds the ARCHASTRO_CI_* credentials and
-#     runs on pull_request_target / push / workflow_dispatch (never on plain
-#     pull_request). It installs `archastro` from the FIXED public
-#     ArchAstro/archastro release — never from the PR — and only ever reads the
-#     PR head's samples (sample-source/) as data the trusted CLI validates and
-#     never executes. So fork code can't run in the credentialed context.
-#
-#   - The unprivileged `schema` job runs the offline `--schema-only` check on
-#     pull_request (incl. forks) and NEVER references secrets.
-#
-# Requires the ARCHASTRO_CI_ACCESS_TOKEN + ARCHASTRO_CI_APP_ID repository
-# secrets (optional var ARCHASTRO_CI_APP_NAME) for the platform sweep.
+# Offline validation for samples under agents/ + solutions/. Platform-backed
+# validation happens when solution samples are released and deployed by
+# release-samples.yml.
 
 on:
   pull_request:
@@ -30,21 +10,12 @@ on:
     paths:
       - "agents/**"
       - "solutions/**"
-      - "install.sh"
-      - ".github/workflows/validate-sample-scripts.yml"
-  pull_request_target:
-    branches: [main]
-    paths:
-      - "agents/**"
-      - "solutions/**"
-      - "install.sh"
       - ".github/workflows/validate-sample-scripts.yml"
   push:
     branches: [main]
     paths:
       - "agents/**"
       - "solutions/**"
-      - "install.sh"
       - ".github/workflows/validate-sample-scripts.yml"
   workflow_dispatch:
 
@@ -52,125 +23,16 @@ permissions:
   contents: read
 
 jobs:
-  # Offline schema check. No secrets — safe on pull_request (incl. forks).
-  # Skipped on pull_request_target (the privileged `validate` job owns that
-  # event).
   schema:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request_target'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
 
-      - name: Install archagent CLI
-        env:
-          ARCHAGENT_INSTALL_DIR: ${{ runner.temp }}/bin
-          # install.sh's built-in default targets the archagent-cli repo; the
-          # CLI binaries are released here, so point it at this repo.
-          ARCHAGENT_RELEASE_BASE_URL: https://github.com/ArchAstro/archagents/releases/latest/download
-          ARCHAGENT_INSTALL_SKIP_COMPLETIONS: "true"
-          ARCHAGENT_INSTALL_SKIP_PATH_UPDATE: "true"
-        run: |
-          set -euo pipefail
-          ./install.sh
-          echo "${{ runner.temp }}/bin" >> "$GITHUB_PATH"
+      - uses: ArchAstro/archastro-github-actions/setup-archagent@v1
 
-      - name: Schema-validate every sample (offline)
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          for sample in agents/*/sample.yaml solutions/*/sample.yaml; do
-            dir="$(dirname "$sample")"
-            echo "::group::$dir"
-            archagent validate solution "$dir" --schema-only
-            echo "::endgroup::"
-          done
-
-  # Platform-backed .aascript sweep via archastro (developer mode). Holds the
-  # CI credentials, so it runs only where execution is trusted:
-  # pull_request_target (with the trusted-binary/untrusted-data split below),
-  # push, and manual dispatch — never on plain pull_request.
-  validate:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    if: github.event_name != 'pull_request'
-    env:
-      ARCHASTRO_DEV_API_URL: https://platform.archastro.ai
-    steps:
-      # Untrusted sample DATA: the repo itself for push/dispatch, or the PR
-      # head (possibly a fork) for pull_request_target. Read as data only.
-      - name: Checkout sample source
-        if: github.event_name != 'pull_request_target'
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: ArchAstro/archastro-github-actions/validate-solutions@v1
         with:
-          path: sample-source
-          persist-credentials: false
-
-      - name: Checkout pull request sample source
-        if: github.event_name == 'pull_request_target'
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
-          path: sample-source
-          persist-credentials: false
-
-      - name: Check required CI secrets
-        env:
-          ARCHASTRO_CI_ACCESS_TOKEN: ${{ secrets.ARCHASTRO_CI_ACCESS_TOKEN }}
-          ARCHASTRO_CI_APP_ID: ${{ secrets.ARCHASTRO_CI_APP_ID }}
-        run: |
-          set -euo pipefail
-          missing=0
-          for name in ARCHASTRO_CI_ACCESS_TOKEN ARCHASTRO_CI_APP_ID; do
-            if [[ -z "${!name}" ]]; then
-              echo "${name} secret is required." >&2
-              missing=1
-            fi
-          done
-          [[ "$missing" -eq 0 ]] || exit 1
-          echo "::add-mask::${ARCHASTRO_CI_ACCESS_TOKEN}"
-
-      # archastro (developer CLI), installed from the FIXED public ArchAstro/
-      # archastro release — never from the PR — so the binary that runs against
-      # the untrusted samples is never PR-controlled.
-      - name: Install archastro CLI
-        run: |
-          set -euo pipefail
-          mkdir -p "${{ runner.temp }}/bin"
-          curl -fsSL -o "${{ runner.temp }}/archastro.tar.gz" \
-            "https://github.com/ArchAstro/archastro/releases/latest/download/archastro-linux-x64.tar.gz"
-          tar -xzf "${{ runner.temp }}/archastro.tar.gz" -C "${{ runner.temp }}/bin"
-          chmod +x "${{ runner.temp }}/bin/archastro"
-          echo "${{ runner.temp }}/bin" >> "$GITHUB_PATH"
-          "${{ runner.temp }}/bin/archastro" --version
-
-      - name: Configure CLI credentials
-        env:
-          ARCHASTRO_CI_ACCESS_TOKEN: ${{ secrets.ARCHASTRO_CI_ACCESS_TOKEN }}
-          ARCHASTRO_CI_APP_ID: ${{ secrets.ARCHASTRO_CI_APP_ID }}
-          ARCHASTRO_CI_APP_NAME: ${{ vars.ARCHASTRO_CI_APP_NAME || 'ArchAgent CI' }}
-        run: |
-          set -euo pipefail
-          # Developer mode: no --org, so archastro uses the system-user token
-          # directly — no org session required.
-          archastro auth set-credentials \
-            --access-token "${ARCHASTRO_CI_ACCESS_TOKEN}" \
-            --app-id "${ARCHASTRO_CI_APP_ID}" \
-            --app-name "${ARCHASTRO_CI_APP_NAME}" \
-            --server "${ARCHASTRO_DEV_API_URL}"
-
-      # The trusted CLI validates the untrusted samples as data — it sends
-      # .aascript source to the platform for a semantic check; it does not
-      # execute the sample's scripts locally.
-      - name: Validate sample scripts against the platform
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          for sample in sample-source/agents/*/sample.yaml sample-source/solutions/*/sample.yaml; do
-            dir="$(dirname "$sample")"
-            echo "::group::$dir"
-            archastro validate solution "$dir" --scripts-only
-            echo "::endgroup::"
-          done
+          solution-roots: agents,solutions
+          mode: schema-only
