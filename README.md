@@ -113,12 +113,12 @@ workflow builders, deployment, chat, config management, and embed.
 Sample validation and release workflows use
 [`ArchAstro/archastro-github-actions`](https://github.com/ArchAstro/archastro-github-actions):
 
-- `validate-sample-scripts.yml` validates `agents/` and `solutions/` bundles.
+- `validate-sample-scripts.yml` schema-validates `agents/` and `solutions/` bundles.
 - `check-sample-version-bumps.yml` requires changed samples to bump `sample.yaml` `version:`.
-- `release-samples.yml` creates missing `<slug>-<version>.tar.gz` GitHub Releases.
+- `release-samples.yml` creates missing `<slug>-<version>.tar.gz` GitHub Releases and deploys solution samples.
 
-The platform-backed script validation job uses the
-`ARCHASTRO_SYSTEM_USER_TOKEN` repository secret.
+The release-and-deploy job passes `ARCHASTRO_CI_ACCESS_TOKEN` to the
+reusable action as the ArchAstro system-user token.
 
 ## Docs
 

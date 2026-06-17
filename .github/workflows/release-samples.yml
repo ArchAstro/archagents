@@ -1,8 +1,8 @@
 name: release-samples
 
-# For every sample under agents/ or solutions/, create the missing
-# <slug>-<version>.tar.gz GitHub Release for the version in sample.yaml.
-# The reusable action is idempotent: existing releases are skipped.
+# Agent-mode samples under agents/ are still released for legacy
+# `install agentsample` consumers. Solution samples under solutions/ are
+# released and deployed with the reusable ArchAstro action.
 
 on:
   push:
@@ -12,13 +12,27 @@ on:
       - "solutions/**"
       - ".github/workflows/release-samples.yml"
   workflow_dispatch:
+    inputs:
+      solution:
+        description: Solution sample slug to release/deploy, comma-separated slugs, or "all"
+        type: string
+        default: all
+      dry_run:
+        description: Preview upgrade diffs for manual deployment
+        type: boolean
+        default: true
+      allow_downgrade:
+        description: Allow solution downgrades during deployment
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  release-agent-samples:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -26,5 +40,33 @@ jobs:
 
       - uses: ArchAstro/archastro-github-actions/release-solutions@v1
         with:
-          solution-roots: agents,solutions
+          solution-roots: agents
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  release-and-deploy-solution-samples:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: ArchAstro/archastro-github-actions/release-and-deploy-solutions@v1
+        with:
+          solution-roots: solutions
+          dry-run: "false"
+          archastro-system-user-token: ${{ secrets.ARCHASTRO_CI_ACCESS_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  manual-release-and-deploy-solution-samples:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: ArchAstro/archastro-github-actions/release-and-deploy-solutions@v1
+        with:
+          solution-roots: solutions
+          solution: ${{ inputs.solution }}
+          dry-run: ${{ inputs.dry_run }}
+          allow-downgrade: ${{ inputs.allow_downgrade }}
+          archastro-system-user-token: ${{ secrets.ARCHASTRO_CI_ACCESS_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
