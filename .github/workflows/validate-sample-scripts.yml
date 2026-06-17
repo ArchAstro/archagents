@@ -1,28 +1,11 @@
 name: validate-sample-scripts
 
-# Validates every sample under agents/ + solutions/.
-#
-# FORK-SAFETY:
-#
-#   - The unprivileged schema job runs on pull_request and never references
-#     secrets.
-#
-#   - The privileged validate job runs on pull_request_target, push, and
-#     workflow_dispatch. It installs released ArchAstro tooling and checks out
-#     PR samples under sample-source/, where they are treated as data for
-#     validation.
-#
-# Requires the ARCHASTRO_SYSTEM_USER_TOKEN repository secret for the
-# platform-backed script sweep.
+# Offline validation for samples under agents/ + solutions/. Platform-backed
+# validation happens when solution samples are released and deployed by
+# release-samples.yml.
 
 on:
   pull_request:
-    branches: [main]
-    paths:
-      - "agents/**"
-      - "solutions/**"
-      - ".github/workflows/validate-sample-scripts.yml"
-  pull_request_target:
     branches: [main]
     paths:
       - "agents/**"
@@ -42,7 +25,6 @@ permissions:
 jobs:
   schema:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request_target'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -54,46 +36,3 @@ jobs:
         with:
           solution-roots: agents,solutions
           mode: schema-only
-
-  validate:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    if: github.event_name != 'pull_request'
-    steps:
-      - name: Checkout sample source
-        if: github.event_name != 'pull_request_target'
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          path: sample-source
-          persist-credentials: false
-
-      - name: Checkout pull request sample source
-        if: github.event_name == 'pull_request_target'
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
-          path: sample-source
-          persist-credentials: false
-
-      - name: Check required CI secret
-        env:
-          ARCHASTRO_SYSTEM_USER_TOKEN: ${{ secrets.ARCHASTRO_SYSTEM_USER_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [[ -z "$ARCHASTRO_SYSTEM_USER_TOKEN" ]]; then
-            echo "ARCHASTRO_SYSTEM_USER_TOKEN secret is required." >&2
-            exit 1
-          fi
-          echo "::add-mask::$ARCHASTRO_SYSTEM_USER_TOKEN"
-
-      - uses: ArchAstro/archastro-github-actions/setup-archagent@v1
-
-      - uses: ArchAstro/archastro-github-actions/configure-archagent@v1
-        with:
-          archastro-system-user-token: ${{ secrets.ARCHASTRO_SYSTEM_USER_TOKEN }}
-
-      - uses: ArchAstro/archastro-github-actions/validate-solutions@v1
-        with:
-          solution-roots: sample-source/agents,sample-source/solutions
-          mode: scripts-only
