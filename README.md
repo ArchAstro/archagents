@@ -108,6 +108,18 @@ archagent setup --scope project
 The `archagents` plugin bundles CLI auth, agent authoring, script and
 workflow builders, deployment, chat, config management, and embed.
 
+## CI
+
+Sample validation and release workflows use
+[`ArchAstro/archastro-github-actions`](https://github.com/ArchAstro/archastro-github-actions):
+
+- `validate-sample-scripts.yml` validates `agents/` and `solutions/` bundles.
+- `check-sample-version-bumps.yml` requires changed samples to bump `sample.yaml` `version:`.
+- `release-samples.yml` creates missing `<slug>-<version>.tar.gz` GitHub Releases.
+
+The platform-backed script validation job uses the
+`ARCHASTRO_SYSTEM_USER_TOKEN` repository secret.
+
 ## Docs
 
 - [Getting Started](https://docs.archagents.com/docs/getting-started) — zero to one working agent

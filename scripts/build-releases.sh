@@ -23,7 +23,7 @@
 # Exit codes:
 #   0 — all samples packed successfully (or skipped via --skip-existing)
 #   1 — usage / arg error
-#   non-zero — `archastro package solution` failed for at least one sample
+#   non-zero — `archagent package solution` failed for at least one sample
 
 set -euo pipefail
 
@@ -138,7 +138,7 @@ for sample_path in "${PLAN[@]}"; do
   fi
 
   echo "→ $sample_path → ${tarball#$REPO_ROOT/}"
-  if archastro package solution "$sample_path" --output-dir "$target_dir" >/dev/null; then
+  if archagent package solution "$sample_path" --output-dir "$target_dir" >/dev/null; then
     packed=$((packed + 1))
   else
     echo "✗ $sample_path: pack failed" >&2
