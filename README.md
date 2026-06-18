@@ -118,9 +118,8 @@ Sample validation and release workflows use
 - `release-samples.yml` creates missing `<slug>-<version>.tar.gz` GitHub Releases and deploys solution samples.
 
 The release-and-deploy job passes `ARCHASTRO_CI_ACCESS_TOKEN` to the
-reusable action as the ArchAstro system-user token. While the released CLI
-still requires app-scoped auth metadata for solution listing, the workflow
-also maps `ARCHASTRO_CI_APP_ID` to the action's app-context environment.
+reusable action as the ArchAstro system-user token and sets `owner: system`
+so solution samples deploy through the system-owned `archastro` path.
 
 ## Docs
 
