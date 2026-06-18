@@ -50,11 +50,9 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - uses: ArchAstro/archastro-github-actions/release-and-deploy-solutions@v1
-        env:
-          ARCHASTRO_SYSTEM_USER_APP_ID: ${{ secrets.ARCHASTRO_CI_APP_ID }}
-          ARCHASTRO_SYSTEM_USER_APP_NAME: ${{ vars.ARCHASTRO_CI_APP_NAME || 'ArchAgent CI' }}
         with:
           solution-roots: solutions
+          owner: system
           dry-run: "false"
           archastro-system-user-token: ${{ secrets.ARCHASTRO_CI_ACCESS_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -66,12 +64,10 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - uses: ArchAstro/archastro-github-actions/release-and-deploy-solutions@v1
-        env:
-          ARCHASTRO_SYSTEM_USER_APP_ID: ${{ secrets.ARCHASTRO_CI_APP_ID }}
-          ARCHASTRO_SYSTEM_USER_APP_NAME: ${{ vars.ARCHASTRO_CI_APP_NAME || 'ArchAgent CI' }}
         with:
           solution-roots: solutions
           solution: ${{ inputs.solution }}
+          owner: system
           dry-run: ${{ inputs.dry_run }}
           allow-downgrade: ${{ inputs.allow_downgrade }}
           archastro-system-user-token: ${{ secrets.ARCHASTRO_CI_ACCESS_TOKEN }}
