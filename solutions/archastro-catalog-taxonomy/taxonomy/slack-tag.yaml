@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: slack
+name: Slack
+description: Integrates with Slack channels, Slack Connect, or Slack slash commands.
+sort_order: 20

@@ -1,0 +1,8 @@
+# This sample is installed via `archastro install agentsample <slug>`,
+# which reads sample.yaml's `steps:` block and runs the DSL executor
+# (`upload_configs` for taxonomy/, then `deploy_solution`).
+# `archastro deploy configs` should skip every file inside this directory.
+README.md
+sample.yaml
+solution.yaml
+taxonomy/

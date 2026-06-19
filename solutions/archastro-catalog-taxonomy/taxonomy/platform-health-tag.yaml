@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: platform-health
+name: Platform Health
+description: Watches the platform itself — uptime, errors, alert digests.
+sort_order: 170

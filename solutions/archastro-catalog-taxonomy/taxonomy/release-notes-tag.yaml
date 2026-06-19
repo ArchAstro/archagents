@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: release-notes
+name: Release Notes
+description: Composes user-facing release notes from change history.
+sort_order: 185

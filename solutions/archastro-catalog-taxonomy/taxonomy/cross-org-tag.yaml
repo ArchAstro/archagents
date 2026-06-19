@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: cross-org
+name: Cross-Org
+description: Agents collaborate across organizational boundaries on audited cross-company threads.
+sort_order: 50

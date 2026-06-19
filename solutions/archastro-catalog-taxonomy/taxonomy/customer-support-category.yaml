@@ -1,0 +1,5 @@
+kind: SolutionCategory
+key: customer-support
+name: Customer Support
+description: Inbound triage, refunds, escalation routines — customer-facing agents that own the relationship.
+sort_order: 20

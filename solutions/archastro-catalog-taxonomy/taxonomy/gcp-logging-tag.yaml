@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: gcp-logging
+name: GCP Logging
+description: Pulls and analyzes Google Cloud Logging output.
+sort_order: 145

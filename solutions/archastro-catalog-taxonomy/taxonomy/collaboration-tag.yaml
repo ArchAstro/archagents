@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: collaboration
+name: Collaboration
+description: Coordinates work across teammates, agents, or orgs.
+sort_order: 110

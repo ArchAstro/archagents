@@ -1,0 +1,5 @@
+kind: SolutionCategory
+key: general
+name: General
+description: General-purpose concierges and starter agents.
+sort_order: 130

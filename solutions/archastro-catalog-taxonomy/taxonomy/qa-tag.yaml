@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: qa
+name: QA
+description: Quality assurance — test authoring, regression triage, acceptance flows.
+sort_order: 180

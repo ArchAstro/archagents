@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: implementation
+name: Implementation
+description: Builds or maintains concrete artifacts on behalf of a requester.
+sort_order: 155

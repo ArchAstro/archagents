@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: handoff
+name: Handoff
+description: Hands the conversation off to a specialist peer agent.
+sort_order: 150

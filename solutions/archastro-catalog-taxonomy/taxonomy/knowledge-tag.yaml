@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: knowledge
+name: Knowledge
+description: Grounds answers in retrieved project knowledge.
+sort_order: 160

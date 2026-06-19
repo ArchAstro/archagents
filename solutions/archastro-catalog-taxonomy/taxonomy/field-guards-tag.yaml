@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: field-guards
+name: Field Guards
+description: Uses schema-level field guards for cross-org or cross-tenant privacy.
+sort_order: 140

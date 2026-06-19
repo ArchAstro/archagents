@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: per-customer
+name: Per-Customer
+description: Provisions one isolated agent per customer relationship — separate credentials, separate memory namespace.
+sort_order: 15
