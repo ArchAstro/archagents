@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: support
+name: Support
+description: Customer-facing support work — inbound triage, escalation, account help.
+sort_order: 200

@@ -1,0 +1,5 @@
+kind: SolutionCategory
+key: engineering
+name: Engineering
+description: Agents that participate in code review, release flow, and integration work alongside human engineers.
+sort_order: 120

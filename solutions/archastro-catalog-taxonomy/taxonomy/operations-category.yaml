@@ -1,0 +1,5 @@
+kind: SolutionCategory
+key: operations
+name: Operations
+description: Runs ops-style routines — health checks, on-call digests, incident triage.
+sort_order: 150

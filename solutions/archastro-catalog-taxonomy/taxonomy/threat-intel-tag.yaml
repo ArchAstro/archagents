@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: threat-intel
+name: Threat Intel
+description: Pulls advisories, CVEs, and security-news signals.
+sort_order: 205

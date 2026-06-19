@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: compliance
+name: Compliance
+description: Enforces policy guardrails before changes ship.
+sort_order: 115

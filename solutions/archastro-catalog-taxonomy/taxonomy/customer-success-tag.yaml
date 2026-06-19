@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: customer-success
+name: Customer Success
+description: Helps customer-facing teams onboard, support, and grow accounts.
+sort_order: 30

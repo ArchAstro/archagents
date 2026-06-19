@@ -1,0 +1,5 @@
+kind: SolutionCategory
+key: continuous-integration
+name: Continuous Integration
+description: Agents on both sides build and maintain integrations — vendor harnesses, customer specs, audited cross-company runs.
+sort_order: 30

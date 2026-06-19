@@ -1,0 +1,5 @@
+kind: SolutionCategory
+key: developer-experience
+name: Developer Experience
+description: Tooling agents that smooth the inner loop for engineers — onboarding, in-editor help, doc lookup.
+sort_order: 110

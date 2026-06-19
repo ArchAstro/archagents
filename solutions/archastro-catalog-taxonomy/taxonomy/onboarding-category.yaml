@@ -1,0 +1,5 @@
+kind: SolutionCategory
+key: onboarding
+name: Onboarding
+description: Walks new users or new orgs through first-use flows and learning paths.
+sort_order: 140

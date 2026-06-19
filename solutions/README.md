@@ -6,6 +6,7 @@ routines ready to deploy.
 
 | Solution | What it ships |
 |---|---|
+| [archastro-catalog-taxonomy](archastro-catalog-taxonomy) | Hidden config-only bundle of every SolutionCategory + SolutionTag the catalog ships |
 | [archastro-sample](archastro-sample) | Default ArchAstro project concierge |
 | [archastro-onboarding-sample](archastro-onboarding-sample) | Guided first-agent onboarding |
 | [code-review-agent-sample](code-review-agent-sample) | PR review agent + custom GitHub review tools |

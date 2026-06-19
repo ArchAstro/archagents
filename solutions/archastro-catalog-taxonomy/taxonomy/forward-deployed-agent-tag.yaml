@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: forward-deployed-agent
+name: Forward Deployed Agent
+description: One agent per customer account — persistent memory, isolated credentials, audited cross-company threads.
+sort_order: 10

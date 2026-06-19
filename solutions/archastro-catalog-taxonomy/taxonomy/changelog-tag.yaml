@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: changelog
+name: Changelog
+description: Reads merged PRs / commits and produces release notes.
+sort_order: 100

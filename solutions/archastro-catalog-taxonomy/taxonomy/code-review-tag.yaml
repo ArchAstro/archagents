@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: code-review
+name: Code Review
+description: Reviews pull requests against rubrics, conventions, or policy.
+sort_order: 105

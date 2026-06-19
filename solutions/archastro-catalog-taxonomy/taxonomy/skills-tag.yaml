@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: skills
+name: Skills
+description: Uses Skills (per-conversation instruction bundles) heavily.
+sort_order: 195

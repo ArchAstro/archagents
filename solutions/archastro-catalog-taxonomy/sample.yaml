@@ -1,0 +1,17 @@
+schema_version: 2
+version: v0.1.1
+name: "ArchAstro Catalog Taxonomy"
+tagline: "Hidden config-only Solution bundling every SolutionCategory + SolutionTag the ArchAstro Solution catalog ships."
+min_cli_version: "0.34.0"
+
+# Templateless install: every YAML under taxonomy/ is uploaded as a
+# top-level config (SolutionCategory / SolutionTag, keyed by `kind:`),
+# then solution.yaml is deployed as a hidden config-only Solution that
+# adopts those rows as its children. No deployable template is wrapped,
+# so this sample carries no agent/tool/script body — just the catalog
+# vocabulary other Solutions reference through `category_keys` / `tag_keys`.
+steps:
+  - type: upload_configs
+    source_dir: taxonomy
+  - type: deploy_solution
+    solution_file: solution.yaml

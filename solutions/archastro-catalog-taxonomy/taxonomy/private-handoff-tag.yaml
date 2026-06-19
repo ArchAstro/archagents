@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: private-handoff
+name: Private Handoff
+description: Uses private internal specialist consultation without exposing helpers directly to customers.
+sort_order: 40

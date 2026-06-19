@@ -1,0 +1,5 @@
+kind: SolutionCategory
+key: compliance
+name: Compliance
+description: Field-guarded reviews and audits — agents that gate sensitive changes against policy.
+sort_order: 100

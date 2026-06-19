@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: dependency-scanning
+name: Dependency Scanning
+description: Surfaces vulnerable or outdated dependencies.
+sort_order: 125

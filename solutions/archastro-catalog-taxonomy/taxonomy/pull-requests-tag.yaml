@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: pull-requests
+name: Pull Requests
+description: Acts on GitHub pull requests as the unit of work.
+sort_order: 175

@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: onboarding
+name: Onboarding
+description: Onboarding-flow tag — counterpart to the onboarding category.
+sort_order: 165

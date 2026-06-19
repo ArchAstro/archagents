@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: sample
+name: Sample
+description: Official sample — ships with ArchAstro to demonstrate a canonical pattern.
+sort_order: 9000

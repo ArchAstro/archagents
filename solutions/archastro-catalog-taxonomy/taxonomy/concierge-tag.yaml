@@ -1,0 +1,5 @@
+kind: SolutionTag
+key: concierge
+name: Concierge
+description: Front-desk agent that answers, hands off, or escalates.
+sort_order: 120

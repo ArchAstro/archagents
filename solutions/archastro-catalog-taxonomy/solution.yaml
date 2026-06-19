@@ -1,0 +1,12 @@
+kind: Solution
+lookup_key: archastro-catalog-taxonomy-solution
+solution_id: e30a2de2-698e-4f94-9b34-3b0554bea9d7
+solution_version: v0.1.1
+name: "ArchAstro Catalog Taxonomy"
+description: "Imports every SolutionCategory and SolutionTag the ArchAstro Solution catalog ships — engineering, customer support, FDA value props, and the supporting tag vocabulary. Hidden config-only bundle with no installable template."
+
+# Hidden Solutions are kept out of catalog list/show APIs and may omit
+# `template:` / `templates:` entirely — they exist only to import their
+# child config rows (here, the SolutionCategory + SolutionTag YAMLs the
+# sample.yaml uploads in step 1).
+hidden: true
