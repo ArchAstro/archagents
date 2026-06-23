@@ -3,7 +3,7 @@
 set -euo pipefail
 
 OWNER="ArchAstro"
-REPO="archagent-cli"
+REPO="archagents"
 BINARY_NAME="archagent"
 DEFAULT_VERSION="latest"
 INSTALL_DIR="${ARCHAGENT_INSTALL_DIR:-}"
