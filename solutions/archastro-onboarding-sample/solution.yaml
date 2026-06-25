@@ -1,7 +1,7 @@
 kind: Solution
 lookup_key: archastro-onboarding-sample-solution
 solution_id: ee57c05f-5745-4be6-b725-77d6113a8f36
-solution_version: v0.1.7
+solution_version: v0.1.8
 name: ArchAstro Onboarding Sample
 description: Guides a new user through setting up their first agent in ArchAstro.
 category_keys:

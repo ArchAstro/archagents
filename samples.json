@@ -21,7 +21,7 @@
       "slug": "archastro-onboarding",
       "name": "ArchAstro Onboarding",
       "tagline": "Guides a new user through setting up their first agent in ArchAstro.",
-      "current_version": "v0.1.7",
+      "current_version": "v0.1.8",
       "min_cli_version": "0.28.0",
       "kind": "agent"
     },
@@ -29,7 +29,7 @@
       "slug": "archastro-onboarding-sample",
       "name": "ArchAstro Onboarding Sample",
       "tagline": "Guides a new user through setting up their first agent in ArchAstro.",
-      "current_version": "v0.1.7",
+      "current_version": "v0.1.8",
       "min_cli_version": "0.28.0",
       "kind": "solution"
     },
