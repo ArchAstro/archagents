@@ -48,6 +48,7 @@ Pick the handler shape. There are only a few common ones:
 | External webhook | Routine, `event_type: webhook.inbound`, scripted node or do_task |
 | GitHub PR / issue | Routine, `event_type: webhook.github_app.*` |
 | Human conversation | Routine, `event_type: thread.session.join`, `preset_name: participate` |
+| Conversation, but real work needs a local environment | Routine, `event_type: thread.session.join`, `preset_name: triage` — joins like `participate`, but acknowledges and tracks work on the thread task list (claiming itself as owner) for the agent to finish once it runs **embedded** (locally) |
 | Multi-step w/ approvals | Routine wrapping a `WorkflowGraph` (use `archagent-build-workflow`) |
 
 Write the skeleton `agent.yaml` inline when it helps the customer see the
