@@ -1,0 +1,257 @@
+# Cross-team bug relay — a durable distributed workflow.
+#
+# Two embedded agents from (potentially) different teams hand real work
+# back and forth through the platform's work-dispatch queue:
+#
+#   trigger → post_received (thread update)
+#           → discover   (embedded: reporter files the defect in its tracker)
+#           → post_filed (thread update)
+#           → triage     (embedded: resolver reproduces + classifies)
+#           → post_triaged (thread update)
+#           → route      (switch on the resolver's resolution)
+#               ├─ attempt_workaround → remediate (embedded: reporter applies
+#               │                        guidance) → post_done
+#               └─ anything else      → post_manual
+#
+# Every `post_*` node posts a status message to the thread named by the
+# optional `thread` parameter and is a no-op when none is provided.
+#
+# The workflow is tracker- and vendor-agnostic: the reporter uses whatever
+# tracker tools its agent has connected; the resolver uses whatever
+# product tools its agent has. Nothing here assumes a specific issue
+# tracker or billing system.
+kind: WorkflowGraph
+name: Cross-team bug relay
+description: >-
+  Relays a discovered defect between two teams' agents: the reporter files
+  it in the discovering team's tracker, the owning team's resolver
+  reproduces and classifies it, and the reporter applies any workaround
+  guidance — with status updates posted to an optional thread throughout.
+start_node: trigger
+
+parameters_schema:
+  type: object
+  properties:
+    title:
+      type: string
+      description: One-line summary of the observed defect.
+    details:
+      type: string
+      description: >-
+        Everything known about the defect — symptom, error strings,
+        object identifiers, severity, and how it was noticed.
+    thread:
+      type: string
+      description: >-
+        Optional thread id. When provided, the workflow posts status
+        updates there at every stage transition.
+  required:
+    - title
+    - details
+
+participants_schema:
+  reporter:
+    type: agent_user
+    description: >-
+      Tracker-side agent for the team that discovered the defect. Files
+      the issue and applies remediation guidance.
+    required: true
+  resolver:
+    type: agent_user
+    description: >-
+      Owning-side agent for the team whose product has the defect.
+      Reproduces the report and classifies the resolution.
+    required: true
+
+nodes:
+  - kind: WorkflowTrigger
+    id: trigger
+    trigger: automation.invoked
+    on_success: post_received
+
+  - kind: WorkflowScript
+    id: post_received
+    script: post-received-script
+    on_success: discover
+
+  - kind: WorkflowEmbedAgent
+    id: discover
+    agent_ref: reporter
+    instructions: |
+      You are the tracker-side reporter in a cross-team bug relay.
+
+      Stage: DISCOVERY.
+
+      A defect was reported:
+      - Title: {{$.parameters.title}}
+      - Details: {{$.parameters.details}}
+
+      1. Confirm the symptom from the details provided. Do not invent
+         identifiers, error strings, or timestamps — use only what the
+         report contains or what a tool returns.
+      2. Record the defect in your team's issue tracker using the
+         tracker tools connected to you. If no tracker tool is
+         available, compose the complete issue body anyway and use
+         "pending-manual-filing" as the issue reference.
+      3. Capture reproduction steps as concretely as the report allows.
+
+      Reply with ONLY a JSON object, no prose around it:
+      {"issue_ref": "<tracker reference, or pending-manual-filing>",
+       "issue_url": "<link to the tracked issue, or empty string>",
+       "summary": "<one-sentence defect summary>",
+       "repro": "<concrete reproduction steps>"}
+    on_success: post_filed
+
+  - kind: WorkflowScript
+    id: post_filed
+    script: post-filed-script
+    on_success: triage
+
+  - kind: WorkflowEmbedAgent
+    id: triage
+    agent_ref: resolver
+    instructions: |
+      You are the owning-side resolver in a cross-team bug relay.
+
+      Stage: TRIAGE.
+
+      A partner team filed a defect against your product:
+      - Tracked issue: {{$["input"].issue_ref}} {{$["input"].issue_url}}
+      - Summary: {{$["input"].summary}}
+      - Reproduction: {{$["input"].repro}}
+
+      1. Attempt to reproduce the defect from the reproduction steps
+         using the tools connected to you. Record what you actually
+         observed — never claim a check you did not perform.
+      2. Classify the resolution as exactly one of:
+         - "attempt_workaround" — the partner team can work around it
+           now; you must provide concrete guidance.
+         - "provider_fix" — your team will fix it; no partner action.
+         - "wont_fix" — working as intended; explain why.
+         - "needs_more_info" — not reproducible as reported; say exactly
+           what is missing.
+      3. Write guidance the partner team can act on without a meeting.
+
+      Reply with ONLY a JSON object, echoing issue_ref and issue_url
+      unchanged:
+      {"issue_ref": "<echo>", "issue_url": "<echo>",
+       "resolution": "<one of the four values above>",
+       "guidance": "<concrete next step for the partner team>",
+       "notes": "<what you observed while reproducing>"}
+    on_success: post_triaged
+
+  - kind: WorkflowScript
+    id: post_triaged
+    script: post-triaged-script
+    on_success: route
+
+  - kind: WorkflowSwitch
+    id: route
+    clauses:
+      - expr: $["input"].resolution == "attempt_workaround"
+        to: remediate
+    else: post_manual
+
+  - kind: WorkflowEmbedAgent
+    id: remediate
+    agent_ref: reporter
+    instructions: |
+      You are the tracker-side reporter in a cross-team bug relay.
+
+      Stage: REMEDIATION.
+
+      The owning team triaged {{$["input"].issue_ref}} and proposed a
+      workaround:
+      - Guidance: {{$["input"].guidance}}
+      - Triage notes: {{$["input"].notes}}
+
+      1. Apply the guidance in your team's systems where you can do so
+         safely; where you cannot, prepare the exact change for a human
+         to apply and say so.
+      2. Update the tracked issue ({{$["input"].issue_ref}}) with what
+         was attempted and the result, using your tracker tools when
+         available.
+
+      Reply with ONLY a JSON object:
+      {"issue_ref": "<echo>",
+       "outcome": "<applied | prepared-for-human | blocked>",
+       "details": "<what changed and what remains>"}
+    on_success: post_done
+
+  - kind: WorkflowScript
+    id: post_done
+    script: post-done-script
+
+  - kind: WorkflowScript
+    id: post_manual
+    script: post-manual-script
+
+data:
+  - kind: Script
+    id: post-received-script
+    script: |
+      let p = $["parameters"]
+      let threads = import("threads")
+      if (p != null && p.thread != null && p.thread != "") {
+        let _r = unwrap(threads.send_message({
+          thread: p.thread,
+          content: "🐛 Bug relay started: " + p.title
+        }))
+      }
+      put($, "stage", "received")
+
+  - kind: Script
+    id: post-filed-script
+    script: |
+      let p = $["parameters"]
+      let d = $["input"]
+      let threads = import("threads")
+      if (p != null && p.thread != null && p.thread != "") {
+        let _r = unwrap(threads.send_message({
+          thread: p.thread,
+          content: "📌 Filed " + d.issue_ref + ": " + d.summary
+        }))
+      }
+      put($, "stage", "filed")
+
+  - kind: Script
+    id: post-triaged-script
+    script: |
+      let p = $["parameters"]
+      let d = $["input"]
+      let threads = import("threads")
+      if (p != null && p.thread != null && p.thread != "") {
+        let _r = unwrap(threads.send_message({
+          thread: p.thread,
+          content: "🔎 Triage for " + d.issue_ref + ": " + d.resolution + " — " + d.guidance
+        }))
+      }
+      put($, "stage", "triaged")
+
+  - kind: Script
+    id: post-done-script
+    script: |
+      let p = $["parameters"]
+      let d = $["input"]
+      let threads = import("threads")
+      if (p != null && p.thread != null && p.thread != "") {
+        let _r = unwrap(threads.send_message({
+          thread: p.thread,
+          content: "✅ Bug relay complete for " + d.issue_ref + ": " + d.outcome + " — " + d.details
+        }))
+      }
+      put($, "stage", "done")
+
+  - kind: Script
+    id: post-manual-script
+    script: |
+      let p = $["parameters"]
+      let d = $["input"]
+      let threads = import("threads")
+      if (p != null && p.thread != null && p.thread != "") {
+        let _r = unwrap(threads.send_message({
+          thread: p.thread,
+          content: "⚠️ Bug relay for " + d.issue_ref + " needs manual follow-up (" + d.resolution + "): " + d.guidance
+        }))
+      }
+      put($, "stage", "manual")
