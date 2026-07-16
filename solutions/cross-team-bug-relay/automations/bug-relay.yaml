@@ -1,0 +1,20 @@
+# Invocable automation wrapping the bug-relay distributed workflow.
+#
+# Installs org-level (no agent anchor). Invoking it starts a durable
+# workflow run whose embedded stages are executed by the reporter and
+# resolver agents named in the invoke payload's `participants`.
+#
+# invoke_auth is `user` so the automation is installable and invocable
+# by org members — the invoking user's identity is the run's execution
+# context.
+kind: AutomationTemplate
+name: "Cross-Team Bug Relay"
+description: >-
+  Relays a discovered defect between two teams' agents — file, triage,
+  remediate — as one durable workflow run, with status updates posted to
+  an optional thread.
+type: invoked
+invoke_auth: user
+status: running
+automation_key: cross-team-bug-relay
+config_ref: bug-relay

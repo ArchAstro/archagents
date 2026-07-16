@@ -1,0 +1,115 @@
+# Catalog-facing wrapper for the cross-team bug relay demo: two agents
+# plus the first automation shipped through the Solution catalog. The
+# automation installs org-level (no agent anchor) and drives the durable
+# distributed workflow between the two agents.
+kind: Solution
+lookup_key: cross-team-bug-relay-solution
+solution_id: d7ea4a75-6bd7-48a8-9843-b95cfd8602ee
+solution_version: v0.1.0
+name: "Cross-Team Bug Relay"
+description: "File, triage, and remediate a defect across two teams' agents as one durable workflow, with live thread updates."
+
+category_keys:
+  - sample
+  - operations
+tag_keys:
+  - workflow
+  - cross-team
+  - bug-tracking
+  - automation
+
+readme: |
+  # Cross-Team Bug Relay
+
+  A demo of ArchAstro's **distributed durable workflows**: one automation
+  relays a discovered defect between two teams' agents — the discovering
+  team's **Bug Reporter** files it in their tracker, the owning team's
+  **Bug Resolver** reproduces and classifies it, and the Reporter applies
+  any workaround guidance — with status updates posted to a thread at
+  every stage.
+
+  The flow is modeled on real cross-company bug workflows (a team finds a
+  defect in a partner's product, files it internally, hands off for
+  triage, and closes the loop), but it is deliberately **generic**: no
+  issue tracker, vendor, or billing system is assumed. Each agent uses
+  whatever tools its installer connects.
+
+  ## Architecture
+
+  ![Architecture overview](diagrams/architecture.svg)
+
+  ## What it ships
+
+  - **Bug Reporter** (`AgentTemplate`) — tracker-side specialist that
+    files defects and applies remediation guidance.
+  - **Bug Resolver** (`AgentTemplate`) — owning-side specialist that
+    reproduces defects and classifies the resolution
+    (`attempt_workaround` / `provider_fix` / `wont_fix` /
+    `needs_more_info`).
+  - **Cross-Team Bug Relay** (`AutomationTemplate`) — an invocable,
+    org-level automation wrapping the `bug-relay` WorkflowGraph: two
+    embedded-agent stages (three when a workaround is attempted), a
+    resolution switch, and conditional thread updates.
+
+  ## Install
+
+  This is a multi-template Solution — install each template, choosing it
+  with `template`:
+
+  1. Install **Bug Reporter** and **Bug Resolver** (once per team; for a
+     cross-org demo, each org installs its own side).
+  2. Install **Cross-Team Bug Relay** — this provisions the automation
+     already activated.
+
+  ## Run a relay
+
+  Invoke the automation with the two participants (and an optional
+  thread for status updates):
+
+  ```sh
+  archastro invoke automation cross-team-bug-relay --payload '{
+    "parameters": {
+      "title": "Checkout total drops discounts on renewal",
+      "details": "Renewal invoices ignore the subscription discount. Error: AmountMismatch (req_abc123). Seen on plan pro-annual since 2026-07-01.",
+      "thread": "thr_..."
+    },
+    "participants": {
+      "reporter": "agi_... (Bug Reporter)",
+      "resolver": "agi_... (Bug Resolver)"
+    }
+  }'
+  ```
+
+  Each embedded stage parks the run as a leaseable work item on the named
+  agent's queue; the agent's harness claims it, does the work, and
+  submits a JSON result that resumes the workflow:
+
+  ```sh
+  archastro list workflow-work --agent <agent>
+  archastro claim workflow-work --agent <agent>
+  ```
+
+  ## Cross-org relays
+
+  When the resolver belongs to a different org than the run, assignment
+  is fail-closed until the automation's owner publishes an `assign`
+  grant naming the assignee:
+
+  ```sh
+  archastro update automation cross-team-bug-relay \
+    --acl-add agent:<resolver-agent-id>:assign
+  ```
+
+assets:
+  - asset_path: diagrams/architecture.svg
+
+templates:
+  - template_path: agents/bug-reporter.yaml
+    readme_path: agents/bug-reporter.md
+  - template_path: agents/bug-resolver.yaml
+    readme_path: agents/bug-resolver.md
+  - template_path: automations/bug-relay.yaml
+    readme_path: automations/bug-relay.md
+
+metadata:
+  sample_slug: cross-team-bug-relay

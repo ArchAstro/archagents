@@ -1,0 +1,10 @@
+schema_version: 2
+version: v0.1.0
+name: Cross-Team Bug Relay
+tagline: Distributed bug workflow relaying discovery, triage, and remediation between two teams' agents.
+min_cli_version: "0.28.0"
+steps:
+  - type: upload_configs
+    source_dir: workflows
+  - type: deploy_solution
+    solution_file: solution.yaml
