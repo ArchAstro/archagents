@@ -14,7 +14,7 @@
 #               └─ anything else      → post_manual
 #
 # Every `post_*` node posts a status message to the thread named by the
-# optional `thread` parameter and is a no-op when none is provided.
+# optional `thread` payload field and is a no-op when none is provided.
 #
 # The workflow is tracker- and vendor-agnostic: the reporter uses whatever
 # tracker tools its agent has connected; the resolver uses whatever
@@ -28,29 +28,6 @@ description: >-
   reproduces and classifies it, and the reporter applies any workaround
   guidance — with status updates posted to an optional thread throughout.
 start_node: trigger
-
-parameters_schema:
-  type: object
-  properties:
-    title:
-      type: string
-      description: One-line summary of the observed defect.
-    details:
-      type: string
-      description: >-
-        Everything known about the defect — symptom, error strings,
-        object identifiers, severity, and how it was noticed.
-    thread:
-      type: string
-      # `format: thread` marks this as a thread ID (thr_...) so invoke
-      # UIs offer a thread picker instead of a free-text field.
-      format: thread
-      description: >-
-        Optional thread. When provided, the workflow posts status
-        updates there at every stage transition.
-  required:
-    - title
-    - details
 
 participants_schema:
   reporter:
@@ -86,8 +63,8 @@ nodes:
       Stage: DISCOVERY.
 
       A defect was reported:
-      - Title: {{$.parameters.title}}
-      - Details: {{$.parameters.details}}
+      - Title: {{$.title}}
+      - Details: {{$.details}}
 
       1. Confirm the symptom from the details provided. Do not invent
          identifiers, error strings, or timestamps — use only what the
@@ -193,12 +170,12 @@ data:
   - kind: Script
     id: post-received-script
     script: |
-      let p = $["parameters"]
+      let thread = $["thread"]
       let threads = import("threads")
-      if (p != null && p.thread != null && p.thread != "") {
+      if (thread != null && thread != "") {
         let _r = unwrap(threads.send_message({
-          thread: p.thread,
-          content: "🐛 Bug relay started: " + p.title
+          thread: thread,
+          content: "🐛 Bug relay started: " + $["title"]
         }))
       }
       put($, "stage", "received")
@@ -206,12 +183,12 @@ data:
   - kind: Script
     id: post-filed-script
     script: |
-      let p = $["parameters"]
+      let thread = $["thread"]
       let d = $["input"]
       let threads = import("threads")
-      if (p != null && p.thread != null && p.thread != "") {
+      if (thread != null && thread != "") {
         let _r = unwrap(threads.send_message({
-          thread: p.thread,
+          thread: thread,
           content: "📌 Filed " + d.issue_ref + ": " + d.summary
         }))
       }
@@ -220,12 +197,12 @@ data:
   - kind: Script
     id: post-triaged-script
     script: |
-      let p = $["parameters"]
+      let thread = $["thread"]
       let d = $["input"]
       let threads = import("threads")
-      if (p != null && p.thread != null && p.thread != "") {
+      if (thread != null && thread != "") {
         let _r = unwrap(threads.send_message({
-          thread: p.thread,
+          thread: thread,
           content: "🔎 Triage for " + d.issue_ref + ": " + d.resolution + " — " + d.guidance
         }))
       }
@@ -234,12 +211,12 @@ data:
   - kind: Script
     id: post-done-script
     script: |
-      let p = $["parameters"]
+      let thread = $["thread"]
       let d = $["input"]
       let threads = import("threads")
-      if (p != null && p.thread != null && p.thread != "") {
+      if (thread != null && thread != "") {
         let _r = unwrap(threads.send_message({
-          thread: p.thread,
+          thread: thread,
           content: "✅ Bug relay complete for " + d.issue_ref + ": " + d.outcome + " — " + d.details
         }))
       }
@@ -248,12 +225,12 @@ data:
   - kind: Script
     id: post-manual-script
     script: |
-      let p = $["parameters"]
+      let thread = $["thread"]
       let d = $["input"]
       let threads = import("threads")
-      if (p != null && p.thread != null && p.thread != "") {
+      if (thread != null && thread != "") {
         let _r = unwrap(threads.send_message({
-          thread: p.thread,
+          thread: thread,
           content: "⚠️ Bug relay for " + d.issue_ref + " needs manual follow-up (" + d.resolution + "): " + d.guidance
         }))
       }

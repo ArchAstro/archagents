@@ -30,15 +30,17 @@ tools at install time.
 
 ```
 cross-team-bug-relay/
-  sample.yaml                  # deploy steps (upload workflow, deploy solution)
+  sample.yaml                  # deploy steps (upload schema/workflow, deploy solution)
   solution.yaml                # catalog wrapper + templates list
   agents/
     bug-reporter.yaml/.md      # tracker-side AgentTemplate
     bug-resolver.yaml/.md      # owning-side AgentTemplate
   automations/
     bug-relay.yaml/.md         # invocable org-level AutomationTemplate
+  schemas/
+    bug-relay-input.yaml       # invoke payload JsonSchema
   workflows/
-    bug-relay.yaml             # the WorkflowGraph (embed nodes + switch + thread posts)
+    bug-relay-workflow.yaml    # the WorkflowGraph (embed nodes + switch + thread posts)
   diagrams/architecture.svg
 ```
 
