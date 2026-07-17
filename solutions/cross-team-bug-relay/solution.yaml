@@ -5,7 +5,7 @@
 kind: Solution
 lookup_key: cross-team-bug-relay-solution
 solution_id: d7ea4a75-6bd7-48a8-9843-b95cfd8602ee
-solution_version: v0.1.0
+solution_version: v0.1.1
 name: "Cross-Team Bug Relay"
 description: "File, triage, and remediate a defect across two teams' agents as one durable workflow, with live thread updates."
 

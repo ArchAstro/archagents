@@ -42,8 +42,11 @@ parameters_schema:
         object identifiers, severity, and how it was noticed.
     thread:
       type: string
+      # `format: thread` marks this as a thread ID (thr_...) so invoke
+      # UIs offer a thread picker instead of a free-text field.
+      format: thread
       description: >-
-        Optional thread id. When provided, the workflow posts status
+        Optional thread. When provided, the workflow posts status
         updates there at every stage transition.
   required:
     - title
