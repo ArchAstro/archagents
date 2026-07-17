@@ -5,7 +5,7 @@
 kind: Solution
 lookup_key: cross-team-bug-relay-solution
 solution_id: d7ea4a75-6bd7-48a8-9843-b95cfd8602ee
-solution_version: v0.1.1
+solution_version: v0.1.2
 name: "Cross-Team Bug Relay"
 description: "File, triage, and remediate a defect across two teams' agents as one durable workflow, with live thread updates."
 
@@ -68,15 +68,12 @@ readme: |
 
   ```sh
   archastro invoke automation cross-team-bug-relay --payload '{
-    "parameters": {
-      "title": "Checkout total drops discounts on renewal",
-      "details": "Renewal invoices ignore the subscription discount. Error: AmountMismatch (req_abc123). Seen on plan pro-annual since 2026-07-01.",
-      "thread": "thr_..."
-    },
-    "participants": {
-      "reporter": "agi_... (Bug Reporter)",
-      "resolver": "agi_... (Bug Resolver)"
-    }
+    "title": "Checkout total drops discounts on renewal",
+    "details": "Renewal invoices ignore the subscription discount. Error: AmountMismatch (req_abc123). Seen on plan pro-annual since 2026-07-01.",
+    "thread": "thr_..."
+  }' --participants '{
+    "reporter": "agi_...",
+    "resolver": "agi_..."
   }'
   ```
 

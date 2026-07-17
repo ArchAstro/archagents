@@ -1,0 +1,23 @@
+kind: JsonSchema
+lookup_key: bug-relay-input
+name: Cross-Team Bug Relay Input
+schema:
+  type: object
+  properties:
+    title:
+      type: string
+      description: One-line summary of the observed defect.
+    details:
+      type: string
+      description: >-
+        Everything known about the defect — symptom, error strings,
+        object identifiers, severity, and how it was noticed.
+    thread:
+      type: string
+      format: thread
+      description: >-
+        Optional thread. When provided, the workflow posts status
+        updates there at every stage transition.
+  required:
+    - title
+    - details

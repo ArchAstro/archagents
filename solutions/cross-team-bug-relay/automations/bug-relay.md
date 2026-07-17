@@ -4,20 +4,30 @@ An **invocable, org-level automation** — no agent anchor — wrapping the
 `bug-relay` durable workflow. Installing it provisions the automation
 already activated; invoking it starts one relay run.
 
-## Invoke payload
+## Invoke contract
+
+The automation's `input_schema_ref` validates the payload directly:
 
 ```json
 {
-  "parameters": {
-    "title": "One-line defect summary",
-    "details": "Symptom, error strings, identifiers, severity…",
-    "thread": "thr_… (optional — status updates post here)"
-  },
-  "participants": {
-    "reporter": "agi_… (Bug Reporter agent)",
-    "resolver": "agi_… (Bug Resolver agent)"
-  }
+  "title": "One-line defect summary",
+  "details": "Symptom, error strings, identifiers, severity…",
+  "thread": "thr_… (optional — status updates post here)"
 }
+```
+
+Participant assignments are a top-level sibling of `payload` in the invoke
+request. With the CLI, pass them separately:
+
+```sh
+archastro invoke automation cross-team-bug-relay --payload '{
+  "title": "One-line defect summary",
+  "details": "Symptom, error strings, identifiers, severity…",
+  "thread": "thr_…"
+}' --participants '{
+  "reporter": "agi_…",
+  "resolver": "agi_…"
+}'
 ```
 
 ## What a run does

@@ -2,7 +2,7 @@
 #
 # Installs org-level (no agent anchor). Invoking it starts a durable
 # workflow run whose embedded stages are executed by the reporter and
-# resolver agents named in the invoke payload's `participants`.
+# resolver agents named in the invoke request's top-level `participants`.
 #
 # invoke_auth is `user` so the automation is installable and invocable
 # by org members — the invoking user's identity is the run's execution
@@ -18,3 +18,4 @@ invoke_auth: user
 status: running
 automation_key: cross-team-bug-relay
 config_ref: bug-relay-workflow
+input_schema_ref: bug-relay-input
