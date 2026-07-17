@@ -1,5 +1,5 @@
 schema_version: 2
-version: v0.1.0
+version: v0.1.1
 name: Cross-Team Bug Relay
 tagline: Distributed bug workflow relaying discovery, triage, and remediation between two teams' agents.
 min_cli_version: "0.28.0"

@@ -68,4 +68,4 @@ routines:
     preset_name: participate
     event_type: thread.session.join
     event_config:
-      thread.session.join:
+      thread.session.join: {}

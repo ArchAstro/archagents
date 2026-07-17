@@ -17,4 +17,4 @@ type: invoked
 invoke_auth: user
 status: running
 automation_key: cross-team-bug-relay
-config_ref: bug-relay
+config_ref: bug-relay-workflow
