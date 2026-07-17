@@ -1,0 +1,52 @@
+description: |
+  A TestSuite is a collection of Tests that track specific use cases we depend on.
+  Example: stripe-paper, stripe-webhooks, payments-conformance.
+  One row per suite. Paper tests are one instance: suite_id=stripe-paper.
+
+  TestSuites are the primary grouping, but TestRuns can also be ad-hoc
+  (single case or batch) without a formal suite — see TestRun.mode.
+json_schema:
+  additionalProperties: false
+  properties:
+    suite_id:
+      description: Stable suite identifier, e.g. stripe-paper
+      minLength: 1
+      type: string
+    name:
+      description: Human display name, e.g. Stripe Paper Tests
+      type: string
+    description:
+      description: What this suite covers
+      type: string
+    repository:
+      description: GitHub repo that owns the suite, e.g. org/paper-tests
+      type: string
+    owner_org_id:
+      description: Org that owns this suite
+      type: string
+    team_id:
+      description: Internal team that owns the channel thread for this suite
+      type: string
+    status:
+      description: Whether suite is active
+      enum:
+        - active
+        - archived
+      type: string
+    default_mode:
+      description: Default run mode for this suite (usually suite)
+      enum:
+        - suite
+        - single
+        - batch
+        - ad-hoc
+      type: string
+  required:
+    - suite_id
+  type: object
+kind: CustomObjectSchema
+lookup_key: test-suite
+name: Test Suite
+row_key:
+  - suite_id
+virtual_path: custom_objects/test-suite.yaml

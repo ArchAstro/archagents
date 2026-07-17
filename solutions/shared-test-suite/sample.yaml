@@ -1,0 +1,15 @@
+schema_version: 2
+version: v0.1.0
+name: "Shared Test Suite"
+tagline: "Route CI test runs into an internal team channel with structured run history."
+min_cli_version: "0.30.0"
+
+# The workflow and schemas must exist before the imported AutomationTemplate
+# resolves config_ref: test-ingest-workflow.
+steps:
+  - type: upload_configs
+    source_dir: custom_objects
+  - type: upload_configs
+    source_dir: workflows
+  - type: deploy_solution
+    solution_file: solution.yaml

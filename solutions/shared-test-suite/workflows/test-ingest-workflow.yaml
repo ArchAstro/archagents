@@ -1,0 +1,372 @@
+---
+data:
+  - id: test-ingest-script
+    kind: Script
+    script: |
+      let threads = import("threads")
+      let custom_objects = import("custom_objects")
+      let array = import("array")
+      let string = import("string")
+      let log = import("log")
+      let map = import("map")
+
+      // Webhook fields are untrusted. Normalize identifiers before using them
+      // in thread keys, object keys, or reporter artifact names, and escape
+      // display text before interpolating it into Markdown.
+      let clean_identifier = fn(value) {
+        let text = string.toString(value)
+        let normalized = string.replacePattern(text, "[^A-Za-z0-9._-]+", "-")
+        let no_leading_punctuation = string.replacePattern(normalized, "^[._-]+", "")
+        let clean = string.replacePattern(no_leading_punctuation, "[._-]+$", "")
+        if (string.length(clean) > 200) { string.substring(clean, 0, 200) } else { clean }
+      }
+      let markdown_inline = fn(value) {
+        let text = string.toString(value)
+        let no_newline = string.replacePattern(text, "[\\r\\n]+", " ")
+        let no_markup = string.replacePattern(no_newline, "[<>{}\\[\\]()]", "")
+        let no_bang = string.replace(no_markup, "!", "")
+        let no_pipe = string.replace(no_bang, "|", "\\|")
+        string.replace(no_pipe, "`", "'")
+      }
+
+      // Payload accessor: works whether runtime delivers under $.trigger.event_payload, $.fields, or flattened at $
+      // In automation context, $.trigger is null, $.fields has scalars, $.raw_payload has full payload with results
+      let payload = if ($.trigger != null && $.trigger.event_payload != null) {
+        $.trigger.event_payload
+      } else {
+        if ($.raw_payload != null) { $ } else {
+          if ($.fields != null) { $.fields } else { $ }
+        }
+      }
+
+      // raw_payload contains full JSON, fields contains top-level scalars
+      let raw = if (payload.raw_payload != null) { payload.raw_payload } else { payload }
+      let fields = if (payload.fields != null) { payload.fields } else { if ($.fields != null) { $.fields } else { {} } }
+
+      // Resolve suite_id: from raw_payload.suite_id, raw_payload.suite, fields.suite_id, fields.suite
+      // For ad-hoc/single runs, suite_id may be empty — we use "ad-hoc" as fallback for thread routing
+      let untrusted_suite_id = if (raw.suite_id != null && raw.suite_id != "") {
+        raw.suite_id
+      } else {
+        if (raw.suite != null && raw.suite != "") {
+          raw.suite
+        } else {
+          if (fields.suite_id != null && fields.suite_id != "") {
+            fields.suite_id
+          } else {
+            if (fields.suite != null && fields.suite != "") {
+              fields.suite
+            } else { "" }
+          }
+        }
+      }
+
+      let raw_suite_id = clean_identifier(untrusted_suite_id)
+
+      // Resolve run_id
+      let untrusted_run_id = if (raw.run_id != null && raw.run_id != "") {
+        raw.run_id
+      } else {
+        if (fields.run_id != null && fields.run_id != "") {
+          fields.run_id
+        } else { "" }
+      }
+      let run_id = clean_identifier(untrusted_run_id)
+
+      // Resolve team_id for internal channel routing
+      let team_id = if (raw.team_id != null && raw.team_id != "") {
+        raw.team_id
+      } else {
+        if (fields.team_id != null && fields.team_id != "") {
+          fields.team_id
+        } else { "" }
+      }
+
+      // Resolve mode: suite | single | batch | ad-hoc
+      // Explicit mode from payload takes precedence. If omitted, infer:
+      // - 1 result -> single (one test case)
+      // - 2-10 results with suite_id -> batch (selected subset of suite)
+      // - 2-10 results without suite_id -> ad-hoc (arbitrary tests)
+      // - >10 or 0 results with suite_id -> suite (full suite run)
+      // - >10 or 0 results without suite_id -> ad-hoc
+      // Callers should set mode explicitly for accuracy; inference is best-effort.
+      let explicit_mode = if (raw.mode != null && raw.mode != "") {
+        raw.mode
+      } else {
+        if (fields.mode != null && fields.mode != "") { fields.mode } else { "" }
+      }
+
+      let results = if (raw.results != null) { raw.results } else { [] }
+      let result_count = array.length(results)
+
+      let inferred_mode = if (explicit_mode != "") {
+        explicit_mode
+      } else {
+        if (result_count == 1) {
+          "single"
+        } else {
+          if (raw_suite_id == "") {
+            "ad-hoc"
+          } else {
+            if (result_count >= 2 && result_count <= 10) {
+              "batch"
+            } else {
+              "suite"
+            }
+          }
+        }
+      }
+
+      let mode = inferred_mode
+
+      // Thread routing: if suite_id present, ALWAYS route to tests:<suite_id>
+      // even for single/batch modes. This keeps all runs of a suite in one channel.
+      // Only when suite_id is empty do we route to single:<key>, batch, or ad-hoc.
+      let thread_suite_id = if (raw_suite_id != "") {
+        raw_suite_id
+      } else {
+        if (mode == "single" && result_count == 1) {
+          let first = results[0]
+          let tk = clean_identifier(if (first.test_key != null) { first.test_key } else { first.key || "" })
+          if (tk != "") { "single:" + tk } else { "ad-hoc" }
+        } else {
+          if (mode == "batch") { "batch" } else { "ad-hoc" }
+        }
+      }
+
+      // Resolve conclusion, stats, run_url, sha, branch
+      let conclusion = if (raw.conclusion != null) { raw.conclusion } else { fields.conclusion || "unknown" }
+      let run_url = if (raw.run_url != null) { raw.run_url } else { fields.run_url || "" }
+      let sha = if (raw.sha != null) { raw.sha } else { fields.sha || "" }
+      let branch = if (raw.branch != null) { raw.branch } else { fields.branch || "" }
+      let repository = if (raw.repository != null) { raw.repository } else { fields.repository || "" }
+      let triggered_by = if (raw.triggered_by != null) { raw.triggered_by } else { fields.triggered_by || "" }
+
+      let stats = if (raw.stats != null) { raw.stats } else { {} }
+      let total = if (stats.total != null) { stats.total } else { result_count }
+      let passed = if (stats.passed != null) { stats.passed } else { 0 }
+      let failed = if (stats.failed != null) { stats.failed } else { 0 }
+      let skipped = if (stats.skipped != null) { stats.skipped } else { 0 }
+
+      // If stats not provided, compute from results
+      let computed_passed = if (stats.passed == null) {
+        array.length(array.filter(results, fn(r) {
+          r.status == "pass" || r.status == "passed" || r.status == "success"
+        }))
+      } else { passed }
+
+      let computed_failed = if (stats.failed == null) {
+        array.length(array.filter(results, fn(r) {
+          r.status == "fail" || r.status == "failure" || r.status == "failed"
+        }))
+      } else { failed }
+
+      let final_passed = computed_passed
+      let final_failed = computed_failed
+      let final_total = if (stats.total == null) { result_count } else { total }
+
+      if (team_id == "") {
+        log.warn("test-ingest: missing team_id, cannot route to internal channel", {suite_id: raw_suite_id, run_id: run_id, mode: mode})
+        {
+          routed: false,
+          reason: "missing_team_id",
+          suite_id: raw_suite_id,
+          run_id: run_id,
+          mode: mode
+        }
+      } else {
+        let thread_key = "tests:" + thread_suite_id
+        let thread_title = if (mode == "single" && result_count == 1) {
+          let first = results[0]
+          let tk = markdown_inline(if (first.test_key != null) { first.test_key } else { first.key || "unknown" })
+          "Test - " + tk
+        } else {
+          if (mode == "batch") {
+            "Tests - batch (" + string.toString(result_count) + " cases)"
+          } else {
+            if (thread_suite_id == "ad-hoc") {
+              "Tests - ad-hoc"
+            } else {
+              "Tests - " + thread_suite_id
+            }
+          }
+        }
+
+        // Compute failures
+        let failures = array.filter(results, fn(r) {
+          r.status == "fail" || r.status == "failure" || r.status == "failed"
+        })
+        let failure_count = array.length(failures)
+
+        // Ensure thread exists (team-owned, internal channel). The installed
+        // automation must be bound to the dedicated reporter agent during setup.
+        let thread_res = threads.ensure_by_key({
+          key: thread_key,
+          title: thread_title,
+          team_id: team_id
+        })
+        let thread = if (thread_res.ok) { thread_res.value } else { null }
+        if (!thread_res.ok) {
+          log.warn("test-ingest: failed to ensure thread", {key: thread_key, error: thread_res.error})
+          // If CanViewRule violated, thread exists but agent can't view it (not member, unlisted)
+          // Try to list threads for team and find by key, then add agent as member
+          // For now, just log and continue — message will not be posted to this thread
+          // Workaround: delete unlisted ad-hoc thread or add agent as member manually
+        }
+
+        // Build message content based on mode
+        let status_emoji = if (conclusion == "success") { "✅" } else { if (conclusion == "failure") { "❌" } else { "⚠️" } }
+        let mode_label = if (mode == "single") { "single" } else { if (mode == "batch") { "batch" } else { if (mode == "ad-hoc") { "ad-hoc" } else { "suite" } } }
+        let header = status_emoji + " TestRun `" + markdown_inline(run_id) + "` — " + markdown_inline(conclusion) + " (" + markdown_inline(raw_suite_id) + ") [" + mode_label + "]"
+        let meta_lines = [
+          "- **Suite:** `" + markdown_inline(raw_suite_id) + "` | **Mode:** " + mode_label + " | **Branch:** `" + markdown_inline(branch) + "` @ `" + markdown_inline(if (string.length(sha) > 7) { string.substring(sha, 0, 7) } else { sha }) + "`",
+          "- **Stats:** " + string.toString(final_passed) + "/" + string.toString(final_total) + " passed, " + string.toString(final_failed) + " failed" + (if (skipped > 0) { ", " + string.toString(skipped) + " skipped" } else { "" }),
+          "- **Run:** " + markdown_inline(run_url),
+          "- **Repo:** " + markdown_inline(repository)
+        ]
+        let meta_block = array.join(meta_lines, "\n")
+
+        let results_table_header = "| Test | Use Case | Status | Duration | Error |\n|------|----------|--------|----------|-------|"
+        let results_rows = array.map(results, fn(r) {
+          let tk = markdown_inline(if (r.test_key != null) { r.test_key } else { r.key || "unknown" })
+          let uc = markdown_inline(if (r.use_case != null) { r.use_case } else { "—" })
+          let st = markdown_inline(if (r.status != null) { r.status } else { "unknown" })
+          let dur = if (r.duration_ms != null) { string.toString(r.duration_ms) + "ms" } else { "—" }
+          let err = if (r.error != null) {
+            let trimmed = if (string.length(r.error) > 200) { string.substring(r.error, 0, 200) + "..." } else { r.error }
+            markdown_inline(trimmed)
+          } else { "—" }
+          "| `" + tk + "` | " + uc + " | " + st + " | " + dur + " | " + err + " |"
+        })
+        let results_table = results_table_header + "\n" + array.join(results_rows, "\n")
+
+        let failures_block = if (failure_count > 0) {
+          let failure_details = array.map(failures, fn(f) {
+            let tk = markdown_inline(if (f.test_key != null) { f.test_key } else { f.key || "unknown" })
+            let uc = if (f.use_case != null) { " (" + markdown_inline(f.use_case) + ")" } else { "" }
+            let err = markdown_inline(if (f.error != null) { f.error } else { "no error message" })
+            "**`" + tk + "`**" + uc + ": `" + err + "`"
+          })
+          "\n### ❌ Failures (" + string.toString(failure_count) + ")\n" + array.join(failure_details, "\n")
+        } else { "" }
+
+        let message_content = header + "\n\n" + meta_block + "\n\n" + results_table + failures_block
+
+        // Post to thread if we have it
+        let msg_res = if (thread != null) {
+          threads.send_message({
+            thread: thread.id,
+            content: message_content
+          })
+        } else { {ok: false, error: "no thread"} }
+
+        if (thread != null && !msg_res.ok) {
+          log.warn("test-ingest: failed to post message", {thread_id: thread.id, error: msg_res.error})
+        }
+
+        // Upsert TestRun custom object
+        let storage_suite_id = if (raw_suite_id != "") { raw_suite_id } else { "ad-hoc" }
+        let run_fields = {
+          run_id: run_id,
+          suite_id: storage_suite_id,
+          conclusion: conclusion,
+          team_id: team_id
+        }
+        let run_with_mode = map.put(run_fields, "mode", mode)
+        let run_with_sha = if (sha != "") { map.put(run_with_mode, "sha", sha) } else { run_with_mode }
+        let run_with_branch = if (branch != "") { map.put(run_with_sha, "branch", branch) } else { run_with_sha }
+        let run_with_url = if (run_url != "") { map.put(run_with_branch, "run_url", run_url) } else { run_with_branch }
+        let run_with_repo = if (repository != "") { map.put(run_with_url, "repository", repository) } else { run_with_url }
+        let run_with_triggered = if (triggered_by != "") { map.put(run_with_repo, "triggered_by", triggered_by) } else { run_with_repo }
+        let run_with_stats = if (final_total > 0) {
+          map.put(run_with_triggered, "stats", {total: final_total, passed: final_passed, failed: final_failed, skipped: skipped})
+        } else { run_with_triggered }
+        let run_with_keys = if (mode == "single" || mode == "batch" || mode == "ad-hoc") {
+          let keys = array.map(results, fn(r) {
+            clean_identifier(if (r.test_key != null && r.test_key != "") { r.test_key } else { r.key || "" })
+          })
+          let non_empty = array.filter(keys, fn(k) { k != "" })
+          if (array.length(non_empty) > 0) {
+            map.put(run_with_stats, "test_keys", non_empty)
+          } else { run_with_stats }
+        } else { run_with_stats }
+
+        let run_obj_res = custom_objects.create({
+          type: "test-run",
+          fields: run_with_keys,
+          team: team_id,
+          upsert: true
+        })
+        if (!run_obj_res.ok) {
+          log.warn("test-ingest: failed to create test-run", {run_id: run_id, error: run_obj_res.error})
+        } else {
+          log.info("test-ingest: created test-run", {run_id: run_id, ok: true})
+        }
+
+        // Upsert TestResult rows
+        let _result_objs = array.map(results, fn(r) {
+          let test_key = clean_identifier(if (r.test_key != null && r.test_key != "") {
+            r.test_key
+          } else {
+            if (r.key != null && r.key != "") { r.key } else { "" }
+          })
+          if (test_key == "" || run_id == "") {
+            null
+          } else {
+            let status = if (r.status != null) { r.status } else { "unknown" }
+            let base = {
+              run_id: run_id,
+              test_key: test_key,
+              suite_id: storage_suite_id,
+              status: status
+            }
+            let with_uc = if (r.use_case != null && r.use_case != "") { map.put(base, "use_case", r.use_case) } else { base }
+            let with_err = if (r.error != null && r.error != "") {
+              let trimmed = if (string.length(r.error) > 2000) { string.substring(r.error, 0, 2000) } else { r.error }
+              map.put(with_uc, "error", trimmed)
+            } else { with_uc }
+            let with_dur = if (r.duration_ms != null) { map.put(with_err, "duration_ms", r.duration_ms) } else { with_err }
+            let with_logs = if (r.logs_url != null && r.logs_url != "") { map.put(with_dur, "logs_url", r.logs_url) } else { with_dur }
+            let res = custom_objects.create({
+              type: "test-result",
+              fields: with_logs,
+              team: team_id,
+              upsert: true
+            })
+            if (!res.ok) {
+              log.warn("test-ingest: failed to create test-result", {run_id: run_id, test_key: test_key, error: res.error})
+            }
+            res
+          }
+        })
+
+        {
+          routed: true,
+          thread_id: if (thread != null) { thread.id } else { null },
+          thread_key: thread_key,
+          suite_id: raw_suite_id,
+          storage_suite_id: storage_suite_id,
+          run_id: run_id,
+          team_id: team_id,
+          mode: mode,
+          conclusion: conclusion,
+          failure_count: failure_count,
+          result_count: result_count,
+          message_posted: msg_res.ok
+        }
+      }
+id: test-ingest-workflow
+kind: WorkflowGraph
+lookup_key: test-ingest-workflow
+name: Test Ingest - Internal Channel
+nodes:
+  - id: trigger_1
+    kind: WorkflowTrigger
+    on_success: script_1
+    trigger: webhook.external.test_run
+  - id: script_1
+    kind: WorkflowScript
+    script: test-ingest-script
+start_node: trigger_1
+version: 1
+virtual_path: workflows/test-ingest-workflow.yaml
