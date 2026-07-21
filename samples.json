@@ -5,7 +5,7 @@
       "slug": "archastro",
       "name": "ArchAstro",
       "tagline": "The default ArchAstro project concierge.",
-      "current_version": "v0.2.4",
+      "current_version": "v0.2.5",
       "min_cli_version": "0.28.0",
       "kind": "agent"
     },
@@ -37,7 +37,7 @@
       "slug": "archastro-sample",
       "name": "ArchAstro Sample",
       "tagline": "The default ArchAstro project concierge.",
-      "current_version": "v0.2.4",
+      "current_version": "v0.2.5",
       "min_cli_version": "0.28.0",
       "kind": "solution"
     },

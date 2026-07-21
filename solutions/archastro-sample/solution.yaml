@@ -1,7 +1,7 @@
 kind: Solution
 lookup_key: archastro-sample-solution
 solution_id: c0de1aec-24dd-47b6-8815-2a4d24cdb5dc
-solution_version: v0.2.4
+solution_version: v0.2.5
 name: ArchAstro Sample
 description: The default ArchAstro project concierge.
 category_keys:
