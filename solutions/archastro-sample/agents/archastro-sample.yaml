@@ -46,7 +46,7 @@ tools:
   builtin_tool_key: artifacts
   status: active
 - tool_type: builtin
-  builtin_tool_key: task_list
+  builtin_tool_key: tasks
   status: active
 - tool_type: builtin
   builtin_tool_key: skills
