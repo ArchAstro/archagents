@@ -1,0 +1,127 @@
+# Catalog-facing wrapper for the cross-org migration scope demo: a
+# vendor-side Orchestrator, an integrator-side Researcher, and an
+# invocable automation that dispatches search requests to the
+# Researcher as durable workflow runs — across an org boundary when
+# granted. Converted from the firstlanding cross-org migration "Scope"
+# demo (Process 1 of a coordinated integration migration).
+kind: Solution
+lookup_key: cross-org-migration-scope-solution
+solution_id: c8006b8c-ae1c-4cdd-a8aa-f4a23822e15e
+solution_version: v0.1.0
+name: "Cross-Org Migration Scope"
+description: "Scope an integration migration across two orgs: a vendor Orchestrator issues breaking-change search requests and a partner Researcher investigates its own codebase, as one durable workflow."
+
+category_keys:
+  - sample
+  - operations
+tag_keys:
+  - workflow
+  - cross-team
+  - migration
+  - automation
+
+readme: |
+  # Cross-Org Migration Scope
+
+  A demo of **cross-org agent collaboration** on Process 1 (Scope) of a
+  coordinated integration migration — the phase where two companies map
+  every place a partner's integration could break before anything is
+  rewritten.
+
+  Two agents from (potentially) different orgs share one thread:
+
+  - The vendor's **Migration Orchestrator** issues the breaking-change
+    catalog as concrete search requests, reconciles findings, mints
+    use-case IDs, and maintains the registry as the thread's task list.
+  - The integrator's **Migration Researcher** investigates its own
+    codebase, confirms or writes the classic (pre-migration) **paper
+    test** for each affected use case, and reports evidence-first
+    findings with coverage manifests.
+
+  The **Migration Scope Investigation** automation ties them together:
+  invoking it parks a durable, leaseable work item on the Researcher's
+  queue — crossing the org boundary when the automation carries an
+  `assign` grant — and posts the returned finding to an optional
+  thread. The Researcher can run hosted, or locally via `astrorun`
+  inside a working checkout of the codebase under investigation.
+
+  The flow is modeled on a real vendor×integrator billing-API migration
+  (e.g. Stripe classic → flexible billing mode) but is deliberately
+  **engagement-agnostic**: the breaking-change catalog, use-case ID
+  namespace, and repos all come from the thread and the invoke payload,
+  not from the templates.
+
+  ## What it ships
+
+  - **Migration Orchestrator** (`AgentTemplate`) — vendor-side
+    coordinator; owns the catalog and the use-case registry (the
+    thread's task list); never touches partner code.
+  - **Migration Researcher** (`AgentTemplate`) — integrator-side
+    investigator; hosted (GitHub via `integrations`) or local
+    (`astrorun` + local `git`/`gh`/`archastro` CLIs).
+  - **Migration Scope Investigation** (`AutomationTemplate`) — an
+    invocable, org-level automation wrapping the
+    `scope-investigation-workflow` WorkflowGraph: one embedded
+    Researcher stage plus a thread announce.
+
+  ## Install
+
+  This is a multi-template Solution — install each template, choosing
+  it with `template`:
+
+  1. Install **Migration Orchestrator** in the vendor org and
+     **Migration Researcher** in the integrator org (for a single-org
+     trial, install both in one org).
+  2. Install **Migration Scope Investigation** in the vendor org — this
+     provisions the automation already activated.
+  3. Put both agents on a shared (cross-org) team thread — that thread
+     is the record: requests, findings, and the task-list registry all
+     live there.
+
+  ## Run an investigation
+
+  Compose the search request once — including the use-case ID and
+  marker conventions, since the embedded Researcher sees only this
+  string — post it to the thread as the Orchestrator, and invoke with
+  the same text:
+
+  ```sh
+  archastro invoke automation migration-scope-investigation --payload '{
+    "request": "Search request FBM-38c6b758 (scoping). Find every call site that reads a subscription current_period_start / current_period_end (these move to item level in flexible billing mode). Confirm or write the classic (pre-migration) paper test and KEY IT to FBM-38c6b758 (id in the test filename AND a marker comment). Return the standard finding with a coverage manifest recording the git SHA.",
+    "thread": "thr_..."
+  }' --participants '{
+    "researcher": "agi_..."
+  }'
+  ```
+
+  The embedded stage parks the run as a leaseable work item on the
+  Researcher's queue; a hosted harness — or the integrator's local
+  `astrorun` — claims it, investigates, and submits a JSON result that
+  resumes the workflow:
+
+  ```sh
+  archastro list workflow-work --agent <researcher>
+  archastro claim workflow-work --agent <researcher>
+  ```
+
+  ## Cross-org dispatch
+
+  When the Researcher belongs to a different org than the run,
+  assignment is fail-closed until the automation's owner publishes an
+  `assign` grant naming the assignee's **org**:
+
+  ```sh
+  archastro update automation migration-scope-investigation \
+    --acl-add org:<researcher-org-id>:assign
+  ```
+
+templates:
+  - template_path: agents/migration-orchestrator.yaml
+    readme_path: agents/migration-orchestrator.md
+  - template_path: agents/migration-researcher.yaml
+    readme_path: agents/migration-researcher.md
+  - template_path: automations/scope-investigation.yaml
+    readme_path: automations/scope-investigation.md
+
+metadata:
+  sample_slug: cross-org-migration-scope

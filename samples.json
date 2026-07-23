@@ -90,6 +90,14 @@
       "kind": "solution"
     },
     {
+      "slug": "cross-org-migration-scope",
+      "name": "Cross-Org Migration Scope",
+      "tagline": "Cross-org migration scoping — a vendor Orchestrator dispatches breaking-change search requests to a partner org's Researcher as durable workflow runs.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.28.0",
+      "kind": "solution"
+    },
+    {
       "slug": "cross-team-bug-relay",
       "name": "Cross-Team Bug Relay",
       "tagline": "Distributed bug workflow relaying discovery, triage, and remediation between two teams' agents.",

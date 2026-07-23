@@ -1,0 +1,24 @@
+# Invocable automation wrapping the migration scope investigation
+# workflow.
+#
+# Installs org-level (no agent anchor) on the vendor side. Invoking it
+# starts a durable workflow run whose embedded stage is executed by the
+# researcher agent named in the invoke request's top-level
+# `participants` — across an org boundary when the automation carries an
+# `assign` ACL grant naming the assignee's org.
+#
+# invoke_auth is `user` so the automation is installable and invocable
+# by org members — the invoking user's identity is the run's execution
+# context.
+kind: AutomationTemplate
+name: "Migration Scope Investigation"
+description: >-
+  Dispatches one breaking-change search request to an integrator-side
+  Researcher agent as a durable workflow run — across an org boundary
+  when granted — and posts the returned finding to an optional thread.
+type: invoked
+invoke_auth: user
+status: running
+automation_key: migration-scope-investigation
+config_ref: scope-investigation-workflow
+input_schema_ref: scope-investigation-input

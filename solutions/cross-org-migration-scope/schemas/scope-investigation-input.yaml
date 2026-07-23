@@ -1,0 +1,22 @@
+kind: JsonSchema
+lookup_key: scope-investigation-input
+name: Migration Scope Investigation Input
+schema:
+  type: object
+  properties:
+    request:
+      type: string
+      description: >-
+        The full search request text, exactly as the Orchestrator posted
+        it to the shared thread — including the use-case ID (e.g.
+        FBM-38c6b758) and any marker conventions. The embedded
+        Researcher only ever sees this string, so everything it needs
+        must be in it.
+    thread:
+      type: string
+      format: thread
+      description: >-
+        Optional thread. When provided, the workflow posts the returned
+        finding there once the investigation completes.
+  required:
+    - request
