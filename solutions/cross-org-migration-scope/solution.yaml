@@ -1,15 +1,15 @@
 # Catalog-facing wrapper for the cross-org migration scope demo: a
-# vendor-side Orchestrator, an integrator-side Researcher, and an
+# vendor-side Orchestrator, a customer-side Researcher, and an
 # invocable automation that dispatches search requests to the
 # Researcher as durable workflow runs — across an org boundary when
 # granted. Converted from the firstlanding cross-org migration "Scope"
-# demo (Process 1 of a coordinated integration migration).
+# demo.
 kind: Solution
 lookup_key: cross-org-migration-scope-solution
 solution_id: c8006b8c-ae1c-4cdd-a8aa-f4a23822e15e
 solution_version: v0.1.0
 name: "Cross-Org Migration Scope"
-description: "Scope an integration migration across two orgs: a vendor Orchestrator issues breaking-change search requests and a partner Researcher investigates its own codebase, as one durable workflow."
+description: "A vendor helps its customer navigate a breaking-change migration: a vendor Orchestrator issues search requests and a customer Researcher maps at-risk code and writes paper tests reflecting real production usage, as one durable workflow."
 
 category_keys:
   - sample
@@ -23,40 +23,52 @@ tag_keys:
 readme: |
   # Cross-Org Migration Scope
 
-  A demo of **cross-org agent collaboration** on Process 1 (Scope) of a
-  coordinated integration migration — the phase where two companies map
-  every place a partner's integration could break before anything is
-  rewritten.
+  A demo of **cross-org agent collaboration** on the scoping phase of a
+  vendor-led migration: a vendor's API is introducing breaking changes,
+  and the vendor wants to help one of its customers navigate the
+  migration. Before anything is rewritten, the two sides map every
+  place the customer's integration is at risk and pin its current
+  behavior down in tests.
 
   Two agents from (potentially) different orgs share one thread:
 
-  - The vendor's **Migration Orchestrator** issues the breaking-change
-    catalog as concrete search requests, reconciles findings, mints
-    use-case IDs, and maintains the registry as the thread's task list.
-  - The integrator's **Migration Researcher** investigates its own
-    codebase, confirms or writes the classic (pre-migration) **paper
-    test** for each affected use case, and reports evidence-first
-    findings with coverage manifests.
+  - The vendor's **Migration Orchestrator** is fed the vendor's
+    breaking-change and integration-change reference material, turns
+    it into concrete search requests, reconciles findings, mints
+    use-case IDs, and maintains the registry as the thread's task
+    list. Its goal: the customer's integration is **comprehensively
+    covered by paper tests** for the parts of the API the migration
+    focuses on.
+  - The customer's **Migration Researcher** investigates its own
+    codebase to identify the areas at risk of breaking and writes
+    classic (pre-migration) **paper tests** into a shared repo. Its
+    goal: the paper tests **accurately reflect real-world usage**,
+    asserting on the behaviors and dependencies the customer's
+    production code actually relies on.
 
-  The **Migration Scope Investigation** automation ties them together:
-  invoking it parks a durable, leaseable work item on the Researcher's
-  queue — crossing the org boundary when the automation carries an
-  `assign` grant — and posts the returned finding to an optional
-  thread. The Researcher can run hosted, or locally via `astrorun`
-  inside a working checkout of the codebase under investigation.
+  Later steps of the migration replay these paper tests to prove the
+  migration is safe before any real usage is moved.
 
-  The flow is modeled on a real vendor×integrator billing-API migration
-  (e.g. Stripe classic → flexible billing mode) but is deliberately
+  The **Migration Scope Investigation** automation ties the two sides
+  together: invoking it parks a durable, leaseable work item on the
+  Researcher's queue — crossing the org boundary when the automation
+  carries an `assign` grant — and posts the returned finding to an
+  optional thread. The Researcher can run hosted, or locally via
+  `astrorun` inside a working checkout of the codebase under
+  investigation.
+
+  The flow is modeled on a real billing-API migration (e.g. Stripe
+  classic → flexible billing mode) but is deliberately
   **engagement-agnostic**: the breaking-change catalog, use-case ID
-  namespace, and repos all come from the thread and the invoke payload,
-  not from the templates.
+  namespace, and repos all come from the thread and the invoke
+  payload, not from the templates.
 
   ## What it ships
 
   - **Migration Orchestrator** (`AgentTemplate`) — vendor-side
-    coordinator; owns the catalog and the use-case registry (the
-    thread's task list); never touches partner code.
-  - **Migration Researcher** (`AgentTemplate`) — integrator-side
+    coordinator; owns the breaking-change catalog and the use-case
+    registry (the thread's task list); never touches customer code.
+  - **Migration Researcher** (`AgentTemplate`) — customer-side
     investigator; hosted (GitHub via `integrations`) or local
     (`astrorun` + local `git`/`gh`/`archastro` CLIs).
   - **Migration Scope Investigation** (`AutomationTemplate`) — an
@@ -70,7 +82,7 @@ readme: |
   it with `template`:
 
   1. Install **Migration Orchestrator** in the vendor org and
-     **Migration Researcher** in the integrator org (for a single-org
+     **Migration Researcher** in the customer org (for a single-org
      trial, install both in one org).
   2. Install **Migration Scope Investigation** in the vendor org — this
      provisions the automation already activated.
@@ -87,7 +99,7 @@ readme: |
 
   ```sh
   archastro invoke automation migration-scope-investigation --payload '{
-    "request": "Search request FBM-38c6b758 (scoping). Find every call site that reads a subscription current_period_start / current_period_end (these move to item level in flexible billing mode). Confirm or write the classic (pre-migration) paper test and KEY IT to FBM-38c6b758 (id in the test filename AND a marker comment). Return the standard finding with a coverage manifest recording the git SHA.",
+    "request": "Search request MIGRATION-38c6b758 (scoping). Find every call site that reads a subscription current_period_start / current_period_end (these move to item level in flexible billing mode). Confirm or write the classic (pre-migration) paper test and KEY IT to MIGRATION-38c6b758 (id in the test filename AND a marker comment). Return the standard finding with a coverage manifest recording the git SHA.",
     "thread": "thr_..."
   }' --participants '{
     "researcher": "agi_..."
@@ -95,7 +107,7 @@ readme: |
   ```
 
   The embedded stage parks the run as a leaseable work item on the
-  Researcher's queue; a hosted harness — or the integrator's local
+  Researcher's queue; a hosted harness — or the customer's local
   `astrorun` — claims it, investigates, and submits a JSON result that
   resumes the workflow:
 

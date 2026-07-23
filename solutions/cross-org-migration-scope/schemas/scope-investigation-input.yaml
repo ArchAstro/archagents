@@ -9,7 +9,7 @@ schema:
       description: >-
         The full search request text, exactly as the Orchestrator posted
         it to the shared thread — including the use-case ID (e.g.
-        FBM-38c6b758) and any marker conventions. The embedded
+        MIGRATION-38c6b758) and any marker conventions. The embedded
         Researcher only ever sees this string, so everything it needs
         must be in it.
     thread:

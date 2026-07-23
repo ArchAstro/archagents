@@ -1,17 +1,18 @@
 # Migration scope investigation — a durable distributed workflow.
 #
 # One embedded agent stage: the invoking (vendor) side dispatches a
-# breaking-change search request to the integrator's Researcher agent,
+# breaking-change search request to the customer's Researcher agent,
 # which may live in another org:
 #
-#   trigger → investigate (embedded: researcher works the search request
-#           against its own codebase and paper-test repo)
+#   trigger → investigate (embedded: researcher finds the at-risk call
+#           sites in its own codebase and confirms or writes the classic
+#           paper test in the shared paper-test repo)
 #           → announce   (posts the returned finding to the optional
 #                         `thread` payload field; no-op when absent)
 #
 # The embedded stage parks a leaseable work item on the Researcher's
 # queue. In a hosted setup the platform harness runs it; in the local
-# demo the integrator's `astrorun` leases it, runs the investigation in
+# demo the customer's `astrorun` leases it, runs the investigation in
 # a working checkout, and submits the JSON result that resumes the run.
 #
 # Note for local astrorun demos: the announce script posts as the
@@ -22,17 +23,17 @@
 kind: WorkflowGraph
 name: Migration scope investigation
 description: >-
-  Dispatches one breaking-change search request to an integrator-side
-  Researcher agent as a durable run: the Researcher finds affected call
-  sites in its own codebase, confirms or writes the classic paper test,
-  and returns a finding that is posted to an optional thread.
+  Dispatches one breaking-change search request to a customer-side
+  Researcher agent as a durable run: the Researcher finds the at-risk
+  call sites in its own codebase, confirms or writes the classic paper
+  test, and returns a finding that is posted to an optional thread.
 start_node: trigger
 
 participants_schema:
   researcher:
     type: agent_user
     description: >-
-      Integrator-side Researcher agent that investigates its own
+      Customer-side Researcher agent that investigates its own
       organization's codebase and owns the paper-test work. May belong
       to a different org than the run when the automation carries an
       assign grant.
@@ -48,18 +49,20 @@ nodes:
     id: investigate
     agent_ref: researcher
     instructions: |
-      You are the integrator-side Researcher in Process 1 (Scope) of a
-      coordinated integration migration. Investigate this search request
+      You are the customer-side Researcher scoping a vendor's
+      breaking-change migration. Investigate this search request
       against your organization's codebase:
 
       {{$.request}}
 
-      1. Find every affected call site and classify what the code
-         assumes about the vendor's behavior at each site.
+      1. Find every call site at risk of breaking and classify what the
+         code assumes about the vendor's behavior at each site.
       2. Confirm or write the classic (pre-migration) paper test for the
          affected use case in the paper-test repo, keyed to the use-case
          ID in the request (ID in the test filename AND a marker comment
-         at the top of the test).
+         at the top of the test). The test must assert the behaviors and
+         dependencies your production code actually relies on, not
+         merely that a call happens.
       3. Use the tools your session actually has: in a hosted session,
          the GitHub operations surfaced by your integrations tool
          (get_repo_file / create_branch / commit_file /

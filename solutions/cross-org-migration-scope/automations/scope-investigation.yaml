@@ -13,7 +13,7 @@
 kind: AutomationTemplate
 name: "Migration Scope Investigation"
 description: >-
-  Dispatches one breaking-change search request to an integrator-side
+  Dispatches one breaking-change search request to a customer-side
   Researcher agent as a durable workflow run — across an org boundary
   when granted — and posts the returned finding to an optional thread.
 type: invoked

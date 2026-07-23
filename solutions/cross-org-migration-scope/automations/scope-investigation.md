@@ -3,7 +3,7 @@
 An **invocable, org-level automation** — no agent anchor — wrapping the
 `scope-investigation-workflow` durable workflow. Installing it
 provisions the automation already activated; invoking it dispatches one
-breaking-change search request to a Researcher agent.
+breaking-change search request to a customer-side Researcher agent.
 
 ## Invoke contract
 
@@ -11,7 +11,7 @@ The automation's `input_schema_ref` validates the payload directly:
 
 ```json
 {
-  "request": "Search request FBM-38c6b758 (scoping). Find every call site that reads … Confirm or write the classic paper test and KEY IT to FBM-38c6b758 …",
+  "request": "Search request MIGRATION-38c6b758 (scoping). Find every call site that reads … Confirm or write the classic paper test and KEY IT to MIGRATION-38c6b758 …",
   "thread": "thr_… (optional — the finding posts here)"
 }
 ```
@@ -27,7 +27,7 @@ invoke request. With the CLI:
 
 ```sh
 archastro invoke automation migration-scope-investigation --payload '{
-  "request": "Search request FBM-… (scoping). Find every call site that …",
+  "request": "Search request MIGRATION-… (scoping). Find every call site that …",
   "thread": "thr_…"
 }' --participants '{
   "researcher": "agi_…"
@@ -38,7 +38,7 @@ archastro invoke automation migration-scope-investigation --payload '{
 
 1. Parks an **investigation** work item on the researcher's queue. A
    hosted researcher's harness claims it; in the local demo the
-   integrator runs `astrorun`, which leases it and runs the
+   customer runs `astrorun`, which leases it and runs the
    investigation inside a working checkout:
 
    ```sh

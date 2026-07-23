@@ -1,16 +1,23 @@
 # Migration Researcher
 
-Integrator-side investigator for Process 1 (Scope) of a coordinated
-integration migration. It works the Orchestrator's search requests
-against its **own organization's codebase**, confirms or writes the
-classic (pre-migration) **paper test** for each affected use case, and
-reports evidence-first findings — call-site tables with `file:line`, a
-mandatory coverage manifest recording the git SHA scanned, and explicit
-negative results.
+Customer-side investigator for scoping a vendor's breaking-change
+migration. It works the Orchestrator's search requests against its
+**own organization's codebase** to (1) identify the areas at risk of
+breaking and (2) confirm or write the classic (pre-migration) **paper
+test** for each affected use case in the shared paper-test repo.
 
-It never mints use-case IDs or decides what the breaking changes are —
-that authority belongs to the Orchestrator. Every outgoing finding and
-every repo change passes a human review gate.
+Its goal: the paper tests **accurately reflect real-world usage** —
+asserting on the behaviors and dependencies the customer's production
+code actually relies on, not merely that a call happens. Later steps
+of the migration replay these tests to prove the migration is safe
+before real usage is moved.
+
+Findings are evidence-first: call-site tables with `file:line`, a
+mandatory coverage manifest recording the git SHA scanned, and
+explicit negative results. It never mints use-case IDs or decides what
+the breaking changes are — that authority belongs to the Orchestrator.
+Every outgoing finding and every repo change passes a human review
+gate.
 
 ## Two execution modes
 
