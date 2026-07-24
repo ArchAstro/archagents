@@ -63,12 +63,15 @@ nodes:
          at the top of the test). The test must assert the behaviors and
          dependencies your production code actually relies on, not
          merely that a call happens.
-      3. Use the tools your session actually has: in a hosted session,
-         the GitHub operations surfaced by your integrations tool
-         (get_repo_file / create_branch / commit_file /
-         create_pull_request); in a local astrorun session, local shell
-         and `git grep` for the investigation and the local `gh`/`git`
-         CLIs for the paper-test repo.
+      3. Use the tools your session actually has. For the paper-test
+         repo, prefer the GitHub operations surfaced by your
+         integrations tool (get_repo_file / create_branch /
+         commit_file / create_pull_request) — available in hosted
+         sessions, and in local astrorun sessions when the GitHub App
+         is bound to you. In a local session, investigate with local
+         shell and `git grep`; if the integration tools are absent,
+         fall back to the local `gh`/`git` CLIs for the paper-test
+         repo.
 
       Return EXACTLY ONE JSON object and nothing else, with these keys:
         "finding": a markdown finding (call-site table with file:line,

@@ -27,13 +27,17 @@ gate.
   a GitHub App integration is connected to the agent.
 - **Local automated session (astrorun)** — the agent runs as a local
   coding session inside a working clone of the codebase under
-  investigation, with no platform tools: it investigates with local
-  shell/`git grep`, writes paper tests via the local `gh`/`git` CLIs,
-  and posts findings and manages tasks by shelling out to the
-  `archastro`/`archagent` CLIs.
+  investigation: it investigates with local shell/`git grep` and posts
+  findings and manages tasks by shelling out to the
+  `archastro`/`archagent` CLIs. With the GitHub App bound, the same
+  `integrations` repo operations are available here too; without it,
+  the local `gh`/`git` CLIs are the fallback for the paper-test repo.
 
-The identity prompt tells the agent to detect its mode from the tools
-actually available.
+GitHub access in both modes comes from the org's GitHub App connection
+bound to the agent (an `enablement/github_app` agent installation).
+Sessions load their tool manifest at start, so bind it before
+launching. The identity prompt tells the agent to detect what it has
+from the tools actually available.
 
 ## Contract with the workflow
 

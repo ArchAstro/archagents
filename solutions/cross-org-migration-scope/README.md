@@ -34,9 +34,12 @@ Each embedded stage is a durable, leaseable work item on the
 Researcher's queue. Cross-org assignment is fail-closed until the
 automation carries an `assign` ACL grant naming the researcher's org —
 so the boundary crossing is explicit and auditable. The Researcher can
-run **hosted** (GitHub ops via its `integrations` tool) or **locally
-via `astrorun`** inside a working checkout, using only local
-`git`/`gh`/`archastro` CLIs.
+run **hosted** or **locally via `astrorun`** inside a working
+checkout. In both modes, GitHub operations on the paper-test repo
+surface through its `integrations` tool once the org's GitHub App is
+bound to the agent (an `enablement/github_app` installation; tools
+load at session start, so bind before launching). A local `gh` login
+is the fallback for astrorun machines without the binding.
 
 The shape is modeled on a real billing-API migration (e.g. Stripe
 classic → flexible billing mode), but the templates are deliberately
