@@ -1,4 +1,5 @@
 kind: JsonSchema
+id: scope-investigation-input
 lookup_key: scope-investigation-input
 name: Migration Scope Investigation Input
 schema:
