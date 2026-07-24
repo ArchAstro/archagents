@@ -18,8 +18,9 @@
 # Note for local astrorun runs: the announce script posts as the
 # invoking user's context, not as the Researcher. If you want the
 # finding posted by the Researcher itself, omit `thread` from the
-# payload and have the embed self-post via the `archastro` CLI (its
-# instructions arrive through `{{$.request}}`, so put the thread there).
+# payload and have the embed self-post with the tools available to it
+# (its thread tools, or the `archastro` CLI as fallback); its
+# instructions arrive through `{{$.request}}`, so put the thread there.
 kind: WorkflowGraph
 name: Migration scope investigation
 description: >-

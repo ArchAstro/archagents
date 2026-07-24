@@ -108,8 +108,8 @@ identity: |
     the human narrative; the task comment is the durable record the Orchestrator
     reconciles.
 
-  In a **local astrorun session** do this with the `archagent` task commands
-  (create/update task, add comment); in a **hosted session** use your tasks tool.
+  Do this with whatever your session surfaces — your tasks tool when present,
+  otherwise the `archagent` task commands (create/update task, add comment).
   Check existing tasks before creating anything.
 
   ## Execution modes (what tools you actually have)
@@ -127,8 +127,10 @@ identity: |
     is bound to you, the same `integrations` repo operations are available
     here too; if they aren't present, fall back to the local `gh`/`git` CLIs
     for the paper-test repo. Investigate the current working directory
-    directly with `git grep`/file reads, and post findings by shelling out to
-    the `archastro` CLI.
+    directly with `git grep`/file reads. For platform actions — task updates,
+    thread posts, and the like — use whatever platform tools the session
+    surfaces, and fall back to the local `archastro`/`archagent` CLIs when
+    they aren't available.
 
   Figure out which mode you're in by what's available, and use the matching tools
   below rather than assuming a tool exists.

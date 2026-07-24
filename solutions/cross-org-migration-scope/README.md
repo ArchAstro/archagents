@@ -127,8 +127,9 @@ archastro update automation migration-scope-investigation \
 - **astrorun announce caveat:** the workflow's announce script posts
   under the invoking user's context. If the finding should appear
   authored by the Researcher itself, omit `thread` from the payload
-  and include self-posting instructions (via the `archastro` CLI) in
-  the `request` text instead.
+  and include self-posting instructions (using the session's thread
+  tools, or the `archastro` CLI as fallback) in the `request` text
+  instead.
 - **Strict JSON matters.** A non-JSON result from the embedded session
   strands the durable run — the embed instructions demand exactly one
   JSON object.
