@@ -11,11 +11,11 @@
 #                         `thread` payload field; no-op when absent)
 #
 # The embedded stage parks a leaseable work item on the Researcher's
-# queue. In a hosted setup the platform harness runs it; in the local
-# demo the customer's `astrorun` leases it, runs the investigation in
+# queue. In a hosted setup the platform harness runs it; in a local
+# setup the customer's `astrorun` leases it, runs the investigation in
 # a working checkout, and submits the JSON result that resumes the run.
 #
-# Note for local astrorun demos: the announce script posts as the
+# Note for local astrorun runs: the announce script posts as the
 # invoking user's context, not as the Researcher. If you want the
 # finding posted by the Researcher itself, omit `thread` from the
 # payload and have the embed self-post via the `archastro` CLI (its

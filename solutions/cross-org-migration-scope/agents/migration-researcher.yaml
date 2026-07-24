@@ -1,4 +1,4 @@
-# Customer-side investigator for the cross-org migration scope demo.
+# Customer-side investigator for the cross-org migration scope sample.
 # Investigates its own organization's codebase to find the areas at risk
 # of breaking, and writes classic paper tests that reflect how the
 # customer's production code really uses the vendor's API. Runs hosted

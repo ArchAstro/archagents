@@ -1,9 +1,8 @@
-# Catalog-facing wrapper for the cross-org migration scope demo: a
+# Catalog-facing wrapper for the cross-org migration scope sample: a
 # vendor-side Orchestrator, a customer-side Researcher, and an
 # invocable automation that dispatches search requests to the
 # Researcher as durable workflow runs — across an org boundary when
-# granted. Converted from the firstlanding cross-org migration "Scope"
-# demo.
+# granted.
 kind: Solution
 lookup_key: cross-org-migration-scope-solution
 solution_id: c8006b8c-ae1c-4cdd-a8aa-f4a23822e15e
@@ -23,7 +22,7 @@ tag_keys:
 readme: |
   # Cross-Org Migration Scope
 
-  A demo of **cross-org agent collaboration** on the scoping phase of a
+  A sample showing **cross-org agent collaboration** on the scoping phase of a
   vendor-led migration: a vendor's API is introducing breaking changes,
   and the vendor wants to help one of its customers navigate the
   migration. Before anything is rewritten, the two sides map every

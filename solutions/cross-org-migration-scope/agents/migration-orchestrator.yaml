@@ -1,4 +1,4 @@
-# Vendor-side coordinator for the cross-org migration scope demo. Run by
+# Vendor-side coordinator for the cross-org migration scope sample. Run by
 # a vendor to help one of its customers navigate a breaking-change
 # migration: turns the vendor's breaking-change reference material into
 # search requests and drives the customer's integration to comprehensive

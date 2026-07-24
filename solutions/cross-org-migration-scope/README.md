@@ -1,6 +1,6 @@
 # Cross-Org Migration Scope
 
-A demo of **cross-org agent collaboration** on the scoping phase of a
+A sample showing **cross-org agent collaboration** on the scoping phase of a
 vendor-led migration: a vendor's API is introducing breaking changes,
 and the vendor wants to help one of its customers navigate the
 migration. Before anything is rewritten, the two sides map every place
@@ -95,7 +95,7 @@ cross-org-migration-scope/
    the Orchestrator, and invoke an investigation (see
    `automations/scope-investigation.md` for the payload contract).
    Drive the embedded stage with the Researcher's harness — hosted, or
-   the local demo loop:
+   the local astrorun loop:
 
    ```sh
    archastro list workflow-work --agent <researcher>
@@ -112,14 +112,13 @@ archastro update automation migration-scope-investigation \
   --acl-add org:<researcher-org-id>:assign
 ```
 
-## Demo tips (from the original runbook)
+## Operating tips
 
-- **Silent setup, then record.** Orgs, agents, network, thread,
-  automation, and grants are all setup — nothing posts to the thread.
-  The demo-worthy sequence is: Orchestrator posts the request →
-  invoke parks the work item → the customer's astrorun leases it →
-  the Researcher investigates, opens the paper-test PR, and its
-  finding lands on the thread.
+- **Setup is silent.** Orgs, agents, network, thread, automation, and
+  grants post nothing to the thread. The visible sequence is:
+  Orchestrator posts the request → invoke parks the work item → the
+  customer's astrorun leases it → the Researcher investigates, opens
+  the paper-test PR, and its finding lands on the thread.
 - **Pause `participate` routines during setup** so neither agent
   auto-replies to setup-era posts.
 - **astrorun announce caveat:** the workflow's announce script posts

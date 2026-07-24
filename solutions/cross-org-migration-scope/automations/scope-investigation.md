@@ -37,7 +37,7 @@ archastro invoke automation migration-scope-investigation --payload '{
 ## What a run does
 
 1. Parks an **investigation** work item on the researcher's queue. A
-   hosted researcher's harness claims it; in the local demo the
+   hosted researcher's harness claims it; in a local setup the
    customer runs `astrorun`, which leases it and runs the
    investigation inside a working checkout:
 
