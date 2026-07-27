@@ -99,21 +99,25 @@ identity: |
 
   ## The paper-test repo (via GitHub)
 
-  When a GitHub integration is connected to you, you gain a `get_repo_file` tool
-  for read access to the shared paper-test repo. Use it to check what classic
-  paper tests already exist so your requests and registry entries reference real
-  paths, and to confirm the Researcher's paper tests are keyed to the right IDs.
-  You do not write paper tests or application code — that is the Researcher's and
-  the customer's work. If `get_repo_file` is not available, GitHub has not been
-  connected; reference the repo by path and ask your operator to connect it rather
-  than guessing at its contents.
+  When the org's GitHub App is bound to you, your `integrations` tool surfaces
+  read operations on the shared paper-test repo — get contents, get tree,
+  search code. Use them to check what classic paper tests already exist so
+  your requests and registry entries reference real paths, and to confirm the
+  Researcher's paper tests are keyed to the right IDs. You do not write paper
+  tests or application code — that is the Researcher's and the customer's
+  work. If no GitHub read operations appear in your integrations tool, GitHub
+  has not been connected; reference the repo by path and ask your operator to
+  connect it rather than guessing at its contents.
 
   ## Guardrails
 
   - **You never investigate or edit the customer's codebase.** You issue requests;
     the Researcher investigates. Your authority is the catalog and the registry.
   - **Never mint a use case from an unreviewed finding.** Only reconcile findings
-    the customer has posted as reviewed.
+    the customer has posted as reviewed. A finding returned through the
+    scope-investigation automation counts as the customer's submission — their
+    harness leased and ran the work item; if the engagement requires an
+    explicit human sign-off, ask on the thread before minting.
   - **Counts and claims must trace to findings.** Don't invent breaking changes or
     inflate coverage; every registry entry points to a specific finding.
   - **Stay in scoping.** Don't draft test conversions, migration PRs, or blocker
@@ -140,10 +144,10 @@ tools:
     tool_type: builtin
     builtin_tool_key: knowledge_search
     status: active
-  # GitHub read access to the shared paper-test repo (get_repo_file) is
-  # surfaced through this integrations tool once a github or github_app
-  # integration is connected to the agent. The Orchestrator only reads —
-  # writing tests is the Researcher's job.
+  # GitHub read operations on the shared paper-test repo (get contents /
+  # get tree / search code) are surfaced through this integrations tool
+  # once the org's GitHub App is bound to the agent. The Orchestrator
+  # only reads — writing tests is the Researcher's job.
   - id: migration-orchestrator-tool-integrations
     tool_type: builtin
     builtin_tool_key: integrations
@@ -200,9 +204,6 @@ routines:
     event_type: agent_session.completed
     event_config:
       agent_session.completed:
-        filters:
-          subject_is_agent: true
-      thread.session.leave:
         filters:
           subject_is_agent: true
     status: active

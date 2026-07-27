@@ -67,15 +67,15 @@ nodes:
          pending a minted use-case ID. The test must assert the
          behaviors and dependencies your production code actually relies
          on, not merely that a call happens.
-      3. Use the tools your session actually has. For the paper-test
-         repo, prefer the GitHub operations surfaced by your
-         integrations tool (get_repo_file / create_branch /
-         commit_file / create_pull_request) — available in hosted
-         sessions, and in local astrorun sessions when the GitHub App
-         is bound to you. In a local session, investigate with local
-         shell and `git grep`; if the integration tools are absent,
-         fall back to the local `gh`/`git` CLIs for the paper-test
-         repo.
+      3. Use the tools your session actually has. Read the paper-test
+         repo through your integrations tool's GitHub read operations
+         (get contents / get tree / search code) when the GitHub App is
+         bound to you. Branch/commit/PR writes need the local
+         `gh`/`git` CLIs (astrorun session) or a write-capable tool
+         your installer connected; if you have no write path, include
+         the complete drafted test in the finding and return "none"
+         for paper_test. In a local session, investigate with local
+         shell and `git grep`.
 
       Return EXACTLY ONE JSON object and nothing else, with these keys:
         "finding": a markdown finding (call-site table with file:line,

@@ -24,29 +24,35 @@ every mode).
 
 ## Two execution modes
 
-- **Hosted session** — platform builtin tools, plus GitHub repo
-  operations (`get_repo_file`, `create_branch`, `commit_file`,
-  `create_pull_request`) surfaced through the `integrations` tool once
-  a GitHub App integration is connected to the agent.
+- **Hosted session** — platform builtin tools, plus GitHub repo read
+  operations (get contents, get tree, search code) surfaced through
+  the `integrations` tool once the GitHub App is bound to the agent,
+  and any write-capable tools the installer adds.
 - **Local automated session (astrorun)** — the agent runs as a local
   coding session inside a working clone of the codebase under
   investigation: it investigates with local shell/`git grep`, and for
   platform actions (task updates, thread posts) uses whatever platform
   tools the session surfaces, shelling out to the
   `archastro`/`archagent` CLIs as the fallback. With the GitHub App
-  bound, the same `integrations` repo operations are available here
-  too; without it, the local `gh`/`git` CLIs are the fallback for the
-  paper-test repo.
+  bound, the same `integrations` read operations are available here
+  too.
 
-GitHub access in both modes comes from the org's GitHub App connection
-bound to the agent (an `enablement/github_app` agent installation).
-Sessions load their tool manifest at start, so bind it before
-launching. The identity prompt tells the agent to detect what it has
-from the tools actually available.
+GitHub reads in both modes come from the org's GitHub App connection
+bound to the agent (the template declares the `enablement/github_app`
+installation; sessions load their tool manifest at start, so bind
+before launching). Branch/commit/PR **writes** are a different story:
+the `integrations` builtin has no write operations, so writes use the
+local `gh`/`git` CLIs in astrorun sessions — or a write-capable custom
+tool the installer connects for hosted sessions. The identity prompt
+tells the agent to detect what it has from the tools actually
+available.
 
 ## Contract with the workflow
 
 When driven by the `migration-scope-investigation` automation, the
 embedded work item asks for a strict JSON reply (`finding`,
 `paper_test`, `pr_url`). The agent returns only that JSON object — the
-workflow parses it mechanically.
+workflow parses it mechanically. A first-pass discovery request (no
+use-case ID minted yet) legitimately returns `paper_test: "none"`; the
+Orchestrator mints the ID from the finding and follows up with a keyed
+request that lands the test.

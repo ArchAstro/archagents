@@ -35,11 +35,12 @@ Researcher's queue. Cross-org assignment is fail-closed until the
 automation carries an `assign` ACL grant naming the researcher's org —
 so the boundary crossing is explicit and auditable. The Researcher can
 run **hosted** or **locally via `astrorun`** inside a working
-checkout. In both modes, GitHub operations on the paper-test repo
-surface through its `integrations` tool once the org's GitHub App is
-bound to the agent (an `enablement/github_app` installation; tools
-load at session start, so bind before launching). A local `gh` login
-is the fallback for astrorun machines without the binding.
+checkout. In both modes, paper-test-repo **reads** surface through its
+`integrations` tool once the org's GitHub App is bound to the agent
+(an `enablement/github_app` installation; tools load at session start,
+so bind before launching). Branch/commit/PR **writes** use the local
+`gh`/`git` CLIs in astrorun sessions — or a write-capable tool the
+installer connects for hosted sessions.
 
 The shape is modeled on a real billing-API migration (e.g. Stripe
 classic → flexible billing mode), but the templates are deliberately

@@ -68,8 +68,10 @@ readme: |
     coordinator; owns the breaking-change catalog and the use-case
     registry (the thread's task list); never touches customer code.
   - **Migration Researcher** (`AgentTemplate`) — customer-side
-    investigator; hosted (GitHub via `integrations`) or local
-    (`astrorun` + local `git`/`gh`/`archastro` CLIs).
+    investigator; hosted or local (`astrorun`). Paper-test-repo reads
+    surface through `integrations` once the GitHub App is bound;
+    branch/commit/PR writes use the local `gh`/`git` CLIs or an
+    installer-connected write tool.
   - **Migration Scope Investigation** (`AutomationTemplate`) — an
     invocable, org-level automation wrapping the
     `scope-investigation-workflow` WorkflowGraph: one embedded
@@ -94,7 +96,9 @@ readme: |
   Compose the search request once — including the use-case ID, the
   marker conventions, and the paper-test repo location, since the
   embedded Researcher sees only this string — post it to the thread as
-  the Orchestrator, and invoke with the same text:
+  the Orchestrator, and invoke with the same text (omit the ID for a
+  first-pass discovery request; the Researcher then returns
+  paper_test "none" until one is minted):
 
   ```sh
   archastro invoke automation migration-scope-investigation --payload '{

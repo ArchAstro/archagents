@@ -34,6 +34,6 @@ billing mode), but any integration migration fits.
 
 ## GitHub (optional)
 
-Connect a GitHub integration to give it read access to the shared
-paper-test repo (`get_repo_file`) so registry entries reference real
-test paths. It never writes tests or code itself.
+Bind the org's GitHub App to give it read access to the shared
+paper-test repo through its `integrations` tool, so registry entries
+reference real test paths. It never writes tests or code itself.

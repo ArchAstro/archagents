@@ -13,7 +13,9 @@ schema:
         MIGRATION-38c6b758), any marker conventions, and the location of
         the shared paper-test repo (owner/name). The embedded Researcher
         only ever sees this string, so everything it needs must be in
-        it.
+        it. Omit the use-case ID for a first-pass discovery request —
+        the Researcher then returns paper_test "none" pending a minted
+        ID.
     thread:
       type: string
       format: thread

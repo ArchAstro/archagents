@@ -21,7 +21,10 @@ thread — as `request`.** The embedded Researcher only ever sees
 `{{$.request}}`, so the use-case ID, the marker conventions, and the
 paper-test repo location (owner/name) must be *in* that string; a
 stripped summary produces a paper test with no use-case marker, or no
-paper test at all.
+paper test at all. One exception: a first-pass discovery request may
+omit the use-case ID — the Researcher returns `paper_test: "none"`,
+and the Orchestrator mints the ID from the finding before the keyed
+follow-up.
 
 Participant assignment is a top-level sibling of `payload` in the
 invoke request. With the CLI:
@@ -49,7 +52,10 @@ archastro invoke automation migration-scope-investigation --payload '{
 
 2. The researcher submits a strict JSON result (`finding`,
    `paper_test`, `pr_url`) that resumes the run.
-3. The finding is posted to the payload `thread` when one was provided.
+3. The finding is posted to the payload `thread` when one was provided
+   — authored under the invoking user's context, not as the Researcher.
+   If authorship matters, omit `thread` and have the Researcher
+   self-post instead (put those instructions in the `request` text).
    The full journey is durable — inspect it with the automation run's
    journal.
 
