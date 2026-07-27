@@ -91,14 +91,14 @@ readme: |
 
   ## Run an investigation
 
-  Compose the search request once — including the use-case ID and
-  marker conventions, since the embedded Researcher sees only this
-  string — post it to the thread as the Orchestrator, and invoke with
-  the same text:
+  Compose the search request once — including the use-case ID, the
+  marker conventions, and the paper-test repo location, since the
+  embedded Researcher sees only this string — post it to the thread as
+  the Orchestrator, and invoke with the same text:
 
   ```sh
   archastro invoke automation migration-scope-investigation --payload '{
-    "request": "Search request MIGRATION-38c6b758 (scoping). Find every call site that reads a subscription current_period_start / current_period_end (these move to item level in flexible billing mode). Confirm or write the classic (pre-migration) paper test and KEY IT to MIGRATION-38c6b758 (id in the test filename AND a marker comment). Return the standard finding with a coverage manifest recording the git SHA.",
+    "request": "Search request MIGRATION-38c6b758 (scoping). Find every call site that reads a subscription current_period_start / current_period_end (these move to item level in flexible billing mode). Confirm or write the classic (pre-migration) paper test in acme/paper-tests and KEY IT to MIGRATION-38c6b758 (id in the test filename AND a marker comment). Return the standard finding with a coverage manifest recording the git SHA.",
     "thread": "thr_..."
   }' --participants '{
     "researcher": "agi_..."
@@ -111,8 +111,8 @@ readme: |
   resumes the workflow:
 
   ```sh
-  archastro list workflow-work --agent <researcher>
-  archastro claim workflow-work --agent <researcher>
+  archastro list workitems --agent <researcher>
+  archastro claim workitem
   ```
 
   ## Cross-org dispatch

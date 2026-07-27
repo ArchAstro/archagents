@@ -59,11 +59,14 @@ nodes:
       1. Find every call site at risk of breaking and classify what the
          code assumes about the vendor's behavior at each site.
       2. Confirm or write the classic (pre-migration) paper test for the
-         affected use case in the paper-test repo, keyed to the use-case
-         ID in the request (ID in the test filename AND a marker comment
-         at the top of the test). The test must assert the behaviors and
-         dependencies your production code actually relies on, not
-         merely that a call happens.
+         affected use case in the paper-test repo named in the request.
+         If the request names a use-case ID, key the test to it (ID in
+         the test filename AND a marker comment at the top of the test).
+         If it names none — a first-pass discovery request — return the
+         finding with "paper_test": "none" and note that the test is
+         pending a minted use-case ID. The test must assert the
+         behaviors and dependencies your production code actually relies
+         on, not merely that a call happens.
       3. Use the tools your session actually has. For the paper-test
          repo, prefer the GitHub operations surfaced by your
          integrations tool (get_repo_file / create_branch /

@@ -70,16 +70,17 @@ cross-org-migration-scope/
   and rollups all land on one shared (cross-org team) thread.
 - **The task list is the registry.** The Orchestrator mints a use-case
   ID per behavioral assumption (`MIGRATION-` + 8 hex), tags a task with
-  it, tracks lifecycle as task status, assigns the Researcher via
+  it and with the lifecycle state, tracks work state as task status
+  (`open`/`in_progress`/`done`), assigns the Researcher via
   `owner_agent`, and reconciles the reviewed finding as a task comment.
 - **Findings are evidence-first.** Call-site tables with `file:line`, a
   mandatory coverage manifest recording the git SHA scanned, explicit
   negative results, and a classic paper test keyed to the use-case ID
   that asserts what the customer's production code actually depends on.
 - **Pass the real request text down.** The embedded Researcher sees
-  only the payload's `request` string — so the use-case ID and marker
-  conventions must be in it, identical to what the Orchestrator posted
-  on the thread.
+  only the payload's `request` string — so the use-case ID, the marker
+  conventions, and the paper-test repo location (owner/name) must be
+  in it, identical to what the Orchestrator posted on the thread.
 
 ## Try it
 
@@ -101,8 +102,8 @@ cross-org-migration-scope/
    the local astrorun loop:
 
    ```sh
-   archastro list workflow-work --agent <researcher>
-   archastro claim workflow-work --agent <researcher>
+   archastro list workitems --agent <researcher>
+   archastro claim workitem
    ```
 
 ## Cross-org dispatch

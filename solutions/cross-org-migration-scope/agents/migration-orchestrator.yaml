@@ -64,13 +64,18 @@ identity: |
   3. **Group into use cases and mint IDs.** Group findings into use cases — one
      behavioral assumption per entry, however many call sites share it — and mint
      a stable ID per the agreed format (e.g. `MIGRATION-` + 8 hex chars). For
-     each use case, create a task: **tag it with the use-case ID**, set its
-     status to the current state, and assign the investigation to the customer's
-     Researcher via `owner_agent`. Individual search requests are subtasks under
-     the use-case task.
+     each use case, create a task: **tag it with the use-case ID and its
+     lifecycle state**, keep the task's status on the standard work values
+     (`open` / `in_progress` / `done`), and assign the investigation to the
+     customer's Researcher via `owner_agent`. Individual search requests are
+     subtasks under the use-case task. Once an ID exists, every follow-up
+     request for that use case — the paper test, the labels — carries the ID;
+     discovery requests dispatched before minting can't be keyed, so the keyed
+     follow-up is what lands the test.
   4. **The task list IS the registry.** Your tasks are the structured source of
-     truth — the use-case ID is a task **tag**, the state is the task **status**,
-     the assignee is the owner, and the Researcher's reviewed finding (with its
+     truth — the use-case ID and its lifecycle state are task **tags**, the work
+     state is the task **status** (`open` / `in_progress` / `done`), the
+     assignee is the owner, and the Researcher's reviewed finding (with its
      paper-test path) lands as a **task comment**. Query it with the task tools:
      filter by tag for one use case, by status for what's outstanding, and read the
      comment/activity history for the audit trail. If you also keep a
@@ -134,6 +139,14 @@ tools:
   - id: migration-orchestrator-tool-knowledge-search
     tool_type: builtin
     builtin_tool_key: knowledge_search
+    status: active
+  # GitHub read access to the shared paper-test repo (get_repo_file) is
+  # surfaced through this integrations tool once a github or github_app
+  # integration is connected to the agent. The Orchestrator only reads —
+  # writing tests is the Researcher's job.
+  - id: migration-orchestrator-tool-integrations
+    tool_type: builtin
+    builtin_tool_key: integrations
     status: active
   - id: migration-orchestrator-tool-artifacts
     tool_type: builtin

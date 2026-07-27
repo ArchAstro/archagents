@@ -10,9 +10,10 @@ schema:
       description: >-
         The full search request text, exactly as the Orchestrator posted
         it to the shared thread — including the use-case ID (e.g.
-        MIGRATION-38c6b758) and any marker conventions. The embedded
-        Researcher only ever sees this string, so everything it needs
-        must be in it.
+        MIGRATION-38c6b758), any marker conventions, and the location of
+        the shared paper-test repo (owner/name). The embedded Researcher
+        only ever sees this string, so everything it needs must be in
+        it.
     thread:
       type: string
       format: thread

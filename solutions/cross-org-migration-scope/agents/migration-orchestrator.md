@@ -19,9 +19,10 @@ On the shared cross-org thread it:
   counts, coverage manifests, and that each paper test asserts what
   the customer's production code actually relies on.
 - **Mints use-case IDs** (`MIGRATION-` + 8 hex by default) and
-  maintains the registry as the thread's **task list**: use-case ID =
-  task tag, lifecycle state = task status, assignee = `owner_agent`,
-  reviewed finding = task comment.
+  maintains the registry as the thread's **task list**: use-case ID and
+  lifecycle state = task tags, work state = task status
+  (`open`/`in_progress`/`done`), assignee = `owner_agent`, reviewed
+  finding = task comment.
 - **Posts progress rollups** derived from the tasks.
 
 ## Engagement-agnostic by design

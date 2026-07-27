@@ -16,8 +16,11 @@ Findings are evidence-first: call-site tables with `file:line`, a
 mandatory coverage manifest recording the git SHA scanned, and
 explicit negative results. It never mints use-case IDs or decides what
 the breaking changes are — that authority belongs to the Orchestrator.
-Every outgoing finding and every repo change passes a human review
-gate.
+In interactive sessions, outgoing findings and repo changes pass a
+human review gate; an embedded work item is pre-authorized by its
+dispatch and returns its JSON result directly, with concerns routed to
+the finding's Open questions (repo changes still go through a PR in
+every mode).
 
 ## Two execution modes
 

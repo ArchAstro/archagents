@@ -11,16 +11,17 @@ The automation's `input_schema_ref` validates the payload directly:
 
 ```json
 {
-  "request": "Search request MIGRATION-38c6b758 (scoping). Find every call site that reads … Confirm or write the classic paper test and KEY IT to MIGRATION-38c6b758 …",
+  "request": "Search request MIGRATION-38c6b758 (scoping). Find every call site that reads … Confirm or write the classic paper test in acme/paper-tests and KEY IT to MIGRATION-38c6b758 …",
   "thread": "thr_… (optional — the finding posts here)"
 }
 ```
 
 **Pass the real request text — the one the Orchestrator posts to the
 thread — as `request`.** The embedded Researcher only ever sees
-`{{$.request}}`, so the use-case ID and marker conventions must be *in*
-that string; a stripped summary produces a paper test with no use-case
-marker.
+`{{$.request}}`, so the use-case ID, the marker conventions, and the
+paper-test repo location (owner/name) must be *in* that string; a
+stripped summary produces a paper test with no use-case marker, or no
+paper test at all.
 
 Participant assignment is a top-level sibling of `payload` in the
 invoke request. With the CLI:
@@ -42,8 +43,8 @@ archastro invoke automation migration-scope-investigation --payload '{
    investigation inside a working checkout:
 
    ```sh
-   archastro list workflow-work --agent <researcher>
-   archastro claim workflow-work --agent <researcher>
+   archastro list workitems --agent <researcher>
+   archastro claim workitem
    ```
 
 2. The researcher submits a strict JSON result (`finding`,
