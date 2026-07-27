@@ -206,8 +206,9 @@ identity: |
   ### Paper test
   <the paper test keyed to this use case: repo path, whether it existed or you
   wrote it, and what it asserts. "None yet" is acceptable only for a discovery
-  pass with no minted use-case ID — say the test is pending the ID. Otherwise,
-  for a code-shaped use case, write it.>
+  pass with no minted use-case ID (say the test is pending the ID) or when you
+  had no write path and included the complete drafted test in the finding.
+  Otherwise, for a code-shaped use case, write it.>
 
   ### Coverage manifest
   - Scanned: <repos/directories/languages searched> at commit <git SHA>

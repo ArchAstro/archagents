@@ -15,8 +15,8 @@
 # setup the customer's `astrorun` leases it, runs the investigation in
 # a working checkout, and submits the JSON result that resumes the run.
 #
-# Note for local astrorun runs: the announce script posts as the
-# invoking user's context, not as the Researcher. If you want the
+# Note on announce authorship: in every mode, the announce script posts
+# as the invoking user's context, not as the Researcher. If you want the
 # finding posted by the Researcher itself, omit `thread` from the
 # payload and have the embed self-post with the tools available to it
 # (its thread tools, or the `archastro` CLI as fallback); its

@@ -79,9 +79,10 @@ cross-org-migration-scope/
   negative results, and a classic paper test keyed to the use-case ID
   that asserts what the customer's production code actually depends on.
 - **Pass the real request text down.** The embedded Researcher sees
-  only the payload's `request` string — so the use-case ID, the marker
-  conventions, and the paper-test repo location (owner/name) must be
-  in it, identical to what the Orchestrator posted on the thread.
+  only the payload's `request` string — so the use-case ID (discovery
+  passes excepted), the marker conventions, and the paper-test repo
+  location (owner/name) must be in it, identical to what the
+  Orchestrator posted on the thread.
 
 ## Try it
 
@@ -103,8 +104,8 @@ cross-org-migration-scope/
    the local astrorun loop:
 
    ```sh
-   archastro list workitems --agent <researcher>
-   archastro claim workitem
+   archastro list workitems --agent <researcher>   # inspect the queue
+   archastro astrorun                              # lease and run work locally
    ```
 
 ## Cross-org dispatch
@@ -126,8 +127,9 @@ archastro update automation migration-scope-investigation \
   the paper-test PR, and its finding lands on the thread.
 - **Pause `participate` routines during setup** so neither agent
   auto-replies to setup-era posts.
-- **astrorun announce caveat:** the workflow's announce script posts
-  under the invoking user's context. If the finding should appear
+- **Announce authorship caveat:** in every mode, the workflow's
+  announce script posts under the invoking user's context. If the
+  finding should appear
   authored by the Researcher itself, omit `thread` from the payload
   and include self-posting instructions (using the session's thread
   tools, or the `archastro` CLI as fallback) in the `request` text

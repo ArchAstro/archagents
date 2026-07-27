@@ -46,8 +46,8 @@ archastro invoke automation migration-scope-investigation --payload '{
    investigation inside a working checkout:
 
    ```sh
-   archastro list workitems --agent <researcher>
-   archastro claim workitem
+   archastro list workitems --agent <researcher>   # inspect the queue
+   archastro astrorun                              # lease and run work locally
    ```
 
 2. The researcher submits a strict JSON result (`finding`,
