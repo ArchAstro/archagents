@@ -127,8 +127,11 @@ case "$ARCH" in
 esac
 
 if [[ "$PLATFORM" == "linux" && "$ARCH_LABEL" == "x64" ]]; then
-  if command -v ldd >/dev/null 2>&1 && ldd --version 2>&1 | grep -qi "musl"; then
-    ARCH_LABEL="x64-musl"
+  if command -v ldd >/dev/null 2>&1; then
+    LDD_VERSION="$(ldd --version 2>&1 || true)"
+    if printf '%s\n' "$LDD_VERSION" | grep -i "musl" >/dev/null; then
+      ARCH_LABEL="x64-musl"
+    fi
   fi
 fi
 
@@ -236,16 +239,10 @@ fi
 mkdir -p "$EXTRACT_DIR"
 tar -xzf "$ASSET_PATH" -C "$EXTRACT_DIR"
 
-FOUND_BINARY=""
-while IFS= read -r candidate; do
-  if [[ "$(basename "$candidate")" == "$BINARY_NAME" ]]; then
-    FOUND_BINARY="$candidate"
-    break
-  fi
-done < <(find "$EXTRACT_DIR" -type f)
+FOUND_BINARY="$(find "$EXTRACT_DIR" -type f -name "$BINARY_NAME" -print | sed -n '1p')"
 
 if [[ -z "$FOUND_BINARY" ]]; then
-  FOUND_BINARY="$(find "$EXTRACT_DIR" -type f | head -n 1 || true)"
+  FOUND_BINARY="$(find "$EXTRACT_DIR" -type f -print | sed -n '1p')"
 fi
 
 if [[ -z "$FOUND_BINARY" ]]; then
