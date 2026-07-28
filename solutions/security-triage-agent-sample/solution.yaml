@@ -16,7 +16,7 @@
 kind: Solution
 lookup_key: security-triage-agent-sample-solution
 solution_id: 35d13405-c67e-4c4d-b192-e3c460b97097
-solution_version: v0.4.7
+solution_version: v0.4.8
 name: Security Triage Agent Sample
 description: A senior security engineer that triages vulnerabilities, fixes what it can, and escalates the rest. Sample bundle — copy + tailor to your stack.
 
@@ -104,9 +104,11 @@ readme: |
 
   Upload the generated tarball through the Solution import flow.
 
+image: images/cover.jpg
 assets:
   - asset_path: diagrams/architecture.svg
   - asset_path: diagrams/triage-flow.svg
+  - asset_path: images/cover.jpg
 
 templates:
   # Deployable AgentTemplate (first entry — the install endpoint defaults
