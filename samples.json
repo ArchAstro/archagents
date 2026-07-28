@@ -60,7 +60,7 @@
     {
       "slug": "compliance-reviewer",
       "name": "Compliance Reviewer",
-      "tagline": "Reviews pull requests against compliance rules \u2014 does not review style or bugs.",
+      "tagline": "Reviews pull requests against compliance rules — does not review style or bugs.",
       "current_version": "v0.3.7",
       "min_cli_version": "0.28.0",
       "kind": "agent"
@@ -68,7 +68,7 @@
     {
       "slug": "compliance-reviewer-sample",
       "name": "Compliance Reviewer Sample",
-      "tagline": "Reviews pull requests against compliance rules \u2014 does not review style or bugs.",
+      "tagline": "Reviews pull requests against compliance rules — does not review style or bugs.",
       "current_version": "v0.3.8",
       "min_cli_version": "0.28.0",
       "kind": "solution"
@@ -132,7 +132,7 @@
     {
       "slug": "platform-health-agent",
       "name": "Platform Health Agent",
-      "tagline": "Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs \u2014 delivered to Slack.",
+      "tagline": "Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack.",
       "current_version": "v0.2.4",
       "min_cli_version": "0.28.0",
       "kind": "agent"
@@ -140,7 +140,7 @@
     {
       "slug": "platform-health-agent-sample",
       "name": "Platform Health Agent Sample",
-      "tagline": "Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs \u2014 delivered to Slack.",
+      "tagline": "Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack.",
       "current_version": "v0.2.5",
       "min_cli_version": "0.28.0",
       "kind": "solution"
@@ -164,7 +164,7 @@
     {
       "slug": "security-triage-agent-sample",
       "name": "Security Triage Agent Sample",
-      "tagline": "A senior security engineer that triages vulnerabilities found by daily dependency scans. Sample bundle \u2014 copy + tailor to your stack.",
+      "tagline": "A senior security engineer that triages vulnerabilities found by daily dependency scans. Sample bundle — copy + tailor to your stack.",
       "current_version": "v0.4.8",
       "min_cli_version": "0.28.0",
       "kind": "solution"
