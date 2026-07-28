@@ -53,7 +53,7 @@
       "slug": "code-review-agent-sample",
       "name": "Code Review Agent Sample",
       "tagline": "A senior engineer that reviews every PR like it's going into production at 3am.",
-      "current_version": "v0.3.9",
+      "current_version": "v0.3.10",
       "min_cli_version": "0.28.0",
       "kind": "solution"
     },
@@ -69,7 +69,7 @@
       "slug": "compliance-reviewer-sample",
       "name": "Compliance Reviewer Sample",
       "tagline": "Reviews pull requests against compliance rules — does not review style or bugs.",
-      "current_version": "v0.3.7",
+      "current_version": "v0.3.8",
       "min_cli_version": "0.28.0",
       "kind": "solution"
     },
@@ -141,7 +141,7 @@
       "slug": "platform-health-agent-sample",
       "name": "Platform Health Agent Sample",
       "tagline": "Daily report on your repo's health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack.",
-      "current_version": "v0.2.4",
+      "current_version": "v0.2.5",
       "min_cli_version": "0.28.0",
       "kind": "solution"
     },
@@ -165,7 +165,7 @@
       "slug": "security-triage-agent-sample",
       "name": "Security Triage Agent Sample",
       "tagline": "A senior security engineer that triages vulnerabilities found by daily dependency scans. Sample bundle — copy + tailor to your stack.",
-      "current_version": "v0.4.7",
+      "current_version": "v0.4.8",
       "min_cli_version": "0.28.0",
       "kind": "solution"
     },
@@ -181,7 +181,7 @@
       "slug": "threat-intel-agent-sample",
       "name": "Threat Intelligence Agent Sample",
       "tagline": "A security intelligence analyst that produces daily threat briefs from monitored feeds.",
-      "current_version": "v0.3.7",
+      "current_version": "v0.3.8",
       "min_cli_version": "0.28.0",
       "kind": "solution"
     }
