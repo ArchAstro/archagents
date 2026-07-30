@@ -123,7 +123,7 @@ so solution samples deploy through the system-owned `archastro` path.
 
 ## Docs
 
-- [Getting Started](https://docs.archagents.com/docs/getting-started) — zero to one working agent
-- [For Coding Agents](https://docs.archagents.com/docs/for-coding-agents) — machine-friendly setup
-- [CLI Reference](https://docs.archagents.com/docs/cli) — terminal workflow
-- [Agents](https://docs.archagents.com/docs/agents) — the full agent model
+- [Getting Started](https://docs.archagents.com/docs/start-here/getting-started) — zero to one working agent
+- [For Coding Agents](https://docs.archagents.com/docs/start-here/for-coding-agents) — machine-friendly setup
+- [CLI Reference](https://docs.archagents.com/docs/start-here/cli) — terminal workflow
+- [Agents](https://docs.archagents.com/docs/build-agents/agents) — the full agent model
