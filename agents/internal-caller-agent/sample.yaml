@@ -1,0 +1,11 @@
+schema_version: 2
+version: v0.1.0
+name: "Internal Caller Agent"
+tagline: "Shows how an agent can call an authenticated API with an agent-scoped bearer token."
+min_cli_version: "0.28.0"
+
+steps:
+  - type: upload_scripts
+    source_dir: scripts
+  - type: deploy_agent
+    template_file: agent.yaml

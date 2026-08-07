@@ -114,6 +114,14 @@
       "kind": "solution"
     },
     {
+      "slug": "internal-caller-agent",
+      "name": "Internal Caller Agent",
+      "tagline": "Shows how an agent can call an authenticated API with an agent-scoped bearer token.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.28.0",
+      "kind": "agent"
+    },
+    {
       "slug": "onboarding-qa",
       "name": "Onboarding Q&A",
       "tagline": "Answers new-hire questions about how things work at the company.",
