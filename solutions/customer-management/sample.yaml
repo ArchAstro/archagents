@@ -1,0 +1,8 @@
+schema_version: 2
+version: v0.1.0
+name: Customer Management
+tagline: A dedicated Slack agent for every customer you work with — in scope, grounded in that customer's context.
+min_cli_version: 0.28.0
+steps:
+- type: deploy_solution
+  solution_file: solution.yaml

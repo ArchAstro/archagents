@@ -1,0 +1,65 @@
+kind: Solution
+lookup_key: customer-management-solution
+solution_id: 9b818967-1a60-405f-9c68-a3f28b79e143
+solution_version: v0.1.0
+name: Customer Management
+description: A dedicated Slack agent for every customer relationship — it works in the shared Slack channel with one customer, stays in scope, stays grounded in that customer's context, and keeps a durable memory of the account.
+
+# Catalog taxonomy. `category_keys` shelf the bundle in the Library
+# carousel; `tag_keys` feed the tag-filter picker. Each key expects a
+# matching SolutionCategory / SolutionTag config to own its display
+# metadata (see solutions/archastro-catalog-taxonomy).
+category_keys:
+- customer-support
+tag_keys:
+- slack
+- per-customer
+- customer-success
+
+readme: |
+  # Customer Management
+
+  Install this once into your own Slack workspace, then stamp one
+  **Customer Success Agent** per customer relationship. Each stamped
+  agent works in the shared Slack channel with a single customer: it
+  answers grounded in that customer's context, stays strictly in that
+  customer's scope, and keeps a durable memory of the account so every
+  conversation resumes where the last one left off.
+
+  ## Architecture
+
+  ![Architecture overview](diagrams/architecture.svg)
+
+  The deployable template is parameterized on `customer_label` — the
+  customer identity is filled in when the agent is stamped for a specific
+  customer, so each customer gets a clearly-named, single-scope agent
+  (`Customer Success Agent — Acme`, `Customer Success Agent — Beta`, …).
+
+  ## What the agent does
+
+  - Answers a customer's product and account questions, grounded in the
+    knowledge base and the thread — never from general knowledge.
+  - Stays in one customer's scope: it never mentions, compares against, or
+    leaks anything about another customer.
+  - Keeps durable, date-stamped relationship memory so context carries
+    across sessions.
+  - Works in the customer's shared Slack channel and responds when added.
+
+  ## The bundle
+
+  One deployable AgentTemplate (`Customer Success Agent`). It uses builtin
+  tools only — `knowledge_search`, `long_term_memory`, `memory`, `search`,
+  `skills`, `tasks`, and `artifacts` — and ships no credentials.
+
+assets:
+- asset_path: diagrams/architecture.svg
+
+templates:
+# Deployable AgentTemplate (first entry — the default install target).
+# `readme_path:` is the per-template Library-inspector body.
+- template_path: agents/customer-management.yaml
+  readme_path: agents/customer-management.md
+
+metadata:
+  category: customer-support
+  sample_slug: customer-management
