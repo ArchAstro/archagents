@@ -98,6 +98,14 @@
       "kind": "solution"
     },
     {
+      "slug": "customer-management",
+      "name": "Customer Management",
+      "tagline": "A dedicated Slack agent for every customer relationship — scoped to one shared channel, grounded in that customer's context.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.28.0",
+      "kind": "solution"
+    },
+    {
       "slug": "fde-agent",
       "name": "FDE Agent",
       "tagline": "A production Forward Deployed Engineer agent for discovery, implementation, validation, and handoff.",
