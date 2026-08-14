@@ -67,7 +67,9 @@ tools:
   builtin_tool_key: knowledge_search
   status: active
   builtin_tool_config:
-    scope: ["agent", "org"]
+    scope: []
+    source_refs:
+    - customer-public-docs
 - tool_type: builtin
   builtin_tool_key: long_term_memory
   status: active
@@ -107,6 +109,11 @@ routines:
         subject_is_agent: true
   status: active
 installations:
+- install_type: web/site
+  install_key: customer-public-docs
+  config:
+    url: https://docs.archagents.com
+    max_pages: 100
 - install_type: memory/long-term
   config: {}
 - install_type: archastro/thread

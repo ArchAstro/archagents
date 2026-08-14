@@ -1,7 +1,7 @@
 kind: Solution
 lookup_key: customer-management-solution
 solution_id: 9b818967-1a60-405f-9c68-a3f28b79e143
-solution_version: v0.1.0
+solution_version: v0.2.0
 name: Customer Management
 description: A dedicated Slack agent for every customer relationship — it works in the shared Slack channel with one customer, stays in scope, stays grounded in that customer's context, and keeps a durable memory of the account.
 
