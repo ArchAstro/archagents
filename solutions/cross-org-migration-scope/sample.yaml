@@ -1,0 +1,12 @@
+schema_version: 2
+version: v0.1.0
+name: Cross-Org Migration Scope
+tagline: A vendor helps its customer scope a breaking-change migration — an Orchestrator dispatches search requests to the customer org's Researcher, which maps at-risk code and writes paper tests reflecting real usage.
+min_cli_version: "0.53.0"
+steps:
+  - type: upload_configs
+    source_dir: schemas
+  - type: upload_configs
+    source_dir: workflows
+  - type: deploy_solution
+    solution_file: solution.yaml

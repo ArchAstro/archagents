@@ -1,0 +1,142 @@
+# Catalog-facing wrapper for the cross-org migration scope sample: a
+# vendor-side Orchestrator, a customer-side Researcher, and an
+# invocable automation that dispatches search requests to the
+# Researcher as durable workflow runs — across an org boundary when
+# granted.
+kind: Solution
+lookup_key: cross-org-migration-scope-solution
+solution_id: c8006b8c-ae1c-4cdd-a8aa-f4a23822e15e
+solution_version: v0.1.0
+name: "Cross-Org Migration Scope"
+description: "A vendor helps its customer navigate a breaking-change migration: a vendor Orchestrator issues search requests and a customer Researcher maps at-risk code and writes paper tests reflecting real production usage, as one durable workflow."
+
+category_keys:
+  - sample
+  - operations
+tag_keys:
+  - workflow
+  - cross-org
+  - migration
+  - automation
+
+readme: |
+  # Cross-Org Migration Scope
+
+  A sample showing **cross-org agent collaboration** on the scoping phase of a
+  vendor-led migration: a vendor's API is introducing breaking changes,
+  and the vendor wants to help one of its customers navigate the
+  migration. Before anything is rewritten, the two sides map every
+  place the customer's integration is at risk and pin its current
+  behavior down in tests.
+
+  Two agents from (potentially) different orgs share one thread:
+
+  - The vendor's **Migration Orchestrator** is fed the vendor's
+    breaking-change and integration-change reference material, turns
+    it into concrete search requests, reconciles findings, mints
+    use-case IDs, and maintains the registry as the thread's task
+    list. Its goal: the customer's integration is **comprehensively
+    covered by paper tests** for the parts of the API the migration
+    focuses on.
+  - The customer's **Migration Researcher** investigates its own
+    codebase to identify the areas at risk of breaking and writes
+    classic (pre-migration) **paper tests** into a shared repo. Its
+    goal: the paper tests **accurately reflect real-world usage**,
+    asserting on the behaviors and dependencies the customer's
+    production code actually relies on.
+
+  Later steps of the migration replay these paper tests to prove the
+  migration is safe before any real usage is moved.
+
+  The **Migration Scope Investigation** automation ties the two sides
+  together: invoking it parks a durable, leaseable work item on the
+  Researcher's queue — crossing the org boundary when the automation
+  carries an `assign` grant — and posts the returned finding to an
+  optional thread. The Researcher can run hosted, or locally via
+  `astrorun` inside a working checkout of the codebase under
+  investigation.
+
+  The flow is modeled on a real billing-API migration (e.g. Stripe
+  classic → flexible billing mode) but is deliberately
+  **engagement-agnostic**: the breaking-change catalog, use-case ID
+  namespace, and repos all come from the thread and the invoke
+  payload, not from the templates.
+
+  ## What it ships
+
+  - **Migration Orchestrator** (`AgentTemplate`) — vendor-side
+    coordinator; owns the breaking-change catalog and the use-case
+    registry (the thread's task list); never touches customer code.
+  - **Migration Researcher** (`AgentTemplate`) — customer-side
+    investigator; hosted or local (`astrorun`). Paper-test-repo reads
+    surface through `integrations` once the GitHub App is bound;
+    branch/commit/PR writes use the local `gh`/`git` CLIs or an
+    installer-connected write tool.
+  - **Migration Scope Investigation** (`AutomationTemplate`) — an
+    invocable, org-level automation wrapping the
+    `scope-investigation-workflow` WorkflowGraph: one embedded
+    Researcher stage plus a thread announce.
+
+  ## Install
+
+  This is a multi-template Solution — install each template, choosing
+  it with `template`:
+
+  1. Install **Migration Orchestrator** in the vendor org and
+     **Migration Researcher** in the customer org (for a single-org
+     trial, install both in one org).
+  2. Install **Migration Scope Investigation** in the vendor org — this
+     provisions the automation already activated.
+  3. Put both agents on a shared (cross-org) team thread — that thread
+     is the record: requests, findings, and the task-list registry all
+     live there.
+
+  ## Run an investigation
+
+  Compose the search request once — including the use-case ID, the
+  marker conventions, and the paper-test repo location, since the
+  embedded Researcher sees only this string — post it to the thread as
+  the Orchestrator, and invoke with the same text (omit the ID for a
+  first-pass discovery request; the Researcher then returns
+  paper_test "none" until one is minted):
+
+  ```sh
+  archastro invoke automation migration-scope-investigation --payload '{
+    "request": "Search request MIGRATION-38c6b758 (scoping). Find every call site that reads a subscription current_period_start / current_period_end (these move to item level in flexible billing mode). Confirm or write the classic (pre-migration) paper test in acme/paper-tests and KEY IT to MIGRATION-38c6b758 (id in the test filename AND a marker comment). Return the standard finding with a coverage manifest recording the git SHA.",
+    "thread": "thr_..."
+  }' --participants '{
+    "researcher": "agi_..."
+  }'
+  ```
+
+  The embedded stage parks the run as a leaseable work item on the
+  Researcher's queue; a hosted harness — or the customer's local
+  `astrorun` — claims it, investigates, and submits a JSON result that
+  resumes the workflow:
+
+  ```sh
+  archastro list workitems --agent <researcher>   # inspect the queue
+  archastro astrorun                              # lease and run work locally
+  ```
+
+  ## Cross-org dispatch
+
+  When the Researcher belongs to a different org than the run,
+  assignment is fail-closed until the automation's owner publishes an
+  `assign` grant naming the assignee's **org**:
+
+  ```sh
+  archastro update automation migration-scope-investigation \
+    --acl-add org:<researcher-org-id>:assign
+  ```
+
+templates:
+  - template_path: agents/migration-orchestrator.yaml
+    readme_path: agents/migration-orchestrator.md
+  - template_path: agents/migration-researcher.yaml
+    readme_path: agents/migration-researcher.md
+  - template_path: automations/scope-investigation.yaml
+    readme_path: automations/scope-investigation.md
+
+metadata:
+  sample_slug: cross-org-migration-scope

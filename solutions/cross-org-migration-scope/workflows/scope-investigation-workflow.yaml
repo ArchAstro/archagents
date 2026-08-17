@@ -1,0 +1,108 @@
+# Migration scope investigation — a durable distributed workflow.
+#
+# One embedded agent stage: the invoking (vendor) side dispatches a
+# breaking-change search request to the customer's Researcher agent,
+# which may live in another org:
+#
+#   trigger → investigate (embedded: researcher finds the at-risk call
+#           sites in its own codebase and confirms or writes the classic
+#           paper test in the shared paper-test repo)
+#           → announce   (posts the returned finding to the optional
+#                         `thread` payload field; no-op when absent)
+#
+# The embedded stage parks a leaseable work item on the Researcher's
+# queue. In a hosted setup the platform harness runs it; in a local
+# setup the customer's `astrorun` leases it, runs the investigation in
+# a working checkout, and submits the JSON result that resumes the run.
+#
+# Note on announce authorship: in every mode, the announce script posts
+# as the invoking user's context, not as the Researcher. If you want the
+# finding posted by the Researcher itself, omit `thread` from the
+# payload and have the embed self-post with the tools available to it
+# (its thread tools, or the `archastro` CLI as fallback); its
+# instructions arrive through `{{$.request}}`, so put the thread there.
+kind: WorkflowGraph
+name: Migration scope investigation
+description: >-
+  Dispatches one breaking-change search request to a customer-side
+  Researcher agent as a durable run: the Researcher finds the at-risk
+  call sites in its own codebase, confirms or writes the classic paper
+  test, and returns a finding that is posted to an optional thread.
+start_node: trigger
+
+participants_schema:
+  researcher:
+    type: agent_user
+    description: >-
+      Customer-side Researcher agent that investigates its own
+      organization's codebase and owns the paper-test work. May belong
+      to a different org than the run when the automation carries an
+      assign grant.
+    required: true
+
+nodes:
+  - kind: WorkflowTrigger
+    id: trigger
+    trigger: automation.invoked
+    on_success: investigate
+
+  - kind: WorkflowEmbedAgent
+    id: investigate
+    agent_ref: researcher
+    instructions: |
+      You are the customer-side Researcher scoping a vendor's
+      breaking-change migration. Investigate this search request
+      against your organization's codebase:
+
+      {{$.request}}
+
+      1. Find every call site at risk of breaking and classify what the
+         code assumes about the vendor's behavior at each site.
+      2. Confirm or write the classic (pre-migration) paper test for the
+         affected use case in the paper-test repo named in the request.
+         If the request names a use-case ID, key the test to it (ID in
+         the test filename AND a marker comment at the top of the test).
+         If it names none — a first-pass discovery request — return the
+         finding with "paper_test": "none" and note that the test is
+         pending a minted use-case ID. The test must assert the
+         behaviors and dependencies your production code actually relies
+         on, not merely that a call happens.
+      3. Use the tools your session actually has. Read the paper-test
+         repo through your integrations tool's GitHub read operations
+         (get contents / get tree / search code) when the GitHub App is
+         bound to you. Branch/commit/PR writes need the local
+         `gh`/`git` CLIs (astrorun session) or a write-capable tool
+         your installer connected; if you have no write path, include
+         the complete drafted test in the finding and return "none"
+         for paper_test. In a local session, investigate with local
+         shell and `git grep`.
+
+      Return EXACTLY ONE JSON object and nothing else, with these keys:
+        "finding": a markdown finding (call-site table with file:line,
+          analysis, and a coverage manifest that records the git commit
+          SHA scanned),
+        "paper_test": the repo path of the classic paper test you
+          confirmed or wrote (or "none" if you could not),
+        "pr_url": the pull request URL if you opened one (or "none").
+      Return only that JSON object.
+    on_success: announce
+
+  - kind: WorkflowScript
+    id: announce
+    script: announce-script
+
+data:
+  - kind: Script
+    id: announce-script
+    script: |
+      let thread = $["thread"]
+      let d = $["input"]
+      let threads = import("threads")
+      if (thread != null && thread != "") {
+        let _r = unwrap(threads.send_message({
+          thread: thread,
+          content: "🔎 Scope finding (paper test: " + d.paper_test + ", PR: " + d.pr_url + ")\n\n" + d.finding
+        }))
+      }
+      put($, "researcher_result", d)
+      put($, "announced", thread != null && thread != "")

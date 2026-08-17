@@ -1,0 +1,26 @@
+kind: JsonSchema
+id: scope-investigation-input
+lookup_key: scope-investigation-input
+name: Migration Scope Investigation Input
+schema:
+  type: object
+  properties:
+    request:
+      type: string
+      description: >-
+        The full search request text, exactly as the Orchestrator posted
+        it to the shared thread — including the use-case ID (e.g.
+        MIGRATION-38c6b758), any marker conventions, and the location of
+        the shared paper-test repo (owner/name). The embedded Researcher
+        only ever sees this string, so everything it needs must be in
+        it. Omit the use-case ID for a first-pass discovery request —
+        the Researcher then returns paper_test "none" pending a minted
+        ID.
+    thread:
+      type: string
+      format: thread
+      description: >-
+        Optional thread. When provided, the workflow posts the returned
+        finding there once the investigation completes.
+  required:
+    - request
