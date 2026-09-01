@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="330" viewBox="0 0 960 330" role="img" aria-labelledby="title desc">
+  <title id="title">Shared Test Suite architecture</title>
+  <desc id="desc">GitHub Actions posts a signed test run to a generic webhook. Test Ingest posts a summary to a team thread and Test Reporter creates a Markdown artifact.</desc>
+  <style>
+    .box { fill: #ffffff; stroke: #293548; stroke-width: 2; rx: 12; }
+    .core { fill: #eaf3ff; stroke: #1769aa; stroke-width: 2; rx: 12; }
+    .output { fill: #ecf8f0; stroke: #28864a; stroke-width: 2; rx: 12; }
+    .t { fill: #172033; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 16px; font-weight: 650; text-anchor: middle; }
+    .s { fill: #4e5d73; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; text-anchor: middle; }
+    .arrow { fill: none; stroke: #5f6f86; stroke-width: 2.5; marker-end: url(#head); }
+    .label { fill: #4e5d73; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; text-anchor: middle; }
+  </style>
+  <defs>
+    <marker id="head" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#5f6f86"/>
+    </marker>
+  </defs>
+  <rect width="960" height="330" fill="#f7f9fc"/>
+  <rect class="box" x="40" y="118" width="170" height="88"/>
+  <text class="t" x="125" y="153">GitHub Actions</text>
+  <text class="s" x="125" y="178">JUnit → test_run JSON</text>
+
+  <rect class="core" x="280" y="118" width="170" height="88"/>
+  <text class="t" x="365" y="153">Generic Webhook</text>
+  <text class="s" x="365" y="178">HMAC + external event</text>
+
+  <rect class="core" x="520" y="64" width="180" height="88"/>
+  <text class="t" x="610" y="99">Test Ingest</text>
+  <text class="s" x="610" y="124">automation + workflow</text>
+
+  <rect class="core" x="520" y="198" width="180" height="88"/>
+  <text class="t" x="610" y="233">Test Reporter</text>
+  <text class="s" x="610" y="258">agent routine</text>
+
+  <rect class="output" x="770" y="42" width="150" height="88"/>
+  <text class="t" x="845" y="77">tests:suite</text>
+  <text class="s" x="845" y="102">internal thread</text>
+
+  <rect class="output" x="770" y="208" width="150" height="88"/>
+  <text class="t" x="845" y="243">Run artifact</text>
+  <text class="s" x="845" y="268">Markdown + latest</text>
+
+  <path class="arrow" d="M210 162 H280"/>
+  <text class="label" x="245" y="146">signed POST</text>
+  <path class="arrow" d="M450 162 C475 162, 485 108, 520 108"/>
+  <path class="arrow" d="M450 162 C475 162, 485 242, 520 242"/>
+  <text class="label" x="483" y="178">webhook.external.test_run</text>
+  <path class="arrow" d="M700 108 H770"/>
+  <path class="arrow" d="M700 242 H770"/>
+</svg>

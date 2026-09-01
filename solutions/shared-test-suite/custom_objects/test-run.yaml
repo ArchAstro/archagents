@@ -1,0 +1,120 @@
+description: |
+  A TestRun is one execution of tests. Flexible enough to represent:
+  - A full suite run (e.g. GitHub Actions run of stripe-paper with 42 tests) — mode=suite
+  - A single case run (e.g. one invoice_void test executed independently) — mode=single
+  - A batch of selected cases (e.g. 5 tests from stripe-paper) — mode=batch
+  - An ad-hoc run with no formal suite — mode=ad-hoc
+
+  Partitioned by suite_id (or scope), sorted by run_id. Stores summary stats
+  and link back to CI run. The `mode` field indicates what kind of run this is.
+  `test_keys` lists which tests were included when mode is single/batch/ad-hoc;
+  for suite mode it may be omitted (implies all tests in suite).
+
+  Thread routing: if suite_id is present (e.g. stripe-paper), the run always
+  routes to tests:<suite_id> channel, even for single/batch modes. This keeps
+  all runs of a suite in one place. Only when suite_id is empty do we route
+  to tests:single:<key>, tests:batch, or tests:ad-hoc.
+
+  Storage: row_key suite_id falls back to "ad-hoc" when empty, so ad-hoc runs
+  are queryable under suite_id=ad-hoc.
+
+  Used for internal test channel and future dashboard/history.
+json_schema:
+  additionalProperties: false
+  properties:
+    suite_id:
+      description: TestSuite identifier, e.g. stripe-paper. For ad-hoc runs, may be empty or a scope like ad-hoc.
+      type: string
+    run_id:
+      description: Unique run identifier from CI (GitHub run_id) or generated for ad-hoc runs
+      minLength: 1
+      type: string
+    mode:
+      description: |
+        What kind of run this is:
+        - suite: full suite run (e.g. 42 tests of stripe-paper)
+        - single: one test case (e.g. invoice_void)
+        - batch: selected subset (e.g. 5 tests)
+        - ad-hoc: no formal suite, arbitrary tests
+        If omitted, inferred from results length and suite_id presence.
+      enum:
+        - suite
+        - single
+        - batch
+        - ad-hoc
+      type: string
+    test_keys:
+      description: |
+        When mode is single/batch/ad-hoc, the test keys included in this run.
+        For suite mode, may be omitted (implies all tests in suite).
+        Example: ["invoice_void"] for single, ["invoice_void","invoice_create"] for batch.
+      items:
+        type: string
+      type: array
+    sha:
+      description: Git commit SHA
+      type: string
+    branch:
+      description: Git branch
+      type: string
+    conclusion:
+      description: Overall result
+      enum:
+        - success
+        - failure
+        - cancelled
+        - timed_out
+        - action_required
+        - neutral
+        - skipped
+        - unknown
+      type: string
+    stats:
+      description: Aggregated counts
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+        passed:
+          type: integer
+        failed:
+          type: integer
+        skipped:
+          type: integer
+      type: object
+    run_url:
+      description: Link to CI run (GitHub Actions) or logs
+      type: string
+    repository:
+      description: owner/repo
+      type: string
+    started_at:
+      format: date-time
+      type: string
+    completed_at:
+      format: date-time
+      type: string
+    team_id:
+      description: Internal team that owns the channel thread
+      type: string
+    triggered_by:
+      description: Who or what triggered this run (e.g. user email, schedule, webhook)
+      type: string
+    labels:
+      description: Free-form labels for filtering (e.g. env:staging, priority:high)
+      additionalProperties:
+        type: string
+      type: object
+  required:
+    - suite_id
+    - run_id
+    - conclusion
+  type: object
+kind: CustomObjectSchema
+lookup_key: test-run
+name: Test Run
+row_key:
+  - suite_id
+sort_key:
+  - run_id
+virtual_path: custom_objects/test-run.yaml

@@ -1,0 +1,36 @@
+automation_key: shared-test-suite-ingest
+config_ref: test-ingest-workflow
+description: |
+  Ingests TestRun results from external webhooks (e.g. GitHub Actions).
+  Ensures an internal channel thread per TestSuite (key: tests:<suite_id>,
+  team-owned by team_id from payload), posts a summary message with
+  conclusion/stats/failures/run_url, and upserts TestRun + TestResult
+  custom objects for structured querying.
+
+  Triggered by webhook.external.test_run — create a generic webhook
+  with lookup_key test-results and POST JSON with event_type=test_run.
+
+  Payload shape:
+  {
+    "event_type": "test_run",
+    "suite_id": "stripe-paper",
+    "run_id": "123456",
+    "sha": "abc123",
+    "branch": "main",
+    "conclusion": "failure",
+    "stats": {"total": 42, "passed": 40, "failed": 2},
+    "results": [{"test_key": "invoice_void", "status": "fail", "use_case": "UC-12", "error": "..."}],
+    "run_url": "https://github.com/.../runs/123",
+    "team_id": "tem_..." // required for internal channel routing
+  }
+
+  This template is internal-first: team_id selects the team that owns the
+  tests:<suite_id> channel. Provision a Test Reporter agent after importing
+  this Solution, add it to that team, then set this automation's run_as_agent
+  to that agent.
+kind: AutomationTemplate
+lookup_key: shared-test-suite-ingest
+name: "Test Ingest"
+status: running
+trigger: webhook.external.test_run
+type: trigger

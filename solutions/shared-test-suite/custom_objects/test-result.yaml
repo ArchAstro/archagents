@@ -1,0 +1,69 @@
+description: |
+  Result of one Test within a TestRun. Partitioned by run_id, sorted by test_key.
+  Stores per-test status, duration, error, logs link.
+
+  Works for all TestRun modes:
+  - suite: many results per run (one per test in suite)
+  - single: one result per run
+  - batch: N results per run (one per selected test)
+  - ad-hoc: one or more results per run
+
+  The run_id links back to TestRun, which indicates the mode and suite.
+json_schema:
+  additionalProperties: false
+  properties:
+    run_id:
+      description: TestRun this result belongs to
+      minLength: 1
+      type: string
+    test_key:
+      description: Test key within suite, or standalone key for ad-hoc
+      minLength: 1
+      type: string
+    suite_id:
+      description: TestSuite identifier for querying (may be empty for ad-hoc)
+      type: string
+    status:
+      description: Result status
+      enum:
+        - pass
+        - fail
+        - failure
+        - failed
+        - skip
+        - skipped
+        - unknown
+        - error
+        - timeout
+      type: string
+    use_case:
+      description: Use case identifier this test tracks
+      type: string
+    duration_ms:
+      description: Duration in milliseconds
+      type: integer
+    error:
+      description: Error message if failed
+      type: string
+    logs_url:
+      description: Link to logs for this test
+      type: string
+    attempt:
+      description: Attempt number for retries (1-indexed)
+      type: integer
+    metadata:
+      description: Free-form per-result metadata (e.g. env, region, input params)
+      type: object
+  required:
+    - run_id
+    - test_key
+    - status
+  type: object
+kind: CustomObjectSchema
+lookup_key: test-result
+name: Test Result
+row_key:
+  - run_id
+sort_key:
+  - test_key
+virtual_path: custom_objects/test-result.yaml

@@ -178,6 +178,14 @@
       "kind": "solution"
     },
     {
+      "slug": "shared-test-suite",
+      "name": "Shared Test Suite",
+      "tagline": "Route CI test runs into an internal team channel with structured run history.",
+      "current_version": "v0.1.0",
+      "min_cli_version": "0.30.0",
+      "kind": "solution"
+    },
+    {
       "slug": "threat-intel-agent",
       "name": "Threat Intelligence Agent",
       "tagline": "A security intelligence analyst that produces daily threat briefs from monitored feeds.",

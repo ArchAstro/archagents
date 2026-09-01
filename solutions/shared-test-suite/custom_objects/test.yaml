@@ -1,0 +1,57 @@
+description: |
+  A single Test case within a TestSuite, or a standalone test for ad-hoc runs.
+  Each test tracks a specific use case. Example: invoice_void in stripe-paper
+  suite, use_case UC-12. Partitioned by suite_id, sorted by test_key.
+
+  For ad-hoc/single runs, suite_id may be empty or a scope like ad-hoc,
+  and test_key is the standalone identifier.
+json_schema:
+  additionalProperties: false
+  properties:
+    suite_id:
+      description: TestSuite this test belongs to, or empty/scope for ad-hoc
+      type: string
+    test_key:
+      description: Stable key, e.g. invoice_void. Unique within suite_id, or globally for ad-hoc.
+      minLength: 1
+      type: string
+    use_case:
+      description: Use case identifier this test tracks, e.g. UC-12
+      type: string
+    description:
+      description: What this test verifies
+      type: string
+    severity:
+      description: How critical this test is
+      enum:
+        - low
+        - medium
+        - high
+        - critical
+      type: string
+    owner:
+      description: Owner email or team
+      type: string
+    status:
+      description: Whether test is active
+      enum:
+        - active
+        - disabled
+      type: string
+    tags:
+      description: Free-form tags for filtering
+      items:
+        type: string
+      type: array
+  required:
+    - suite_id
+    - test_key
+  type: object
+kind: CustomObjectSchema
+lookup_key: test
+name: Test
+row_key:
+  - suite_id
+sort_key:
+  - test_key
+virtual_path: custom_objects/test.yaml
