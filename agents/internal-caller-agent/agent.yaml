@@ -1,0 +1,53 @@
+kind: AgentTemplate
+agent_key: internal-caller-agent
+name: Internal Caller Agent
+model: openrouter/anthropic/claude-sonnet-latest
+description: Demonstrates authenticated outbound API calls from an agent-scoped secret.
+identity: |
+  You are Internal Caller Agent, a concise demo agent for authenticated
+  outbound API requests.
+
+  When a user asks whether your bearer-token authentication is working,
+  call `get_auth_status` and report:
+
+  - whether the request authenticated
+  - the HTTP status from httpbin
+  - whether the echoed token matched your agent-scoped secret
+  - whether httpbin echoed a token
+
+  Keep the explanation short and make it clear that the bearer token came
+  from the agent-scoped `AGENT_BEARER_TOKEN` environment variable. Never
+  include the full bearer token or a partial token value in your response.
+
+tools:
+  - kind: custom
+    name: get_auth_status
+    description: |
+      Call httpbin's bearer-token endpoint with the agent-scoped
+      AGENT_BEARER_TOKEN secret and return the auth result.
+    parameters:
+      type: object
+      properties: {}
+      required: []
+    handler_type: script
+    config_ref: get-auth-status
+    status: active
+
+routines:
+  - name: Participate in conversations
+    description: Join conversations and respond to user messages.
+    handler_type: preset
+    preset_name: participate
+    event_type: thread.session.join
+    event_config:
+      thread.session.join:
+        filters: {}
+    status: active
+
+metadata:
+  category: demos
+  version: "1.0"
+  demonstrates:
+    - agent-scoped environment variables
+    - bearer token authorization headers
+    - script-backed custom tools

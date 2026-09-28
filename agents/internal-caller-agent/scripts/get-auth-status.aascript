@@ -1,0 +1,21 @@
+// Demonstrates an authenticated outbound API call with an agent-scoped
+// bearer token. The full token is not returned to the agent.
+
+let http = import("requests")
+
+let response = unwrap(http.get("https://httpbin.org/bearer", {
+  headers: {"Authorization": "Bearer " + env.AGENT_BEARER_TOKEN},
+  timeout: 30
+}))
+
+let echoed_token = response.body.token || ""
+
+{
+  ok: response.status == 200,
+  status: response.status,
+  endpoint: "https://httpbin.org/bearer",
+  authenticated: response.body.authenticated,
+  token_was_echoed: echoed_token != "",
+  token_matched_secret: echoed_token == env.AGENT_BEARER_TOKEN,
+  token_source: "agent_scoped_env_var:AGENT_BEARER_TOKEN"
+}

@@ -15,6 +15,7 @@ command installs the whole thing.
 | [compliance-reviewer](compliance-reviewer) | Reviews PRs against SOC2 / GDPR / your custom compliance rules |
 | [cross-org-collab-agent](cross-org-collab-agent) | Privacy by construction — multi-layer field guards for cross-org threads |
 | [fde-agent](fde-agent) | Forward Deployed Engineer agent — runs a discovery → implementation → validation → handoff playbook, specialized with your project knowledge |
+| [internal-caller-agent](internal-caller-agent) | Demonstrates authenticated outbound API calls with an agent-scoped bearer token |
 | [onboarding-qa](onboarding-qa) | Answers new-hire questions from your knowledge base |
 | [platform-health-agent](platform-health-agent) | Daily report on repo health, GitHub event alerts, and a 5xx digest from production logs — delivered to Slack |
 | [release-notes-bot](release-notes-bot) | Watches merged PRs weekly, drafts changelog as a GitHub issue |
